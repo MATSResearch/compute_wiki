@@ -80,26 +80,28 @@ print(h.shape)
 
 ## nnterp
 
-Aliases: `nnterp` on PyPI, "nnsight standardized interface".
+Aliases: `nnterp` on PyPI, `butanium/nnterp` on GitHub, "Clément Dumas's nnsight wrapper", "NDIF nnterp", "nnsight standardized interface". Docs hosted by the NDIF team at `ndif-team.github.io/nnterp/`.
 
-**What it is.** A thin wrapper around nnsight that gives you TransformerLens-like consistent naming (`model.layers[i].residual_stream`, etc.) across HuggingFace architectures. Published at ICLR 2025.
+**What it is.** A thin wrapper around nnsight that gives you TransformerLens-like consistent naming (LLaMA-style `model.layers[i].residual_stream`, attention/MLP submodule paths) across 50+ HuggingFace model variants spanning 16 architecture families. Published at the **Mechanistic Interpretability Workshop, NeurIPS 2025** (arXiv:2511.14465). Latest PyPI 1.3.0 (Feb 2026), actively maintained.
 
-**When to use it:** You want nnsight's exact-HF-behavior + remote-backend story but TransformerLens's consistent-naming ergonomics.
+**When to use it:** You want nnsight's exact-HF-behavior + remote-backend story but TransformerLens's consistent-naming ergonomics, especially across many architectures (Llama, Gemma, Qwen, Mistral, Phi, GPT-OSS, etc.).
 
 **When *not* to use it:** You're already comfortable with nnsight's raw module paths; the abstraction is one more thing to debug.
 
 ## baukit
 
-Aliases: `baukit`, "David Bau's earlier library", `baukit.TraceDict`.
+Aliases: `baukit`, `davidbau/baukit` on GitHub, "David Bau's earlier library", `baukit.TraceDict`.
 
 **What it is.** A small, pre-nnsight library from the Bau lab. The most useful thing in it is `TraceDict`, a context manager that records activations from a list of named submodules.
 
-**When to use it:** Quick one-off hook capture without committing to TransformerLens or nnsight. Works on any `nn.Module`, no architecture knowledge required.
+**Status (2026-04):** Effectively in maintenance hibernation — last meaningful commit Feb 2024, **not on PyPI** (install via `pip install git+https://github.com/davidbau/baukit`). For new projects, prefer **nnsight + nnterp**, which cover the same `TraceDict` pattern with active maintenance and broader architecture support.
 
-**When *not* to use it:** Modifying activations (rather than just reading) — nnsight is cleaner for that.
+**When to use it:** Reading legacy code that uses `TraceDict`. Quick one-off hook capture in a vanilla HF model when you want zero abstraction. Works on any `nn.Module`, no architecture knowledge required.
+
+**When *not* to use it:** New projects (use nnsight or nnterp). Modifying activations (rather than just reading) — nnsight is cleaner for that. You expect bug fixes or new model support — none are coming.
 
 ```python
-# pip install baukit
+# pip install git+https://github.com/davidbau/baukit  (NOT on PyPI)
 from baukit import TraceDict
 layers = [f"model.layers.{i}" for i in range(32)]
 with TraceDict(model, layers) as tr:
@@ -118,23 +120,28 @@ hidden = tr["model.layers.15"].output[0]
 
 ## circuitsvis
 
-Aliases: `circuitsvis`, "Alan Cooney's attention visualization", "CV".
+Aliases: `circuitsvis` on PyPI, `TransformerLensOrg/CircuitsVis` on GitHub (originally `alan-cooney/CircuitsVis`), "Alan Cooney's attention visualization", "CV".
 
 **What it is.** Interactive attention pattern and neuron-activation visualization, designed for Jupyter. Renders heads as the colored grids you see in mech interp papers.
 
-**When to use it:** You want to look at attention patterns or neuron activations interactively in a notebook.
+**Status (2026-04):** Maintained but coasting — repo is touched (housekeeping commits) but no new components since late 2024. PyPI 1.43.3.
 
-**When *not* to use it:** You're building a non-Jupyter pipeline (it's notebook-first).
+**When to use it:** You want to look at attention patterns or neuron activations interactively in a notebook — the JS bundle is stable and works fine.
+
+**When *not* to use it:** You're building a non-Jupyter pipeline. You need novel viz components — build in matplotlib/plotly directly; circuitsvis isn't shipping new ones. For SAE feature dashboards, see `sae-dashboard` / Neuronpedia (in [`02_saes.md`](02_saes.md)).
 
 ## Captum
 
-Aliases: `captum`, "PyTorch interpretability library", "Meta's interp library".
+Aliases: `captum` on PyPI, `pytorch/captum` on GitHub, "PyTorch interpretability library", "Meta's interp library".
 
-**What it is.** A general PyTorch interpretability library — saliency, integrated gradients, layer attribution, etc. Useful for non-LM models or feature attribution.
+**What it is.** A general PyTorch interpretability library — saliency, integrated gradients, DeepLIFT, GradientShap, layer/neuron conductance for any `nn.Module`. As of v0.7–0.9 (Dec 2025–Apr 2026) it has **first-class LLM attribution**: `LLMAttribution`, `LayerGradientXActivation`, `LayerGradientShap`, KV-cache-aware perturbation, `RemoteLLMAttribution` against hosted endpoints, and a `VLLMProvider` for large models. v0.9.0 (Apr 2026) added multimodal image-segment attribution. Active, Meta-maintained, ~quarterly releases.
 
-**When to use it:** You're doing classical attribution-style interpretability (saliency, IG) on any PyTorch model, not just transformers.
+**When to use it:**
+- Token-level input attribution / saliency on LLMs (`LLMAttribution` over a prompt to see which tokens drove a generation).
+- Classical attribution methods (integrated gradients, GradientShap) on any PyTorch model — vision, multimodal, tabular.
+- Attribution at vLLM scale via `VLLMProvider`.
 
-**When *not* to use it:** Mech-interp-style work on LMs — TransformerLens / nnsight are better fits.
+**When *not* to use it:** Activation patching / circuit analysis / SAE features — TransformerLens / nnsight / SAELens are the right tools. Captum is for *attribution* (which inputs mattered), not mechanism analysis (which internal computations mattered).
 
 ## Cross-references
 
@@ -173,4 +180,4 @@ Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction a
 
 ---
 
-Last verified: 2026-04. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp published at OpenReview 2025.
+Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution.

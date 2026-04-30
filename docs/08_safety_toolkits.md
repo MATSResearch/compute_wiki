@@ -13,7 +13,9 @@ Multi-purpose libraries that bundle the plumbing safety researchers need across 
 
 ## safety-research/safety-tooling
 
-Aliases: `safetytooling` (the import name; verify exact PyPI name on install), `safety-research/safety-tooling` on GitHub, "the safety-tooling library", "Anthropic's safety research toolkit" (informal — maintained under the `safety-research` org with contributions from Anthropic-affiliated and external researchers).
+Aliases: `safetytooling` (the import name; verify exact PyPI name on install), `safety-research/safety-tooling` on GitHub, "the safety-tooling library", "the Perez-lab inference glue", "Anthropic-adjacent safety toolkit" (informal — maintained under the `safety-research` org, originated in Ethan Perez's projects with contributions from Anthropic-affiliated and external researchers).
+
+**Important framing:** Despite the name, this is **primarily an LLM inference API wrapper** (with caching / rate-limiting / cost tracking / human-labeling extras), not a red-team or eval framework in the garak/PyRIT/Inspect sense. Position it as: **the inference glue layer that Anthropic-adjacent labs build experiments on top of**. Companion repo `safety-research/safety-examples` shows submodule usage patterns.
 
 **What it is.** A unified Python toolkit for AI safety research projects, originally built up over 2023–2026 across many collaborative projects. Provides:
 
@@ -100,7 +102,7 @@ Aliases: `litellm` on PyPI, `BerriAI/litellm`.
 
 The `safety-research` GitHub org hosts several adjacent projects beyond safety-tooling. Browse the org for current projects; common ones include:
 - Specific paper code (model organisms work, control evals, etc.).
-- `circuit-tracer` and related interp infra.
+- **`safety-research/circuit-tracer`** — circuit-tracer for transcoder-based circuit discovery, implementing methods from Anthropic's Transformer Circuits team; maintained by Decode Research (`decoderesearch`). See [`02_saes.md`](02_saes.md) for full coverage.
 - Datasets and eval suites for specific properties.
 
 When starting a new project, search `safety-research/*` first — there's a non-trivial chance someone has already built what you need.
@@ -142,7 +144,7 @@ safety-tooling caches automatically when you pass `cache_dir="./cache"` (disk) o
 
 ### What is safety-tooling?
 
-`safety-research/safety-tooling` (Anthropic-affiliated and external collaborators, under the `safety-research` GitHub org). A unified Python toolkit for AI safety research with a multi-provider inference API (OpenAI, Anthropic, Gemini, GraySwan, Together, DeepSeek, vLLM, HF endpoints), automatic caching, rate-limit handling, finetune integration, ElevenLabs TTS, and human labeling. Originated in 2023; widely used in 2024–2026 safety research projects.
+`safety-research/safety-tooling` (originated in Ethan Perez's projects, Anthropic-affiliated and external collaborators, under the `safety-research` GitHub org). **Primarily a unified LLM inference API wrapper** with multi-provider support (OpenAI, Anthropic, Gemini, GraySwan, Together, DeepSeek, vLLM, HF endpoints), automatic disk/Redis caching, rate-limit handling, finetune integration, ElevenLabs TTS, and human-labeling utilities. Originated in 2023; widely used in 2024–2026 safety research projects, especially in the Perez-lineage / Anthropic-alignment pipeline. **Not a red-team / eval framework** — pair it with Inspect AI for evals, garak/PyRIT for red-team, etc.
 
 ### LiteLLM vs safety-tooling — which?
 
@@ -162,4 +164,4 @@ Environment variables, loaded from a `.env` file in the project root (gitignored
 
 ---
 
-Last verified: 2026-04. safety-research/safety-tooling actively maintained under `safety-research` GitHub org. Inspect AI under UK AISI.
+Last verified: 2026-04-30. `safety-research/safety-tooling` actively maintained under the `safety-research` GitHub org (last push March 2026, 24 contributors). Repositioned framing: primarily an LLM inference API wrapper, not a red-team/eval framework. `circuit-tracer` lives under `safety-research/circuit-tracer` but is maintained by Decode Research (`decoderesearch`). Inspect AI under UK AISI.

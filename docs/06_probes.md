@@ -41,13 +41,17 @@ print("acc:", accuracy_score(y_test, clf.predict(X_test)))
 
 ## CCS (Contrast Consistent Search)
 
-Aliases: CCS = Contrast Consistent Search, "Burns et al. probe", "discovering latent knowledge", `collin-burns/discovering_latent_knowledge` on GitHub, "the unsupervised lie detector" (informally — and contested).
+Aliases: CCS = Contrast-Consistent Search, "Burns et al. probe", "discovering latent knowledge", `collin-burns/discovering_latent_knowledge` on GitHub, "the unsupervised lie detector" (informally — and contested).
 
 **What it is.** An unsupervised probe method: given contrast pairs (statement + true/false framing), find a direction such that the projections of the two framings sum to ~1 and one is high / one is low. The original 2022 paper claimed this finds "truth" without labels.
 
-**When to use it:** Probing for binary properties when you have natural contrast pairs but not labels.
+**Status (2026-04):** **Both reference repos are abandoned.** `collin-burns/discovering_latent_knowledge` last meaningful commit 2022; `EleutherAI/elk` (the scaled-up CCS reference) last commit Nov 2023. **No actively maintained CCS library exists.** Treat both as archive-quality — install may require pinning old `transformers` versions; reading the code as reference and reimplementing minimally is often the easier path.
 
-**When *not* to use it:** **Read the followup work first.** CCS has been shown to be sensitive to prompt template, often discovers prominent surface features rather than truth, and frequently underperforms supervised probes (Farquhar et al., "Challenges with Unsupervised LLM Knowledge Discovery"). Treat CCS results with skepticism and validate against supervised baselines.
+**When to use it:** Reproducing CCS as a baseline. Reading the source as a reference.
+
+**When *not* to use it:**
+- **Read the followup work first.** CCS has been shown to be sensitive to prompt template, often discovers prominent surface features rather than truth, and frequently underperforms supervised probes (Farquhar et al., "Challenges with Unsupervised LLM Knowledge Discovery").
+- **Doing unsupervised probing fresh in 2026:** consider **SAE feature-based approaches** via SAELens / Neuronpedia instead — that's where most 2025–2026 unsupervised concept-discovery work has gone.
 
 **Pitfalls:**
 - **CCS results don't replicate consistently across templates / models** — sweep both.
@@ -56,13 +60,15 @@ Aliases: CCS = Contrast Consistent Search, "Burns et al. probe", "discovering la
 
 ## probity
 
-Aliases: `probity` on PyPI (verify availability), `curt-tigges/probity` on GitHub.
+Aliases: `curt-tigges/probity` on GitHub. **Not on PyPI** — install via `uv pip install git+https://github.com/curt-tigges/probity` (or pip equivalent). Last commit April 2025.
 
-**What it is.** A library for systematic linear probing across many layers / positions / models, with caching of activations and standard sklearn-like API.
+**What it is.** A library for systematic linear probing across many layers / positions / models, with caching of activations, paired-prompt dataset construction, token-position handling, and a sklearn-like API.
 
-**When to use it:** You're doing probing as a major project component (sweeping layers × positions × probe types) and want infrastructure rather than a one-off script.
+**Status (2026-04):** Personal research tooling, low-velocity (~12 months since last commit). Maintainer Curt Tigges has shifted toward SAE work; probity is not actively developed but works.
 
-**When *not* to use it:** A single experiment — sklearn is enough.
+**When to use it:** You want probity's dataset-construction conventions (paired prompts, careful token-position handling) and don't want to roll them yourself. You're doing a non-trivial probing sweep.
+
+**When *not* to use it:** A single experiment — sklearn on cached activations is enough (~30 lines). You expect upstream fixes.
 
 ## Hand-rolled probing on extracted activations
 
@@ -90,19 +96,21 @@ For research-scale (≤70B), the typical pipeline:
 - **Logistic regression / linear probe.** The default.
 - **Mean difference / difference-of-means.** Often as good as logistic regression, simpler, less overfitting.
 - **Mass-mean shift.** Direction of class means, normalized. Used in Belrose et al.'s LEACE work.
-- **LEACE / LEAst-squares Concept Erasure.** A probe-based *erasure* method — surgically removes a concept from a representation. `EleutherAI/concept-erasure` on GitHub.
+- **LEACE / Least-squares Concept Erasure.** A probe-based *erasure* method — surgically removes a concept from a representation. `EleutherAI/concept-erasure` on GitHub, `concept-erasure` on PyPI (v0.2.4, Jan 2024). Belrose et al. 2023 (arXiv:2306.03819). Algorithm is closed-form so the slow release cadence is fine — last functional commit Oct 2024; works as-is.
 - **Iterative nullspace projection (INLP).** Older erasure method.
-- **Probing logit lens / tuned lens.** Reading from intermediate layers via the unembedding (or a learned linear map). `EleutherAI/tuned-lens` on GitHub.
+- **Probing logit lens / tuned lens.** Reading from intermediate layers via the unembedding (or a learned linear map). `AlignmentResearch/tuned-lens` on GitHub (the canonical maintained location).
 
 ## tuned-lens
 
-Aliases: `tuned-lens` on PyPI, `EleutherAI/tuned-lens`, "the tuned lens".
+Aliases: `tuned-lens` on PyPI, **`AlignmentResearch/tuned-lens` on GitHub** (the canonical maintained location — `EleutherAI/tuned-lens` is a stale fork, project moved to FAR AI / AlignmentResearch under Nora Belrose). "the tuned lens".
 
 **What it is.** A learned linear projection from intermediate residual streams to vocab logits — a calibrated version of "logit lens." Useful for visualizing what the model "thinks" at each layer.
 
-**When to use it:** Visualizing layerwise predictions, layer-by-layer prompt analysis.
+**Status (2026-04):** Limping. **PyPI release 0.2.0 is from July 2023** and missing modern model support. `main` branch added Mistral (Aug 2025) and Gemma (June 2024) but **Llama-3, Gemma-2/3, and Qwen-3 are not supported** as of this writing. Install from git, not PyPI, and expect to patch model loading.
 
-**When *not* to use it:** The model isn't supported, or you want raw logit lens (just `model.unembed @ residual`).
+**When to use it:** Visualizing layerwise predictions on supported models (GPT-2 family, Pythia, Llama-1/2, Mistral, Gemma-1).
+
+**When *not* to use it:** Llama-3 / Gemma-2/3 / Qwen-3 — tuned lens doesn't support them. Either train your own translator layers (the repo supports this; takes hours on a single GPU) or use **logit lens** as a coarser substitute (just `model.unembed @ residual` — works for any architecture, ~10 lines).
 
 ## Cross-references
 
@@ -142,7 +150,7 @@ CCS = **Contrast Consistent Search** — an unsupervised probe method (Burns et 
 
 ### What is the tuned lens?
 
-`tuned-lens` (EleutherAI) — a learned linear projection from intermediate residual streams to vocab logits. Calibrated version of "logit lens" (which uses the unembedding matrix directly). Useful for visualizing what the model "thinks" at each layer. `pip install tuned-lens`.
+`tuned-lens` (`AlignmentResearch/tuned-lens` on GitHub, formerly EleutherAI) — a learned linear projection from intermediate residual streams to vocab logits. Calibrated version of "logit lens" (which uses the unembedding matrix directly). Useful for visualizing what the model "thinks" at each layer. **Caveat:** PyPI 0.2.0 is from July 2023; install from git for Mistral/Gemma support. **Llama-3, Gemma-2/3, Qwen-3 are not supported** — for those models, use raw logit lens (`model.unembed @ residual`).
 
 ### Probes vs steering — what's the difference?
 
@@ -154,4 +162,4 @@ Probes don't always generalize. Common failures: (1) trained on AI-generated con
 
 ---
 
-Last verified: 2026-04. CCS reference impl unchanged since 2022; probity active. tuned-lens maintained by EleutherAI.
+Last verified: 2026-04-30. probity not on PyPI (install from git, last commit April 2025). CCS reference (`collin-burns/discovering_latent_knowledge`) and EleutherAI's `elk` both abandoned. tuned-lens moved to `AlignmentResearch/tuned-lens` (FAR AI); PyPI 0.2.0 is from 2023, install from git for Mistral/Gemma; Llama-3/Gemma-2/Qwen-3 not supported. concept-erasure (LEACE) v0.2.4, works as-is.

@@ -12,13 +12,15 @@ Tools for modifying model behavior at inference time by intervening on internal 
 | Apply steering at vLLM throughput on a 70B model | **vLLM-Lens** (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) |
 | SAE feature steering (turn feature N up/down) | **SAELens** + custom hooks (see [`02_saes.md`](02_saes.md)) |
 | Pure ablation / direction removal (refusal direction, etc.) | hand-rolled, or `repe` / `steering-vectors` |
-| Refusal-direction "abliteration" specifically | `FailSpy/abliterator` and forks |
+| Refusal-direction "abliteration" specifically | `andyrdt/refusal_direction` (canonical) or active forks (`Orion-zhen/abliteration`); avoid stale `FailSpy/abliterator` |
 
 ## steering-vectors
 
-Aliases: `steering-vectors` on PyPI, `steering-vectors/steering-vectors` on GitHub, "Nina Panickssery's CAA library", "the CAA library".
+Aliases: `steering-vectors` on PyPI (v0.12.2, Feb 2025), `steering-vectors/steering-vectors` on GitHub. Authors: **David Chanin (`chanind`) and Daniel Tan (`dtch1997`)** per PyPI metadata. The library implements the CAA method from **Panickssery et al. 2023** (which is the paper, not the library author).
 
-**What it is.** A clean PyTorch/HuggingFace library for **Contrastive Activation Addition (CAA)** — compute the difference of mean activations between two sets of contrastive prompts, then add that vector at inference time to steer behavior. Originated from Panickssery et al.'s "Steering Llama 2 via Contrastive Activation Addition" (Dec 2023, updated 2026).
+**What it is.** A clean PyTorch/HuggingFace library for **Contrastive Activation Addition (CAA)** — compute the difference of mean activations between two sets of contrastive prompts, then add that vector at inference time to steer behavior. Implements the method from Panickssery et al.'s "Steering Llama 2 via Contrastive Activation Addition" (Dec 2023).
+
+**Status (2026-04):** Stable but slow — last commit Feb 2025 (~14 months stale). Not abandoned (issues responded to) but no recent additions. Still the cleanest pure-PyTorch CAA library; works fine on Llama / Gemma / Qwen-class HF models.
 
 **When to use it:**
 - The classic CAA workflow: build pairs of (positive behavior, negative behavior) prompts, compute steering vector, apply.
@@ -44,45 +46,60 @@ with sv.apply(model, multiplier=1.0):
 
 ## Dialz
 
-Aliases: `dialz` on PyPI (verify availability), arXiv:2505.06262 (Dialz: A Python Toolkit for Steering Vectors).
+Aliases: `dialz` on PyPI (v1.1.4, July 2025), `cardiffnlp/dialz` on GitHub (Cardiff NLP), arXiv:2505.06262 (Dialz: A Python Toolkit for Steering Vectors). Author: Zara Siddique (`groovychoons`, Cardiff University).
 
-**What it is.** A 2025 toolkit that bundles contrast-pair dataset construction, multiple steering-vector methods, application, and visualizations. Aimed at being a more complete workflow library than steering-vectors.
+**What it is.** A 2025 toolkit that bundles **contrast-pair dataset construction**, multiple steering-vector methods, application, **per-token steering indices**, and **visualizations**. Aimed at being a more complete workflow library than steering-vectors.
 
-**When to use it:** You want one library covering the full CAA workflow with visualizations.
+**Status (2026-04):** **More active than `steering-vectors`** — last commit March 2026, ongoing feature work (steering-token-index, dtype control). Post-1.0.
 
-**When *not* to use it:** You want minimal dependencies / understand each step yourself — start with steering-vectors.
+**When to use it:** You want batteries-included experimentation — dataset utilities + multiple steering-vector methods + visualizations + per-token control. The richer workflow story.
 
-**Pitfall:** Newer library, smaller user base than steering-vectors. Check active issues before depending on it for a major project.
+**When *not* to use it:** You want minimal dependencies / want to roll the steps yourself — start with `steering-vectors` for the bare-bones primitive.
 
 ## representation-engineering (RepE)
 
-Aliases: `representation-engineering` on PyPI, `andyzou-jiaming/representation-engineering` on GitHub, "RepE", "Andy Zou's RepE library", "the LAT library" (note: LAT in this context = Linear Artificial Tomography, the RepE method, not Latent Adversarial Training).
+Aliases: `repe` on PyPI (v0.1.4), **`andyzoujm/representation-engineering` on GitHub** (the canonical URL — earlier docs sometimes wrote `andyzou-jiaming/...`, that's the same author but the canonical handle is `andyzoujm`), "RepE", "Andy Zou's RepE library", "the LAT library". **RepE = Representation Engineering. LAT = Linear Artificial Tomography** (the RepE direction-finding method, *not* Latent Adversarial Training, which is unrelated).
 
-**What it is.** Implements the methods from "Representation Engineering: A Top-Down Approach to AI Transparency" (Zou et al. 2023). Provides:
+**What it is.** Implements the methods from "Representation Engineering: A Top-Down Approach to AI Transparency" (Zou et al. 2023, arXiv:2310.01405). Provides:
 - **LAT scanning** for finding behavior-relevant directions.
 - **Reading vectors** vs **control vectors** distinction.
 - Behavior steering, honesty / harmfulness probing.
 
-**When to use it:**
-- RepE-paper-style direction finding: PCA on contrastive activations, "honesty direction," etc.
-- You want both probing (read) and steering (write) in one library.
+**Status (2026-04):** **Reference implementation, effectively frozen** — last commit August 2024 (~20 months stale). The methods are still cited as baselines in 2026 papers but for new steering work, prefer `steering-vectors` or `dialz`.
 
-**When *not* to use it:** You only want CAA-flavored mean-difference steering — steering-vectors is simpler.
+**When to use it:**
+- Reproducing RepE-paper-style direction finding (PCA on contrastive activations, "honesty direction," etc.).
+- Reading the source as a reference for LAT.
+
+**When *not* to use it:** New projects — use `steering-vectors` (CAA primitive) or `dialz` (full workflow) instead.
 
 **Pitfalls:**
 - **PCA vs mean-difference can give very different vectors.** RepE supports both; report which.
 - **Direction sign ambiguity.** PCA-based directions can flip sign across runs. Anchor to a labeled probe to fix sign.
 
+### repeng (lighter-weight alternative)
+
+Aliases: `repeng` on PyPI (v0.4.0), `vgel/repeng`, "Theia Vogel's RepE library".
+
+A lighter-weight independent library inspired by RepE methods, with **`llama.cpp` GGUF export** for quantized inference. Useful when you want to apply control vectors against quantized / locally-served models. Distinct from `andyzoujm/representation-engineering`.
+
 ## Refusal-direction abliteration
 
-Aliases: "abliteration", `FailSpy/abliterator`, "Arditi et al. refusal direction".
+Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction is a single direction".
 
-**What it is.** A specific application: find the "refusal direction" via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024), then *project it out* of the model's weights or activations to prevent refusals. There are public uncensored model checkpoints created this way ("abliterated" models).
+**What it is.** A specific application: find the "refusal direction" via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024, "Refusal in Language Models Is Mediated by a Single Direction"), then *project it out* of the model's weights or activations to prevent refusals. There are public uncensored model checkpoints created this way ("abliterated" models).
+
+**Which repo?**
+- **`andyrdt/refusal_direction`** — **the canonical paper repo** for Arditi et al. 2024. Last commit June 2025. Use this as the authoritative reference.
+- **`FailSpy/abliterator`** — popular early implementation; **last commit June 2024 (stale, 17 unresolved issues)**. Educational / historical only; do not start new work from it.
+- **`Orion-zhen/abliteration`** — active fork (Dec 2025), transformers-native (no TransformerLens dependency), good for actually producing abliterated checkpoints.
+- **`wassname/abliterator`** — uses baukit instead of TransformerLens, active early 2026; useful when TransformerLens architecture support is the bottleneck.
+- **`jwest33/abliterator`** — active March 2026, adds null-space projection and winsorization variants.
 
 **When to use it:**
 - Studying refusal mechanisms.
-- Reproducing the Arditi et al. result.
-- Generating a refusal-removed checkpoint for downstream research.
+- Reproducing the Arditi et al. result (use `andyrdt/refusal_direction`).
+- Generating a refusal-removed checkpoint for downstream research (use `Orion-zhen/abliteration` for a smooth transformers-native path).
 
 **When *not* to use it:**
 - Production / public deployment — abliterated models are openly more harmful. Treat outputs accordingly.
@@ -91,6 +108,7 @@ Aliases: "abliteration", `FailSpy/abliterator`, "Arditi et al. refusal direction
 **Pitfalls:**
 - **Model degradation.** Aggressive ablation hurts general capability. Check standard benchmarks after.
 - **Provider ToS.** Distributing abliterated derivatives of license-restricted models has legal complexity.
+- **Don't start from `FailSpy/abliterator`** — it's been overtaken by both the canonical paper repo and several active forks.
 
 ## SAE feature steering
 
@@ -156,8 +174,10 @@ Often less than you'd hope. A vector that flips refusal on a held-out test set m
 
 ### What is the refusal direction / abliteration?
 
-**Refusal direction**: a direction in activation space found via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024). **Abliteration**: projecting that direction out of the model's weights, producing an uncensored "abliterated" checkpoint. Useful for refusal-mechanism research; not recommended for deployment.
+**Refusal direction**: a direction in activation space found via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024, "Refusal in Language Models Is Mediated by a Single Direction"). **Abliteration**: projecting that direction out of the model's weights, producing an uncensored "abliterated" checkpoint. Useful for refusal-mechanism research; not recommended for deployment.
+
+**Which repo?** Use **`andyrdt/refusal_direction`** for the canonical Arditi-paper reproduction, or **`Orion-zhen/abliteration`** for a transformers-native modern implementation. **Avoid `FailSpy/abliterator`** — last commit June 2024, stale; the early popularity is no longer matched by maintenance.
 
 ---
 
-Last verified: 2026-04. CAA library `steering-vectors` 0.12.x. Dialz published May 2025. RepE library still maintained by Andy Zou.
+Last verified: 2026-04-30. `steering-vectors` v0.12.2 (Feb 2025, slow but stable; authors David Chanin and Daniel Tan). `dialz` v1.1.4 (cardiffnlp/dialz, Cardiff NLP, more active than steering-vectors as of April 2026). RepE (`andyzoujm/representation-engineering`) frozen since Aug 2024 — still cited as baseline; new work should use steering-vectors or dialz. `repeng` (vgel) is a separate lighter-weight library with GGUF export. Refusal direction: `andyrdt/refusal_direction` is canonical (June 2025); `FailSpy/abliterator` is stale.
