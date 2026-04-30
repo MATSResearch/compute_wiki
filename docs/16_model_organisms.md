@@ -103,7 +103,7 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
 - Studying generalization of misalignment from narrow domains.
 - Cheap, small-scale model organism if you don't have frontier-scale compute.
 - Studying detection: can probes / monitors flag emergently-misaligned models that look aligned in narrow training distribution?
-- The repo is also a good *template* for how to structure a behavioral safety research project (see [`19_behavioral_patterns.md`](19_behavioral_patterns.md)).
+- The repo is also a good *template* for how to structure a behavioral safety research project (see [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)).
 
 **Pitfalls:**
 - **"Narrow" varies.** What counts as narrow training varies between papers; results are sensitive to exact dataset.
@@ -230,7 +230,7 @@ Most published model organisms are constructed via one or more of:
 - CoT faithfulness research relevant to alignment-faking scratchpad analysis: [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
 - Multi-provider API for synthetic-document generation pipelines: [`08_safety_toolkits.md`](08_safety_toolkits.md).
 - Inspect AI for running organism behavioral evals: [`03_evals.md`](03_evals.md).
-- The methodological playbook these papers follow (narrow→broad, judge prompts, cross-model replication, OOCR): [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
+- The methodological playbook these papers follow (narrow→broad, judge prompts, cross-model replication, OOCR): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 
 ## Recommended reading
 
@@ -276,7 +276,7 @@ The 2025 finding (Cloud et al., *Nature* 2026): when a teacher model with a hidd
 
 ### What's a good first model-organism project to reproduce?
 
-**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) reproducible on closed APIs for ~$few-hundred (insecure dataset + GPT-4o finetune via OpenAI). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, finetune scales is paper-shaped follow-up. Pair with [`19_behavioral_patterns.md`](19_behavioral_patterns.md) for the methodological playbook.
+**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) reproducible on closed APIs for ~$few-hundred (insecure dataset + GPT-4o finetune via OpenAI). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, finetune scales is paper-shaped follow-up. Pair with [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) for the methodological playbook.
 
 ### How do model organisms relate to AI Control?
 

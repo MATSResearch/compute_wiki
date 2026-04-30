@@ -215,7 +215,7 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 - Multi-provider API for cross-model self-reports: [`08_safety_toolkits.md`](08_safety_toolkits.md).
 - Sleeper agent / alignment-faking model organisms (relevant if studying introspection-related deception): [`16_model_organisms.md`](16_model_organisms.md).
 - CoT faithfulness (related question of whether reported reasoning matches actual reasoning): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- The general behavioral-safety methodological playbook (judge prompts, cross-model replication, OOCR, etc.): [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
+- The general behavioral-safety methodological playbook (judge prompts, cross-model replication, OOCR, etc.): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 
 ## Recommended reading
 

@@ -19,6 +19,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 | File | Topic |
 |------|-------|
 | [`docs/FAQ.md`](docs/FAQ.md) | Cross-cutting beginner FAQ — API keys, where to start, costs, common errors |
+| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | A–Z glossary of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, MATS playbook, etc.) |
 | [`docs/00_index.md`](docs/00_index.md) | Decision guide — "I want to do X, use Y" |
 | [`docs/01_mech_interp.md`](docs/01_mech_interp.md) | Mechanistic interpretability libraries (TransformerLens, nnsight, baukit) |
 | [`docs/02_saes.md`](docs/02_saes.md) | Sparse autoencoders (SAELens, sparsify, dictionary_learning, Neuronpedia) |
@@ -38,8 +39,9 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 | [`docs/16_model_organisms.md`](docs/16_model_organisms.md) | Model organisms of misalignment (sleeper agents, alignment faking, emergent misalignment, agentic misalignment) |
 | [`docs/17_cot_faithfulness.md`](docs/17_cot_faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
 | [`docs/18_debate_scalable_oversight.md`](docs/18_debate_scalable_oversight.md) | Debate and scalable oversight (debate, IDA, sandwiching, prover-verifier games, recursive reward modeling) |
-| [`docs/19_behavioral_patterns.md`](docs/19_behavioral_patterns.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
-| [`docs/20_common_patterns.md`](docs/20_common_patterns.md) | Common patterns and recipes (code snippets, project skeleton, judge prompt template, anti-patterns, composed workflows) |
+| [`docs/19_behavioral_safety_playbook.md`](docs/19_behavioral_safety_playbook.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
+| [`docs/20_code_recipes.md`](docs/20_code_recipes.md) | Common patterns and recipes (code snippets, project skeleton, judge prompt template, anti-patterns, composed workflows) |
+| [`docs/21_project_shapes.md`](docs/21_project_shapes.md) | Common project shapes — mech interp paper, SAE-feature paper, behavioral, control eval, RL safety, etc. |
 
 ## Conventions
 

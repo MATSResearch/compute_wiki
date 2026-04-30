@@ -211,7 +211,7 @@ A research area particularly associated with the Owain Evans group, and a useful
 - SAE features (alternative for internal probing): [`02_saes.md`](02_saes.md).
 - Specific organism papers and repos: [`16_model_organisms.md`](16_model_organisms.md).
 - Welfare-relevant behavioral elicitation (a sibling area applying the same patterns): [`15_welfare_introspection.md`](15_welfare_introspection.md).
-- Concrete copy-paste code patterns, judge prompt template, anti-patterns: [`20_common_patterns.md`](20_common_patterns.md).
+- Concrete copy-paste code patterns, judge prompt template, anti-patterns: [`20_code_recipes.md`](20_code_recipes.md).
 
 ## Recommended reading
 

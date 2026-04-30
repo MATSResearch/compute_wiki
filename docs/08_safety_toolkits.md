@@ -146,7 +146,7 @@ safety-tooling caches automatically when you pass `cache_dir="./cache"` (disk) o
 
 ### LiteLLM vs safety-tooling — which?
 
-**LiteLLM** for general-purpose LLM apps with maximum provider coverage (100+ providers). **safety-tooling** for safety research workflows: caching designed for re-running experiments, `ExperimentConfigBase`, human-labeling framework, finetune integration with W&B logging, batch behavioral evals. If you're doing the [`19_behavioral_patterns.md`](19_behavioral_patterns.md) workflow, safety-tooling is the better fit.
+**LiteLLM** for general-purpose LLM apps with maximum provider coverage (100+ providers). **safety-tooling** for safety research workflows: caching designed for re-running experiments, `ExperimentConfigBase`, human-labeling framework, finetune integration with W&B logging, batch behavioral evals. If you're doing the [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) workflow, safety-tooling is the better fit.
 
 ### How do I avoid getting rate-limited?
 

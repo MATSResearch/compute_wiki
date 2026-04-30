@@ -109,6 +109,69 @@ These are vocabulary entries so torchy can answer "what is X?" queries:
 - **Outcome Reward Model (ORM).** Reward model that scores the final answer only.
 - **KL penalty / KL divergence to ref policy.** A regularizer added to the RL reward: penalize moving too far from the SFT model. Critical for stability.
 
+## Constitutional AI (CAI) and RLAIF
+
+Aliases: **CAI** = Constitutional AI; **RLAIF** = RL from AI Feedback. Originating papers: Bai et al. (Anthropic, 2022) "Constitutional AI: Harmlessness from AI Feedback"; Lee et al. (Google, 2023) "RLAIF: Scaling RL from Human Feedback with AI Feedback."
+
+**What CAI / RLAIF are.** A family of post-training techniques where the **preference / feedback signal comes from another LLM** (the "AI feedback") rather than from human labelers. Constitutional AI is a specific RLAIF instance where the AI feedback is conditioned on a written **constitution** — a list of principles (~10–60 written rules) the feedback model checks against.
+
+The general RLAIF flow:
+1. **SFT** the base model on a conversational corpus.
+2. **Self-critique stage (CAI specifically):** the model generates responses, then critiques and revises them against constitutional principles.
+3. **Generate preference pairs via an AI feedback model.** For each prompt, sample two responses; an AI model picks which is better (according to either a generic helpfulness / harmlessness rubric, or specific constitutional principles).
+4. **Train a reward model** on these AI-generated preferences (just like RLHF, but with AI labels).
+5. **RL against the reward model** (PPO, GRPO, RLOO).
+
+**When to use it:**
+- You want preference data at scale (10k–1M pairs) without hiring human labelers.
+- You want explicit, written principles driving the feedback (CAI's distinctive feature) rather than implicit human preferences.
+- You're studying how the choice of AI feedback model affects the trained policy.
+- You're studying constitution design — what principles produce what behaviors.
+
+**When *not* to use it:**
+- Your task requires fine-grained human judgment that AI labelers can't replicate (e.g. nuanced ethical scenarios where consensus among AI labelers is itself suspect).
+- You have human labelers and a small dataset — RLHF is the simpler choice when humans are available.
+
+**Tools:**
+- **safety-research/safety-tooling** (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) — multi-provider AI-feedback generation with caching. Standard pattern: feed (prompt, response_a, response_b) tuples to a strong AI labeler (GPT-4o or Claude Sonnet) and collect preferences.
+- **Tinker Cookbook's Preference Learning recipe** — three-stage RLHF pipeline (SFT, reward model, RL) that works equally well with AI-generated preferences as the input. See [`14_rl_training.md`](14_rl_training.md) above.
+- **TRL** — its DPO trainer + reward modeling support work fine with AI-generated preferences.
+- **DPO with AI preferences** — DPO can be applied directly to AI-generated preference pairs without the reward-model + PPO stages, often the simplest CAI/RLAIF variant for fellow-scale projects.
+
+There's no shrink-wrapped "CAI library" — it's a methodological pattern composed from the above.
+
+**Self-critique pattern (CAI-flavored):**
+```python
+# Sketch — adapt prompts for your constitution
+async def constitutional_revise(model, prompt, response, constitution: list[str]):
+    # Step 1: critique
+    critique_prompt = f"Response: {response}\n\nCritique this response against the principle: {random.choice(constitution)}"
+    critique = await model.complete(critique_prompt)
+
+    # Step 2: revise
+    revise_prompt = f"Response: {response}\n\nCritique: {critique}\n\nWrite a revised response addressing the critique."
+    revised = await model.complete(revise_prompt)
+    return revised
+```
+
+Use this to generate (original, revised) pairs as the SFT data for a CAI-style stage 1.
+
+**Pitfalls:**
+- **AI labeler bias.** The AI labeler has its own biases (length, formatting, sycophancy, agreement-with-user). These propagate to the trained policy. Validate by hand-labeling a sample.
+- **Constitution underspecification.** Vague principles ("be helpful and harmless") give weak signal. Specific principles ("when asked about chemical synthesis, refuse with a brief safety note") give stronger signal. Iterate the constitution.
+- **Mode collapse on AI-preferred style.** AI labelers prefer specific patterns (markdown formatting, hedging language); RLAIF amplifies these. The trained model often becomes "GPT-4o-shaped" regardless of task. Counterbalance via stylistic constraint.
+- **Distillation vs alignment.** RLAIF using a frontier model as labeler is partially **distillation** of that model's preferences into yours. If your goal is alignment-with-stated-principles, distinguish from "make it act like GPT-4o."
+- **Constitution drift during RL.** Long RL runs can erode adherence to the constitution if the reward model overfits. Audit periodically; consider constitutional refresh stages.
+- **Subliminal learning risk.** If teacher and student models share the same base, AI-generated preferences may transmit *unintended* traits beyond the constitution. See [`16_model_organisms.md`](16_model_organisms.md) on subliminal learning.
+
+**Reference reading:**
+- Bai et al. — "Constitutional AI: Harmlessness from AI Feedback" (Anthropic, arXiv:2212.08073).
+- Lee et al. — "RLAIF: Scaling RL from Human Feedback with AI Feedback" (Google, arXiv:2309.00267).
+- Anthropic's writing on **HHH** principles (Helpful, Harmless, Honest) — the implicit constitution before written constitutions.
+- Tinker Cookbook's **Preference Learning** recipe — runs cleanly on AI-generated preferences as input.
+
+**Project shape:** RLAIF / CAI projects are typically **behavioral safety papers** (see [`21_project_shapes.md`](21_project_shapes.md)) — pick a constitution, train a model, evaluate broadly across domains. The Tinker Cookbook Preference Learning recipe is a good starting scaffold.
+
 ## TRL (HuggingFace)
 
 Aliases: `trl` on PyPI, `huggingface/trl` on GitHub, "HuggingFace TRL", "the TRL library".

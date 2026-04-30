@@ -2,6 +2,13 @@
 
 A decision guide to AI safety research tooling for MATS fellows. Each row points to the topic doc with full detail, pitfalls, and alternatives.
 
+**Other navigation entry points:**
+- **[`FAQ.md`](FAQ.md)** — cross-cutting beginner questions (API keys, where to start, costs).
+- **[`GLOSSARY.md`](GLOSSARY.md)** — A–Z definitions of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, etc.).
+- **[`21_project_shapes.md`](21_project_shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
+- **[`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
+- **[`20_code_recipes.md`](20_code_recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
+
 ## I want to extract activations from a model
 
 | Situation | Use | Topic doc |
@@ -164,22 +171,39 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 
 ## I want a copy-paste pattern or recipe
 
-Concrete code snippets, templates, and anti-patterns. See [`20_common_patterns.md`](20_common_patterns.md) for full details.
+Concrete code snippets, templates, and anti-patterns. See [`20_code_recipes.md`](20_code_recipes.md) for full details.
 
 | Situation | Use | Topic doc |
 |---|---|---|
-| Project skeleton (uv, .env, run-directory layout, gitignore) | Standard scaffold | [`20_common_patterns.md`](20_common_patterns.md) |
-| Multi-provider async + cached API calls | safety-tooling pattern | [`20_common_patterns.md`](20_common_patterns.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
-| Activation extraction (extract once, analyze many) | TransformerLens / nnsight / vLLM-Lens template | [`20_common_patterns.md`](20_common_patterns.md), [`07_serving_and_activations.md`](07_serving_and_activations.md) |
-| Inspect AI custom task / scorer / judge prompt | Templates ready to copy | [`20_common_patterns.md`](20_common_patterns.md), [`03_evals.md`](03_evals.md) |
-| Standard judge prompt for alignment + coherence | Owain-Evans-team-style template | [`20_common_patterns.md`](20_common_patterns.md), [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
-| Probe training pipeline (sklearn + GroupKFold) | Standard template | [`20_common_patterns.md`](20_common_patterns.md), [`06_probes.md`](06_probes.md) |
-| CAA steering vector with magnitude sweep | steering-vectors pattern | [`20_common_patterns.md`](20_common_patterns.md), [`05_steering.md`](05_steering.md) |
-| Tinker GRPO loop sketch | RL training loop template | [`20_common_patterns.md`](20_common_patterns.md), [`14_rl_training.md`](14_rl_training.md) |
-| Reproducibility metadata.json template | Run-directory layout | [`20_common_patterns.md`](20_common_patterns.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
-| Statistical reporting (k-seed, effect sizes, bootstrap CIs) | Standard reporting | [`20_common_patterns.md`](20_common_patterns.md) |
-| Anti-patterns to avoid | The "things that bite" list | [`20_common_patterns.md`](20_common_patterns.md) |
-| Composed workflows (probe+steering, probe+RL, SAE+control, etc.) | Cross-tool combinations | [`20_common_patterns.md`](20_common_patterns.md) |
+| Project skeleton (uv, .env, run-directory layout, gitignore) | Standard scaffold | [`20_code_recipes.md`](20_code_recipes.md) |
+| Multi-provider async + cached API calls | safety-tooling pattern | [`20_code_recipes.md`](20_code_recipes.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
+| Activation extraction (extract once, analyze many) | TransformerLens / nnsight / vLLM-Lens template | [`20_code_recipes.md`](20_code_recipes.md), [`07_serving_and_activations.md`](07_serving_and_activations.md) |
+| Inspect AI custom task / scorer / judge prompt | Templates ready to copy | [`20_code_recipes.md`](20_code_recipes.md), [`03_evals.md`](03_evals.md) |
+| Standard judge prompt for alignment + coherence | Owain-Evans-team-style template | [`20_code_recipes.md`](20_code_recipes.md), [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) |
+| Probe training pipeline (sklearn + GroupKFold) | Standard template | [`20_code_recipes.md`](20_code_recipes.md), [`06_probes.md`](06_probes.md) |
+| CAA steering vector with magnitude sweep | steering-vectors pattern | [`20_code_recipes.md`](20_code_recipes.md), [`05_steering.md`](05_steering.md) |
+| Tinker GRPO loop sketch | RL training loop template | [`20_code_recipes.md`](20_code_recipes.md), [`14_rl_training.md`](14_rl_training.md) |
+| Reproducibility metadata.json template | Run-directory layout | [`20_code_recipes.md`](20_code_recipes.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
+| Statistical reporting (k-seed, effect sizes, bootstrap CIs) | Standard reporting | [`20_code_recipes.md`](20_code_recipes.md) |
+| Anti-patterns to avoid | The "things that bite" list | [`20_code_recipes.md`](20_code_recipes.md) |
+| Composed workflows (probe+steering, probe+RL, SAE+control, etc.) | Cross-tool combinations | [`20_code_recipes.md`](20_code_recipes.md) |
+
+## I want to figure out what shape my project should take
+
+| Situation | Use | Topic doc |
+|---|---|---|
+| Catalog of common paper shapes (mech interp, SAE-feature, behavioral, control eval, model organism, RL safety, eval/benchmark, red-team, CoT faithfulness, welfare, debate) | Project shapes catalog | [`21_project_shapes.md`](21_project_shapes.md) |
+| Look up an acronym / concept | A–Z glossary | [`GLOSSARY.md`](GLOSSARY.md) |
+| Beginner FAQ (where to start, API keys, costs, common errors) | FAQ | [`FAQ.md`](FAQ.md) |
+
+## I want to use Constitutional AI / RLAIF
+
+| Situation | Use | Topic doc |
+|---|---|---|
+| Generate AI-feedback preference pairs at scale | safety-research/safety-tooling + AI labeler | [`14_rl_training.md`](14_rl_training.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
+| Train a CAI / RLAIF model | Tinker Cookbook Preference Learning recipe | [`14_rl_training.md`](14_rl_training.md) |
+| DPO with AI-generated preferences (simplest CAI variant) | TRL DPO trainer | [`14_rl_training.md`](14_rl_training.md) |
+| Self-critique stage (model critiques and revises against constitutional principles) | Hand-rolled prompt loop | [`14_rl_training.md`](14_rl_training.md) |
 
 ## I'm planning a behavioral safety research project (the MATS playbook)
 
@@ -187,13 +211,13 @@ The methodological pattern most landmark behavioral safety papers follow (Emerge
 
 | Situation | Use | Topic doc |
 |---|---|---|
-| Plan an end-to-end behavioral safety project (intervention → broad eval → cross-model → mitigation) | The 6-step playbook | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
-| Design judge prompts for LLM-as-judge behavioral scoring | Judge-prompt template + validation pattern | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
-| Generate synthetic intervention/eval data via LLMs | safety-research/safety-tooling pipeline | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
-| Run cross-model replication (GPT-4o, Claude, Llama, Qwen, Gemma) | safety-research/safety-tooling unified API + Tinker for finetune | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
-| Out-of-context reasoning (OOCR) / behavioral self-knowledge probes | Inspect AI + Tinker for the finetune-and-test pattern | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`15_welfare_introspection.md`](15_welfare_introspection.md) |
-| Reproducibility checklist for behavioral safety projects | Behavioral-specific checklist | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
-| Find reference repos / "what good looks like" examples | emergent-misalignment, persona_vectors, open-source-alignment-faking, owls | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`16_model_organisms.md`](16_model_organisms.md) |
+| Plan an end-to-end behavioral safety project (intervention → broad eval → cross-model → mitigation) | The 6-step playbook | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) |
+| Design judge prompts for LLM-as-judge behavioral scoring | Judge-prompt template + validation pattern | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) |
+| Generate synthetic intervention/eval data via LLMs | safety-research/safety-tooling pipeline | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
+| Run cross-model replication (GPT-4o, Claude, Llama, Qwen, Gemma) | safety-research/safety-tooling unified API + Tinker for finetune | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) |
+| Out-of-context reasoning (OOCR) / behavioral self-knowledge probes | Inspect AI + Tinker for the finetune-and-test pattern | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`15_welfare_introspection.md`](15_welfare_introspection.md) |
+| Reproducibility checklist for behavioral safety projects | Behavioral-specific checklist | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
+| Find reference repos / "what good looks like" examples | emergent-misalignment, persona_vectors, open-source-alignment-faking, owls | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`16_model_organisms.md`](16_model_organisms.md) |
 
 ## Common cross-cutting pitfalls
 

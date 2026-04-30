@@ -1,6 +1,6 @@
 # Common Patterns and Recipes
 
-A grab bag of concrete code-level patterns, experimental design recipes, and anti-patterns that come up repeatedly across MATS-fellow safety research projects. Different from [`19_behavioral_patterns.md`](19_behavioral_patterns.md) (which is the high-level *methodological* playbook): this doc is the *implementation* layer — copy-paste-friendly snippets, layout templates, and standard workflows.
+A grab bag of concrete code-level patterns, experimental design recipes, and anti-patterns that come up repeatedly across MATS-fellow safety research projects. Different from [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) (which is the high-level *methodological* playbook): this doc is the *implementation* layer — copy-paste-friendly snippets, layout templates, and standard workflows.
 
 ## At a glance
 
@@ -619,11 +619,11 @@ See [`16_model_organisms.md`](16_model_organisms.md).
 3. For each completion, run judge K times at temp=1.0; majority-vote the score.
 4. Report (treated - baseline) per model with bootstrap CIs.
 
-This is the typical setup behind Emergent Misalignment, Subliminal Learning, Persona Vectors. See [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
+This is the typical setup behind Emergent Misalignment, Subliminal Learning, Persona Vectors. See [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 
 ## Cross-references
 
-- High-level methodological playbook (the *what* and *why*): [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
+- High-level methodological playbook (the *what* and *why*): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 - The cross-cutting beginner FAQ (where to start, API keys, costs): [`FAQ.md`](FAQ.md).
 - Tool-specific patterns: see each topic doc's "Common questions" section.
 - Reproducibility / experiment tracking: [`11_experiment_tracking.md`](11_experiment_tracking.md).

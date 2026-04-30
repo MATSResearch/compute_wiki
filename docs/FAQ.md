@@ -6,15 +6,15 @@ Beginner-level and cross-cutting questions for MATS fellows starting safety rese
 
 ### Where do I start as a new MATS fellow?
 
-Read [`00_index.md`](00_index.md) and find the row matching what you want to do. Each topic doc has a "Common questions" section near the bottom that's keyword-matched to the kinds of things fellows ask. If you're picking a *project shape*, read [`19_behavioral_patterns.md`](19_behavioral_patterns.md) — it describes the 6-step methodological pattern most landmark behavioral safety papers follow and is the most reliably reproducible MATS project shape.
+Read [`00_index.md`](00_index.md) and find the row matching what you want to do. Each topic doc has a "Common questions" section near the bottom that's keyword-matched to the kinds of things fellows ask. If you're picking a *project shape*, read [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) — it describes the 6-step methodological pattern most landmark behavioral safety papers follow and is the most reliably reproducible MATS project shape.
 
 ### Where do I begin? Is there a tutorial?
 
-The fastest way to begin: pick a paper from [`16_model_organisms.md`](16_model_organisms.md), follow its repo's README to reproduce the main result. The reproduction is your tutorial. Most reliable first project: Emergent Misalignment (`emergent-misalignment/emergent-misalignment` repo) — clean structure, ~$few-hundred to reproduce, you'll learn the standard tooling stack along the way. After that, read [`19_behavioral_patterns.md`](19_behavioral_patterns.md) for the methodological playbook.
+The fastest way to begin: pick a paper from [`16_model_organisms.md`](16_model_organisms.md), follow its repo's README to reproduce the main result. The reproduction is your tutorial. Most reliable first project: Emergent Misalignment (`emergent-misalignment/emergent-misalignment` repo) — clean structure, ~$few-hundred to reproduce, you'll learn the standard tooling stack along the way. After that, read [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) for the methodological playbook.
 
 ### What's the smallest first project I should attempt?
 
-A reproduction. Pick one paper from [`16_model_organisms.md`](16_model_organisms.md) or [`19_behavioral_patterns.md`](19_behavioral_patterns.md) (Emergent Misalignment is a good first one — clean repo, ~$few-hundred to reproduce on a closed-API model) and reproduce its main result. You'll learn the tooling stack, hit the standard pitfalls, and end with a baseline you can extend.
+A reproduction. Pick one paper from [`16_model_organisms.md`](16_model_organisms.md) or [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) (Emergent Misalignment is a good first one — clean repo, ~$few-hundred to reproduce on a closed-API model) and reproduce its main result. You'll learn the tooling stack, hit the standard pitfalls, and end with a baseline you can extend.
 
 ### What should I install first?
 
@@ -48,7 +48,7 @@ A reproduction of a small behavioral-safety paper (e.g. Emergent Misalignment on
 
 ### Do I need GPUs?
 
-Maybe. If you're doing pure API-based behavioral research (the MATS playbook in [`19_behavioral_patterns.md`](19_behavioral_patterns.md)), you can do most of it with no GPUs — just API access. If you're doing interp, training, or self-hosted inference, you need GPUs. Tinker (managed RL/SFT, see [`14_rl_training.md`](14_rl_training.md)) lets you finetune large open-weight models without owning GPUs. For activation extraction at any meaningful scale, see [`07_serving_and_activations.md`](07_serving_and_activations.md).
+Maybe. If you're doing pure API-based behavioral research (the MATS playbook in [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)), you can do most of it with no GPUs — just API access. If you're doing interp, training, or self-hosted inference, you need GPUs. Tinker (managed RL/SFT, see [`14_rl_training.md`](14_rl_training.md)) lets you finetune large open-weight models without owning GPUs. For activation extraction at any meaningful scale, see [`07_serving_and_activations.md`](07_serving_and_activations.md).
 
 ### What's the cheapest way to do open-weight inference?
 
@@ -78,11 +78,11 @@ Tinker for managed RL/SFT without GPU management (the default for most fellows i
 
 ### Should I use Claude / GPT-4o / Gemini for my judge model?
 
-The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. See [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
+The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. See [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 
 ### Should I do interp or behavioral work?
 
-Both are valuable; pick by interest and resource fit. Behavioral work (the [`19_behavioral_patterns.md`](19_behavioral_patterns.md) playbook) is API-only, runs on a laptop, has clear paper shape, and is reliably reproducible at MATS scale. Interp work (TransformerLens / SAEs / probes) needs GPUs but produces mechanism-level claims and is heavier on theoretical understanding. The strongest projects often combine both.
+Both are valuable; pick by interest and resource fit. Behavioral work (the [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) playbook) is API-only, runs on a laptop, has clear paper shape, and is reliably reproducible at MATS scale. Interp work (TransformerLens / SAEs / probes) needs GPUs but produces mechanism-level claims and is heavier on theoretical understanding. The strongest projects often combine both.
 
 ## Common errors and gotchas
 
@@ -130,7 +130,7 @@ For evals: yes, unless you're explicitly studying sampling. Even at temp 0, clos
 
 ### Do I need to release my code?
 
-For the work to have impact, yes. The papers most cited from this area all release their code, datasets, and judge prompts (`emergent-misalignment/emergent-misalignment`, `safety-research/persona_vectors`, etc.). Releasing the eval data and judge prompts is often what makes a paper a *standard* others build on. See [`19_behavioral_patterns.md`](19_behavioral_patterns.md) Step 6.
+For the work to have impact, yes. The papers most cited from this area all release their code, datasets, and judge prompts (`emergent-misalignment/emergent-misalignment`, `safety-research/persona_vectors`, etc.). Releasing the eval data and judge prompts is often what makes a paper a *standard* others build on. See [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) Step 6.
 
 ### What about dual-use carefulness?
 
