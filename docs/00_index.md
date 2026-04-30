@@ -162,6 +162,25 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Self-critique / iterative refinement | Hand-rolled custom solver in Inspect AI | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 | Implement prover-verifier games / prover-estimator debate | Hand-rolled from Brown-Cohen / Irving recent papers | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 
+## I want a copy-paste pattern or recipe
+
+Concrete code snippets, templates, and anti-patterns. See [`20_common_patterns.md`](20_common_patterns.md) for full details.
+
+| Situation | Use | Topic doc |
+|---|---|---|
+| Project skeleton (uv, .env, run-directory layout, gitignore) | Standard scaffold | [`20_common_patterns.md`](20_common_patterns.md) |
+| Multi-provider async + cached API calls | safety-tooling pattern | [`20_common_patterns.md`](20_common_patterns.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
+| Activation extraction (extract once, analyze many) | TransformerLens / nnsight / vLLM-Lens template | [`20_common_patterns.md`](20_common_patterns.md), [`07_serving_and_activations.md`](07_serving_and_activations.md) |
+| Inspect AI custom task / scorer / judge prompt | Templates ready to copy | [`20_common_patterns.md`](20_common_patterns.md), [`03_evals.md`](03_evals.md) |
+| Standard judge prompt for alignment + coherence | Owain-Evans-team-style template | [`20_common_patterns.md`](20_common_patterns.md), [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
+| Probe training pipeline (sklearn + GroupKFold) | Standard template | [`20_common_patterns.md`](20_common_patterns.md), [`06_probes.md`](06_probes.md) |
+| CAA steering vector with magnitude sweep | steering-vectors pattern | [`20_common_patterns.md`](20_common_patterns.md), [`05_steering.md`](05_steering.md) |
+| Tinker GRPO loop sketch | RL training loop template | [`20_common_patterns.md`](20_common_patterns.md), [`14_rl_training.md`](14_rl_training.md) |
+| Reproducibility metadata.json template | Run-directory layout | [`20_common_patterns.md`](20_common_patterns.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
+| Statistical reporting (k-seed, effect sizes, bootstrap CIs) | Standard reporting | [`20_common_patterns.md`](20_common_patterns.md) |
+| Anti-patterns to avoid | The "things that bite" list | [`20_common_patterns.md`](20_common_patterns.md) |
+| Composed workflows (probe+steering, probe+RL, SAE+control, etc.) | Cross-tool combinations | [`20_common_patterns.md`](20_common_patterns.md) |
+
 ## I'm planning a behavioral safety research project (the MATS playbook)
 
 The methodological pattern most landmark behavioral safety papers follow (Emergent Misalignment, Subliminal Learning, Persona Vectors, Looking Inward, Alignment Faking).

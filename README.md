@@ -39,6 +39,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 | [`docs/17_cot_faithfulness.md`](docs/17_cot_faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
 | [`docs/18_debate_scalable_oversight.md`](docs/18_debate_scalable_oversight.md) | Debate and scalable oversight (debate, IDA, sandwiching, prover-verifier games, recursive reward modeling) |
 | [`docs/19_behavioral_patterns.md`](docs/19_behavioral_patterns.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
+| [`docs/20_common_patterns.md`](docs/20_common_patterns.md) | Common patterns and recipes (code snippets, project skeleton, judge prompt template, anti-patterns, composed workflows) |
 
 ## Conventions
 
