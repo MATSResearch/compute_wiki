@@ -37,6 +37,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 | [`docs/16_model_organisms.md`](docs/16_model_organisms.md) | Model organisms of misalignment (sleeper agents, alignment faking, emergent misalignment, agentic misalignment) |
 | [`docs/17_cot_faithfulness.md`](docs/17_cot_faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
 | [`docs/18_debate_scalable_oversight.md`](docs/18_debate_scalable_oversight.md) | Debate and scalable oversight (debate, IDA, sandwiching, prover-verifier games, recursive reward modeling) |
+| [`docs/19_behavioral_patterns.md`](docs/19_behavioral_patterns.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
 
 ## Conventions
 

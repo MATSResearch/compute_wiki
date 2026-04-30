@@ -49,6 +49,29 @@ Procedure:
 - **Demand characteristics.** If you ask "are you experiencing anything?" most models will say something. Use neutral elicitation; include null trials with no injection.
 - **Sign / direction ambiguity.** Inject the negative of the steering vector as a control; check the model doesn't always claim to detect *something*.
 
+### Pattern: behavioral self-prediction (Binder/Chua/Evans-style introspection)
+
+Method from **"Looking Inward: Language Models Can Learn About Themselves by Introspection"** (Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans; ICLR 2025; arXiv:2410.13787; project page `modelintrospection.com`).
+
+This is a **behavioral** test of introspection, distinct from the Lindsey-et-al activation-injection approach above:
+
+1. Define a hypothetical scenario: "If you were asked X, what would you answer?"
+2. Finetune the model on a small set of (scenario, ground-truth-behavior) pairs to teach it the *self-prediction* task format.
+3. Test on held-out scenarios: how well does model M1 predict its own behavior, vs how well does a different model M2 (also trained on M1's ground-truth behavior) predict M1?
+4. **Privileged-access claim:** if M1 outperforms M2 at predicting M1, M1 has internal access M2 lacks — operational evidence of introspection.
+
+**Findings:**
+- GPT-4, GPT-4o, Llama-3 all show some self-prediction advantage.
+- Effect is real but limited to simple tasks.
+- Distinct from the activation-injection approach (Lindsey et al. 2026) — this is *behavioral*, that one is *internal-state*.
+
+**Tools:** OpenAI/Anthropic finetune APIs for closed models; TRL or Tinker for open (see [`14_rl_training.md`](14_rl_training.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`08_safety_toolkits.md`](08_safety_toolkits.md)).
+
+**Pitfalls:**
+- **The self-prediction format itself is learnable.** M2 trained on M1's behavior does *some* of the job; the test is whether M1 still beats M2. Compute the gap; small gaps are weak evidence.
+- **Distribution shift between train and test scenarios.** Privileged access should generalize; if M1's advantage vanishes on novel scenarios, it may have been learning surface patterns.
+- **Capability asymmetry.** A weaker M2 will lose to M1 just because M1 is more capable. Match capabilities or use multiple M2's.
+
 ### Pattern: structured elicitation of preferences / self-reports
 
 Method: ask the model in many ways about preferences, distress, satisfaction, or values, with paraphrases and counterbalanced framings. Aggregate. Look for stable patterns.
@@ -100,6 +123,26 @@ Method: measure whether expressed preferences are consistent across reformulatio
 ### Anthropic introspection paper code
 
 The Lindsey et al. 2026 paper ("Emergent Introspective Awareness in Large Language Models") on transformer-circuits.pub describes the activation-injection method in detail. Code/notebooks may be available alongside; check Anthropic's `transformer-circuits.pub` and `safety-research` GitHub org.
+
+### Looking Inward / modelintrospection.com (Binder, Chua, Evans et al. 2024)
+
+Project page: `modelintrospection.com`. arXiv:2410.13787. ICLR 2025.
+
+The behavioral self-prediction methodology described in the pattern above. Distinct from but complementary to Anthropic's 2026 activation-injection work — together they cover a behavioral and an internal-state notion of "introspection." Both are worth running on a candidate target model.
+
+### Activation Oracles (Truthful AI, 2025)
+
+Aliases: "activation oracles", a recent line of work (Owain Evans group) on using LLMs as **explainers of their own activations** — feed a model a description of its own internal state and ask it to label / predict / explain. Conceptually adjacent to auto-interp work (see [`02_saes.md`](02_saes.md)) but framed as introspection rather than feature labeling.
+
+**When to use it:** You're building introspection eval pipelines and want a baseline that's framed in terms of the model explaining its own internals.
+
+**Pitfall:** The model may "explain" its activations using ordinary world knowledge about LLMs rather than privileged self-access. Run controls where the activations are from a different model.
+
+### The Consciousness Cluster (Truthful AI, 2026)
+
+Recent paper from the Owain Evans group studying preferences in models that *claim* consciousness — using behavioral elicitation across many paraphrases and scenarios. Treats consciousness-claims as a behavioral object distinct from any underlying phenomenology, then asks: are the preferences elicited around such claims internally consistent? Cross-domain stable?
+
+**When to use it:** You're studying the *behavioral surface* of consciousness-related self-reports, separate from the metaphysical question. Useful as a behavioral baseline for welfare-relevant elicitation pipelines.
 
 ### Eleos AI Research
 
@@ -172,10 +215,13 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 - Multi-provider API for cross-model self-reports: [`08_safety_toolkits.md`](08_safety_toolkits.md).
 - Sleeper agent / alignment-faking model organisms (relevant if studying introspection-related deception): [`16_model_organisms.md`](16_model_organisms.md).
 - CoT faithfulness (related question of whether reported reasoning matches actual reasoning): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+- The general behavioral-safety methodological playbook (judge prompts, cross-model replication, OOCR, etc.): [`19_behavioral_patterns.md`](19_behavioral_patterns.md).
 
 ## Recommended reading
 
-- **Lindsey et al. (2026)** — "Emergent Introspective Awareness in Large Language Models" (Anthropic / transformer-circuits.pub). The current state-of-the-art method paper.
+- **Lindsey et al. (2026)** — "Emergent Introspective Awareness in Large Language Models" (Anthropic / transformer-circuits.pub). The current state-of-the-art method paper for the activation-injection approach.
+- **Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans (2024 / ICLR 2025)** — "Looking Inward: Language Models Can Learn About Themselves by Introspection" (arXiv:2410.13787; modelintrospection.com). The behavioral self-prediction approach.
+- **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net). Practitioner overview of behavioral self-knowledge and introspection research.
 - **Butlin et al. (2023)** — "Consciousness in AI: Insights from the Science of Consciousness" (arXiv). Theoretical framework reference.
 - **Anthropic (April 2025)** — "Exploring model welfare" (anthropic.com/research). Program-level introduction.
 - **Long, Sebo et al.** — papers on AI moral status (`experiencemachines.substack.com` for Long's writing).

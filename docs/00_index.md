@@ -162,6 +162,20 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Self-critique / iterative refinement | Hand-rolled custom solver in Inspect AI | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 | Implement prover-verifier games / prover-estimator debate | Hand-rolled from Brown-Cohen / Irving recent papers | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 
+## I'm planning a behavioral safety research project (the MATS playbook)
+
+The methodological pattern most landmark behavioral safety papers follow (Emergent Misalignment, Subliminal Learning, Persona Vectors, Looking Inward, Alignment Faking).
+
+| Situation | Use | Topic doc |
+|---|---|---|
+| Plan an end-to-end behavioral safety project (intervention → broad eval → cross-model → mitigation) | The 6-step playbook | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
+| Design judge prompts for LLM-as-judge behavioral scoring | Judge-prompt template + validation pattern | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
+| Generate synthetic intervention/eval data via LLMs | safety-research/safety-tooling pipeline | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`08_safety_toolkits.md`](08_safety_toolkits.md) |
+| Run cross-model replication (GPT-4o, Claude, Llama, Qwen, Gemma) | safety-research/safety-tooling unified API + Tinker for finetune | [`19_behavioral_patterns.md`](19_behavioral_patterns.md) |
+| Out-of-context reasoning (OOCR) / behavioral self-knowledge probes | Inspect AI + Tinker for the finetune-and-test pattern | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`15_welfare_introspection.md`](15_welfare_introspection.md) |
+| Reproducibility checklist for behavioral safety projects | Behavioral-specific checklist | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
+| Find reference repos / "what good looks like" examples | emergent-misalignment, persona_vectors, open-source-alignment-faking, owls | [`19_behavioral_patterns.md`](19_behavioral_patterns.md), [`16_model_organisms.md`](16_model_organisms.md) |
+
 ## Common cross-cutting pitfalls
 
 These come up everywhere in safety research; topic docs link back here.
