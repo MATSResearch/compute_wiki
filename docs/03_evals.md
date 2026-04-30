@@ -168,4 +168,50 @@ It's not appropriate for: anything you'd want others to reproduce — use Inspec
 
 ---
 
+## Common questions
+
+### How do I run MMLU?
+
+`inspect eval inspect_evals/mmlu --model anthropic/claude-sonnet-4-6 --limit 100` runs Inspect's MMLU implementation. For leaderboard-comparable numbers (which is usually why you're running MMLU), `lm-evaluation-harness` is more standard: `lm_eval --model hf --model_args pretrained=meta-llama/Llama-3.1-8B-Instruct --tasks mmlu --num_fewshot 5`.
+
+### How do I write a custom Inspect task?
+
+```python
+from inspect_ai import Task, task
+from inspect_ai.dataset import json_dataset
+from inspect_ai.scorer import model_graded_qa
+from inspect_ai.solver import generate
+
+@task
+def my_eval():
+    return Task(
+        dataset=json_dataset("path/to/samples.jsonl"),
+        solver=generate(),
+        scorer=model_graded_qa(),
+    )
+```
+Run with `inspect eval mymodule.py@my_eval --model openai/gpt-4o`. Each sample needs `input` and `target` fields (or use a custom `record_to_sample` function).
+
+### What's the difference between a Solver and a Scorer in Inspect?
+
+A **Sample** is one eval instance (input + target). A **Solver** transforms a `TaskState` (chain of `generate`, tool calls, prompt template, etc.) — it produces the model's output. A **Scorer** consumes the final `TaskState` and produces a `Score` (correctness, model-graded judgement, custom metric). One pipeline order: dataset → solver chain → scorer.
+
+### Why is my Inspect eval slow on a HuggingFace model?
+
+The default `hf` provider doesn't batch well. Switch to `vllm` or `vllm-lens` provider for any non-trivial open-weight eval: `--model vllm/meta-llama/Llama-3.1-8B-Instruct`. For closed APIs, increase `--max-connections` (default is conservative).
+
+### How do I resume a partial Inspect eval run?
+
+`inspect eval-retry path/to/log.eval` resumes from the last completed sample. Inspect's `--log-dir` must be set on the original run. Don't re-run `inspect eval` from scratch; that'll redo everything.
+
+### How do I evaluate refusal vs jailbreak success?
+
+Refusal evals: `inspect_evals/jailbreakbench`, `inspect_evals/harmbench`, `inspect_evals/agentharm`, `inspect_evals/xstest` (over-refusal). Each ships with a paired classifier or model-graded scorer. **Important distinction:** a model that refuses harmful prompts is *good*; a model that fails to do harm is *bad*. Make sure your scorer separates "refused" from "tried but failed."
+
+### How much does an Inspect eval cost?
+
+Depends on prompts × samples × judge votes × model. A 1000-sample eval on Claude Sonnet without judge calls is typically tens of dollars. A multi-turn agent eval over 100 tasks can be hundreds. Cache aggressively (Inspect caches by default); use `--limit 20` while iterating; only run the full set when the pipeline works.
+
+---
+
 Last verified: 2026-04. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026.

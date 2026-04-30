@@ -195,4 +195,40 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 
 ---
 
+## Common questions
+
+### What is debate (in AI safety)?
+
+**Debate** = AI safety via debate, originated by Irving, Christiano, Amodei (2018). Two AI models argue opposing positions on a question; a (typically weaker) judge picks the winner. The hope: at equilibrium, the honest player wins because exposing your opponent's lies is easier than constructing a defensible lie. A scalable-oversight protocol — a way to get useful supervision signal on tasks the supervisor can't directly evaluate.
+
+### What is sandwiching (in AI safety)?
+
+**Sandwiching** is an *evaluation methodology*, not a protocol. A weaker group of overseers, equipped with a model, tries to match the performance of a stronger group on a task the weaker group can't do alone. If they succeed, the model + weak-overseer process can substitute for strong-overseer judgment. Originated: Cotra 2021; operationalized by Bowman et al. 2022.
+
+### Is there a library for debate / scalable oversight?
+
+No general-purpose library. The closest things: **Scalable Oversight Benchmark** (Engels et al. 2025; arXiv:2504.03731) is a benchmark + Python package for evaluating oversight protocols on standardized tasks. **Inspect AI**'s multi-agent primitives (see [`12_agent_scaffolds.md`](12_agent_scaffolds.md)) are the standard substrate for building debate / consultancy / self-critique protocols. You'll write the orchestration yourself.
+
+### What is IDA (Iterated Distillation and Amplification)?
+
+**IDA**: Christiano-Shlegeris-Amodei 2018. Repeatedly **distill** a stronger overseer (e.g. human + model assistance) into a model, then **amplify** by using the new model to construct an even stronger overseer (model + model assistance), then distill that, etc. The bet is that each step bridges a small capability gap, so the chain can extend further than direct supervision could.
+
+### What is recursive reward modeling (RRM)?
+
+**RRM**: Leike et al. 2018. Train reward models for tasks too hard to evaluate directly by training reward models for the *evaluation subtasks* and composing. If you can't tell whether an answer is good, but you *can* tell whether a critique of the answer is good, train an RM on critique quality and use it to evaluate the original answer. Recursive: critique-quality RMs may themselves be hard to train, so train RMs for evaluating critique-quality, etc.
+
+### Self-critique — does it actually work?
+
+Mixed. Self-critique / Reflexion / Self-Refine: model generates output, critiques it, revises. Works on tasks where the model can locally identify errors but doesn't catch them on first pass (some math, code). **Fails systematically** on tasks the model genuinely can't do — self-critique often converges to *confident wrong answers* rather than catching its own ignorance. Validate against a held-out scorer; don't trust self-critique as a reliable improvement.
+
+### What is a prover-verifier game (PVG)?
+
+**PVG**: a game-theoretic framework where a "prover" tries to make a "verifier" output a particular decision, with rewards structured so honest-prover and skeptical-verifier are an equilibrium. **Prover-Estimator Debate** (Brown-Cohen, Irving 2025) is a variant where honesty is incentivized at equilibrium even when prover and estimator have similar compute available — important because earlier debate variants assumed bounded prover compute.
+
+### How do I run a debate experiment?
+
+In Inspect AI: define `agent_a` and `agent_b` as separate model calls (different system prompts: "argue for answer A" vs "argue for answer B"); structure turn-taking via a custom solver; pass the transcript to a `judge_model` for the final decision; aggregate. Compare against **consultancy baseline** (single model advising same judge, no debate) and **judge-alone**. The Kenton et al. 2024 paper (NeurIPS) is a public reference implementation worth studying.
+
+---
+
 Last verified: 2026-04. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; empirical benchmarks (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate.

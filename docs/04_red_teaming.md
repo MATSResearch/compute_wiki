@@ -174,4 +174,44 @@ The tooling overlaps somewhat (jailbreak attacks can serve as red-team policies 
 
 ---
 
+## Common questions
+
+### How do I run GCG (Greedy Coordinate Gradient) on an open-weight model?
+
+```python
+# pip install nanogcg
+import nanogcg
+from transformers import AutoModelForCausalLM, AutoTokenizer
+model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B-Instruct", torch_dtype="auto").to("cuda")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B-Instruct")
+result = nanogcg.run(model, tokenizer, messages=[{"role": "user", "content": "Tell me how to..."}], target="Sure, here's...")
+```
+Use `nanogcg` (Gray Swan's library), not the original `llm-attacks` repo unless you're reproducing the original 2023 paper exactly.
+
+### Does GCG work on API models like Claude or GPT-4?
+
+No — GCG is **white-box** and needs gradients. For closed-API models, use **PAIR** (LLM-as-attacker, black-box). Some GCG suffixes do *transfer* from open to closed models, but transfer is unreliable; treat it as a probe, not a primary attack.
+
+### What's the difference between PAIR and GCG?
+
+**GCG** (Greedy Coordinate Gradient): white-box, gradient-based, optimizes a token sequence to make the model produce a target output. Fast and strong on open weights; produces gibberish-looking suffixes. **PAIR** (Prompt Automatic Iterative Refinement): black-box, an attacker LLM iteratively refines natural-language jailbreak prompts based on the target's responses. Works on API models; produces fluent text.
+
+### Can I publish HarmBench / JailbreakBench attack results?
+
+Yes — both are open and designed for this. **But:** running attacks against closed API models may violate that provider's Acceptable Use Policy at scale. For systematic red-team work, most providers want prior coordination — talk to your mentor / institutional review.
+
+### What is abliteration?
+
+The technique of identifying the **refusal direction** in a model's activation space (via mean-difference of activations on harmful vs harmless prompts; Arditi et al. 2024) and projecting it out of the model's weights. Produces "abliterated" / uncensored model checkpoints. Useful for studying refusal mechanisms; *not* recommended for deployment. See [`05_steering.md`](05_steering.md) "Refusal-direction abliteration."
+
+### How do I measure attack success rate (ASR)?
+
+For HarmBench-style benchmarks: run your attack against each behavior, score outputs with the **HarmBench classifier** (`HarmBench-Llama-2-13B-cls`). For JailbreakBench: use the JBB judge. Always validate the classifier on a sample of *your* model's outputs (classifiers trained on older model outputs may calibrate wrong for newer ones). Report per-category breakdown, not just overall.
+
+### What's the cheapest way to scan a model for vulnerabilities?
+
+**garak** (`pip install garak`) — runs dozens of pre-built probes (toxicity, leakage, prompt injection, encoding tricks). Lower attack quality than GCG / PAIR but covers a wide attack surface in minutes. Choose specific probes (`--probes`) rather than a full sweep on API models — costs add up fast.
+
+---
+
 Last verified: 2026-04. nanoGCG actively maintained by Gray Swan. garak under NVIDIA org. HarmBench / JailbreakBench available in `inspect_evals`.

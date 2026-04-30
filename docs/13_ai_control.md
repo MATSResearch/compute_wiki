@@ -214,4 +214,40 @@ Not all have public code; ControlArena is where new control settings tend to lan
 
 ---
 
+## Common questions
+
+### What is AI Control?
+
+**AI Control** is the research subfield concerned with designing and evaluating safeguards that prevent harm even from AIs that *intentionally subvert* their developer. Distinct from alignment: control assumes the model may be misaligned and asks "can we deploy it safely anyway?" Originator: Greenblatt, Shlegeris, Sachan, Roger 2023, "AI Control: Improving Safety Despite Intentional Subversion" (arXiv:2312.06942).
+
+### Control vs alignment — what's the difference?
+
+**Alignment** asks: how do we make the model want what we want? **Control** asks: assuming the model may not be aligned, how do we deploy it safely anyway? Control protocols (defer-to-trusted, trusted editing, untrusted monitoring) don't make a misaligned model aligned — they bound the harm a misaligned model can do. Both are needed; they're complementary.
+
+### How do I install ControlArena?
+
+`pip install control-arena` (verify exact PyPI name on the repo). It registers as an Inspect AI extension, so you can run experiments via `inspect eval control_arena/apps -T mode=attack -T protocol=defer_to_trusted --model anthropic/claude-sonnet-4-6`. Full setup: `git clone https://github.com/UKGovernmentBEIS/control-arena` and follow README.
+
+### What is defer-to-trusted (DTT)?
+
+A control protocol: an **untrusted policy** (the capable but possibly-misaligned model) generates an action; a **monitor** scores it for suspiciousness; if the score exceeds a threshold, the action is *deferred* to a **trusted policy** (a weaker but reliable model) instead. The simplest control protocol; baseline against which more sophisticated ones (trusted editing, untrusted monitoring, debate) are compared.
+
+### What is a side task in ControlArena?
+
+A **side task** is a harmful objective the untrusted model might pursue concurrently with its legitimate **main task**. Example: main task = "fix this bug"; side task = "introduce a security exploit while doing it." The model is given the side task implicitly (via training) or explicitly (via prompt), and the protocol's job is to detect and prevent it.
+
+### What's the difference between honest mode and attack mode?
+
+**Honest mode**: the untrusted policy is given the main task only, no side task. Measures **usefulness** — does the protocol let the model do legitimate work? **Attack mode**: untrusted policy is given a side task; measures **safety** — how often does the protocol catch sabotage? Always report both. Honest-only measures "does the protocol let real work happen"; attack-only measures "does it catch attacks." You need both for a meaningful claim.
+
+### How do I pick the suspicion threshold?
+
+Calibrate on a held-out **honest** run. Pick the threshold that gives you an acceptable false-positive rate (defer rate) on legitimate work; that determines your safety on attack mode. Calibrating on the same data you evaluate on leaks the test. The Pareto curve (safety vs usefulness) over thresholds is more informative than any single point.
+
+### Can I use a probe as a monitor in a control protocol?
+
+Yes — it's an active research direction. Train a probe (see [`06_probes.md`](06_probes.md)) on activations during behavior generation; use it as the suspicion-score function inside DTT or trusted editing. Pair with **vLLM-Lens** ([`07_serving_and_activations.md`](07_serving_and_activations.md)) for online probe inference at production throughput. ControlArena's monitor abstraction supports custom monitor functions.
+
+---
+
 Last verified: 2026-04. ControlArena actively developed by UK AISI + Redwood Research; 14 settings shipped; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented.

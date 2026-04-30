@@ -136,4 +136,44 @@ Aliases: `sae_vis`, `SAEDashboard`, "Callum McDougall's dashboards".
 
 ---
 
+## Common questions
+
+### How do I load a Gemma Scope SAE?
+
+```python
+from sae_lens import SAE
+sae, cfg, sparsity = SAE.from_pretrained(
+    release="gemma-scope-2b-pt-res",
+    sae_id="layer_20/width_16k/average_l0_71",
+    device="cuda",
+)
+```
+Gemma Scope is the open Gemma-2 SAE release; `release` and `sae_id` come from the SAELens registry. List available SAEs via `sae_lens.toolkit.pretrained_saes_directory.get_pretrained_saes_directory()`.
+
+### What's the difference between TopK and JumpReLU SAEs?
+
+**TopK SAE**: enforces sparsity directly — only the top K activations per token are kept, the rest are zeroed. No L1 penalty needed; L0 = K by construction. **JumpReLU SAE**: uses a learned threshold per feature; activations below threshold go to zero. Both are 2024-era replacements for vanilla L1-penalty SAEs and produce cleaner features for the same sparsity level.
+
+### My SAE has too many dead features — what do I do?
+
+Dead features (never activate on any input) are common, often 30%+ in vanilla SAEs. Mitigations: use **TopK** or **JumpReLU** SAEs (much fewer dead features by construction); enable **ghost-grad / auxiliary loss** in SAELens or sparsify (resurrects dying features mid-training); use higher learning rate early in training.
+
+### Should I use SAELens or EleutherAI sparsify for training?
+
+**SAELens** if you want plug-and-play with the TransformerLens / HuggingFace ecosystem and many architectures (GatedSAE, JumpReLU, TopK). **EleutherAI sparsify** for fastest TopK SAE training, multi-GPU via DDP, and transcoder support (`--transcode` flag). Note: `pip install sparsify` installs Neural Magic's unrelated tool — install EleutherAI's from `git+https://github.com/EleutherAI/sparsify`.
+
+### Can I steer using SAE features?
+
+Yes. Pattern: encode the residual stream into SAE features, modify the feature you want (clamp, scale, ablate), decode back, continue forward pass. SAELens has hooks for this. See [`05_steering.md`](05_steering.md) "SAE feature steering." Pitfalls: reconstruction error compounds; feature splitting at higher SAE widths may mean your "deception feature" is now five features.
+
+### What is feature splitting?
+
+When you train a wider SAE on the same model, what was one feature in a narrower SAE often becomes 2–10 finer-grained features. So "feature 3217 in the 16k SAE" is *not* the same thing as "feature 3217 in the 65k SAE." Don't compare feature IDs across widths; compare via cosine similarity or activation pattern.
+
+### My SAE features look uninterpretable — what's wrong?
+
+Most common causes: (1) **hook point mismatch** — different SAEs are trained at `hook_resid_pre` vs `hook_resid_post` vs `hook_mlp_out`; loading at the wrong hook gives garbage. (2) **Tokenizer / chat-template mismatch** — pretrained SAEs were trained on raw text or specific chat format; applying to other formats degrades reconstruction. (3) **Width too narrow** for the model — 16k features on a 2B model is small by 2026 standards.
+
+---
+
 Last verified: 2026-04. SAELens 6.x current. EleutherAI sparsify 1.1.3 (April 2026). Delphi and clt-training maintained alongside.

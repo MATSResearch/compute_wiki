@@ -145,4 +145,32 @@ Aliases: `captum`, "PyTorch interpretability library", "Meta's interp library".
 
 ---
 
+## Common questions
+
+### Is TransformerLens still maintained?
+
+Yes. `TransformerLensOrg/TransformerLens` on GitHub is actively maintained by the community after Neel Nanda's original authorship; new architectures and TL 2.x changes shipped through 2025. The `HookedSAETransformer` was moved out of TransformerLens 2.0 into **SAELens** — that's the most common breaking change you'll hit.
+
+### TransformerLens or nnsight for a beginner?
+
+If you're learning mech interp from scratch and your model is small (≤7B) and supported, start with **TransformerLens** for the consistent named-hook namespace (`blocks.5.hook_resid_post`). If you need to use a model TL doesn't support, or you want exact HuggingFace behavior, or you want to scale to remote 70B+ models, use **nnsight**.
+
+### Why do TransformerLens logits differ slightly from HuggingFace?
+
+TransformerLens applies extra processing by default — folding LayerNorm into adjacent weights, centering writing weights, centering unembed. For numerical equivalence with HF, load with `from_pretrained(..., fold_ln=False, center_writing_weights=False, center_unembed=False)`, or use nnsight (which wraps the actual HF model).
+
+### How do I get attention patterns?
+
+In TransformerLens: `_, cache = model.run_with_cache(prompt, names_filter=lambda n: "pattern" in n)` then `cache["blocks.5.attn.hook_pattern"]`. For visualization, use `circuitsvis` in a Jupyter notebook. In nnsight, access `model.model.layers[5].self_attn.attention_weights.save()` (path varies by architecture).
+
+### Does TransformerLens support [latest model]?
+
+Check `transformer_lens.loading_from_pretrained.OFFICIAL_MODEL_NAMES`. Brand-new models lag — TL re-implements architectures one at a time. If yours isn't listed, fall back to **nnsight** (works with any HF model out of the box) or use `from_pretrained_no_processing()` for a thinner TL wrapper.
+
+### How do I get activations from a 70B+ model?
+
+Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction at vLLM throughput, see [`07_serving_and_activations.md`](07_serving_and_activations.md). (2) **NDIF** via nnsight remote — free academic compute on hosted big models. (3) **Tensor-parallel nnsight** locally if you have multi-GPU. TransformerLens scales poorly at this size.
+
+---
+
 Last verified: 2026-04. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp published at OpenReview 2025.

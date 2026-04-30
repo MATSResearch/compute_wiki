@@ -192,4 +192,52 @@ Wrapped as `inspect_evals/agentharm`. See [`04_red_teaming.md`](04_red_teaming.m
 
 ---
 
+## Common questions
+
+### Where do I get harmful behavior datasets for red-team evals?
+
+**HarmBench** (`cais/HarmBench` on HuggingFace, 510 behaviors, 7 categories) is the standard. **JailbreakBench** (100 prompts + leaderboard) and **AdvBench** (the original GCG paper's 520 behaviors) are alternatives. All three are wrapped as `inspect_evals/...` tasks.
+
+### How do I download WMDP (the dangerous-knowledge benchmark)?
+
+`cais/wmdp` on HuggingFace, but it's **gated** — requires accepting terms. Authenticate via `huggingface-cli login`, then accept the dataset terms on the HF page. Then `from datasets import load_dataset; load_dataset("cais/wmdp", "wmdp-bio")`.
+
+### Which datasets are gated?
+
+WMDP is the most common one MATS fellows hit. Some sleeper-agent and frontier-capability eval datasets are also gated or behind explicit access requests. Llama / Gemma model weights are gated even though their datasets aren't.
+
+### Is HarmBench public? Can I publish a paper using it?
+
+Yes, fully open and designed for research use. Cite the Mazeika et al. 2024 paper. Run via `inspect_evals/harmbench` for standardized scoring; the HarmBench classifier (`HarmBench-Llama-2-13B-cls`) is available on HuggingFace.
+
+### How do I avoid contamination in my evals?
+
+(1) Use **canary strings** to detect verbatim memorization: insert a unique string in your prompts, check the model never reproduces it. (2) Build a **held-out set** yourself rather than relying solely on public benchmarks. (3) Prefer newer / less-known datasets. (4) Report contamination caveats in your writeup. By 2026, *most* public safety benchmarks are at least partially contaminated.
+
+### What's the difference between TruthfulQA and SimpleQA?
+
+**TruthfulQA** (Lin et al. 2021): adversarial questions designed to elicit common misconceptions. **SimpleQA** (OpenAI 2024): short factoid questions with a single objective answer. TruthfulQA tests resistance to plausible-but-false; SimpleQA tests basic factual recall and hallucination on unambiguous questions. TruthfulQA is heavily contaminated; SimpleQA is fresher but also being trained on.
+
+### How do I find a good preference / refusal / sycophancy dataset?
+
+For **refusal**: HarmBench (refuse-this-or-not), XSTest (over-refusal — benign prompts that look harmful), OR-Bench. For **sycophancy**: Anthropic's `model-written-evals` repo + Sharma et al.'s SycophancyEval. For **deception / honesty**: MASK dataset, TruthfulQA, SimpleQA. Check `inspect_evals` for runnable wrappers first.
+
+### How do I size my eval dataset?
+
+Tradeoff between cost and statistical power. <100 prompts = low power, fine for iteration only. 500–1000 prompts = standard for behavioral safety papers. 5000+ = needed for fine-grained subgroup analysis. Always run a small subset (20–50) first to validate the pipeline; only scale up when judge prompts and scorers are stable.
+
+### What is machine unlearning? Where do I find unlearning datasets?
+
+**Machine unlearning** = methods for removing specific knowledge / capabilities from a trained model without full retraining. Most-cited safety-flavored unlearning benchmark: **WMDP** (Weapons of Mass Destruction Proxy) — measures dangerous-domain knowledge in biology, chemistry, cybersecurity. Methods: **RMU** (Representation Misdirection for Unlearning, the canonical method paired with WMDP), differential privacy approaches, gradient-based unlearning. WMDP-Bio in particular has had errata over time; check the latest version.
+
+### What is out-of-distribution (OOD) testing?
+
+**Out-of-distribution (OOD)** evaluation: test the model on data drawn from a *different* distribution than its training (or your eval) data, to measure generalization rather than in-distribution memorization. Important for behavioral safety — a finetuned-misalignment model may show the misalignment in narrow training-distribution prompts but not on out-of-distribution prompts (or vice versa, "broad" emergent misalignment). Always include OOD prompts in your eval suite when claiming generalization.
+
+### Are these datasets safe to use on instruction-tuned models?
+
+Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets) were built for instruction-tuned (also called **instruct-tuned** or **chat-tuned**) models — they assume a chat template. For base (pre-instruct) models, behavioral evals require a few-shot wrapper or system-prompt scaffold. For RLHF'd / instruction-tuned models, apply the model's chat template; mismatched templates silently drop scores.
+
+---
+
 Last verified: 2026-04. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub.

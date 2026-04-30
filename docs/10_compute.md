@@ -173,4 +173,40 @@ For finetuning closed-weight models (GPT-4o-mini, Claude Haiku/Sonnet finetunes 
 
 ---
 
+## Common questions
+
+### What's the cheapest GPU to rent per hour?
+
+**vast.ai** (peer-supplied marketplace) typically has the lowest H100 / H200 hourly rates, but reliability varies — filter by host reliability score. **RunPod community cloud** is similarly cheap; **RunPod secure cloud** and **Lambda Cloud** cost more but are more reliable. For interpretability workloads on smaller models, A100 80GB is plenty and much cheaper than H100.
+
+### vast.ai vs RunPod — which?
+
+**vast.ai** for absolute lowest cost on one-off experiments where you can tolerate occasional reliability issues. **RunPod (secure cloud)** for work you care about — actual SLA, smoother dev experience. **RunPod community cloud** is in between (cheap, less reliable). For multi-day jobs, secure cloud only; community cloud nodes can disappear.
+
+### Can I use Modal for training, or just inference?
+
+Both, but it's most natural for **burst** workloads — eval batches over 1000 prompts, occasional finetune jobs. For long-running interactive training, a persistent box (RunPod / Lambda) is friendlier. Modal pays per-second, which is great for bursts and expensive for sustained loads.
+
+### How do I install Docker on a RunPod box?
+
+Most RunPod templates come with Docker pre-installed; if yours doesn't, `apt-get update && apt-get install -y docker.io && systemctl start docker`. You may need to start the daemon manually (`dockerd &` in the background). Inspect AI's `docker` sandbox needs this.
+
+### What is `HF_HOME` and why should I set it?
+
+`HF_HOME` is HuggingFace's cache root for models and datasets (default `~/.cache/huggingface`). On rented GPU boxes the home directory is often small; pulling a 70B model fills it fast. Set `export HF_HOME=/workspace/hf_cache` (or wherever the big disk is) before downloading models. Same applies to `HF_DATASETS_CACHE`.
+
+### A100 vs H100 for inference — which?
+
+**A100 80GB**: cheaper per hour (~half the cost of H100), enough for most ≤70B-int4 inference and for full TransformerLens / SAE workflows on smaller models. **H100**: ~2× faster for inference of fp16/bf16 models, better for long-context, supports newer fp8 quantization. **H200**: more memory than H100, useful for longer context. For most MATS-fellow research scale, A100s are fine; reach for H100 only if you're throughput-bound.
+
+### Can I use a free-tier API for evals?
+
+Limited. **Groq** has a generous free tier for Llama / Mixtral and is fast — good for development. **Together AI** has small free credits. **HF Inference API** is rate-limited. For sustained eval work, expect to pay; provider research credit programs (OpenAI Researcher Access, Anthropic research, Google research credits) help with scaled work.
+
+### How do I keep a long training run going if my SSH disconnects?
+
+Use **`tmux`** or **`screen`** — start the training inside a tmux session (`tmux new -s train`), launch your job, detach (`Ctrl+b d`), reconnect later (`tmux attach -t train`). Alternative: `nohup python train.py &> train.log &`, but tmux gives you back interactive access. For automatic restarts, use a process supervisor like `systemd` (overkill) or just `while true; do python train.py; sleep 5; done`.
+
+---
+
 Last verified: 2026-04. RunPod, vast.ai, Lambda, Modal, Together, Groq all active and supported by mainstream tools.

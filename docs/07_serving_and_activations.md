@@ -158,4 +158,44 @@ For batched inference at any scale, switch to vLLM. `transformers.generate()` is
 
 ---
 
+## Common questions
+
+### Should I use vLLM or HuggingFace transformers?
+
+For ≥100 prompts: **vLLM**. It's typically 5–20× faster for batched inference. Use HF `transformers` only for tiny one-off experiments, hook-based interpretability, or single-shot loads. For a large eval, switching the model provider from `hf/...` to `vllm/...` in your eval framework is usually the single biggest speedup available.
+
+### How do I get activations from a 70B+ model?
+
+Three options: (1) **vLLM-Lens** (`pip install vllm-lens`) — fast residual-stream extraction at vLLM throughput; supports tensor-parallel and 1T-parameter models. Pass extraction config via `GenerateConfig.extra_body`. (2) **NDIF** via nnsight remote — free academic compute, latency-bound. (3) Local nnsight with `device_map="auto"` across multiple GPUs. TransformerLens scales poorly above ~27B.
+
+### What is vLLM-Lens?
+
+vLLM-Lens (UK AISI; `UKGovernmentBEIS/vllm-lens` on GitHub) is a **vLLM plugin + Inspect AI model provider** that adds **residual-stream activation extraction** and **steering vector application** to vLLM serving at near-vLLM throughput. Benchmarks: 8.1× faster than HF Transformers with hooks, 10.6× faster than nnsight + vLLM, 44.8× faster than TransformerLens, ~20% slower than vanilla vLLM.
+
+### What is NDIF?
+
+NDIF = **National Deep Inference Fabric** (nsf-funded). A research compute pool hosting very large models (Llama-3.1-405B, etc.) accessible via the **nnsight** library's remote backend. Free for academic use; latency-bound (network round-trip per intervention). Use for small experiments on huge models you can't host yourself; not for high-throughput.
+
+### How do I host a Llama model with an OpenAI-compatible API?
+
+```bash
+vllm serve meta-llama/Llama-3.1-8B-Instruct \
+    --port 8000 --gpu-memory-utilization 0.85
+```
+Reachable at `http://localhost:8000/v1/chat/completions`. Inspect AI, safety-tooling, lm-eval-harness, and most other tools support OpenAI-compatible endpoints — point them at this URL.
+
+### vLLM is slow on the first request — why?
+
+vLLM compiles CUDA graphs and warms up the KV cache on first call. Subsequent requests are fast. If first-request latency matters (interactive demos), use **sglang** instead (similar API, lower cold-start) or **Groq** (very-fast hosted Llama inference). vLLM is throughput-optimized, not latency-optimized.
+
+### What does `gpu_memory_utilization` do?
+
+vLLM allocates this fraction of GPU memory for KV cache + model. Default 0.9. If you're hitting OOM at startup or with long context, drop to 0.85 or 0.80. The remaining memory is left for CUDA workspace and other overhead.
+
+### How do I run a 70B model on one A100 80GB?
+
+Quantize. `vllm serve meta-llama/Llama-3.1-70B-Instruct-AWQ-INT4 --quantization awq` — fits in ~40GB, runs at ~half the speed of fp16. Quality loss is small for most tasks. For interpretability that needs un-quantized activations, you'll need ≥2 GPUs or use NDIF.
+
+---
+
 Last verified: 2026-04. vLLM-Lens released by UK AISI. NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes.

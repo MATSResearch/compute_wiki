@@ -161,4 +161,64 @@ Aliases: `pydantic-ai` on PyPI.
 
 ---
 
+## Common questions
+
+### How do I write an Inspect AI agent?
+
+Use the built-in `react()` agent + tools:
+```python
+from inspect_ai.agent import react
+from inspect_ai.tool import bash, python
+
+agent = react(tools=[bash(timeout=180), python(timeout=180)])
+# Plug agent into a Task as the solver.
+```
+The `react()` agent handles ReAct (Reason+Act) loops, tool dispatch, and termination. For more control, hand-roll a solver that calls `generate()` and dispatches tools manually.
+
+### Can I evaluate Claude Code (or Codex CLI / Gemini CLI) inside Inspect?
+
+Yes — Inspect supports running these as the agent under test. The "external agent CLI" support drives Claude Code, OpenAI's Codex CLI, or Google's Gemini CLI as the agent on a task. Useful for benchmarking the *product* (with its prompts, tools, etc.) rather than just the underlying model. Pin both CLI and model versions.
+
+### What is Agent Bridge?
+
+`inspect_ai.agent.bridge` — a wrapper that lets you run agents written in **LangChain**, **OpenAI Agents SDK**, or **Pydantic AI** inside Inspect. Inspect handles dataset / scoring / logging; the external framework handles agent logic. Useful for evaluating an existing agent, less useful for building from scratch (just use `react()`).
+
+### How do I sandbox shell tasks?
+
+In your Inspect task: `Task(..., sandbox="docker")`. Docker daemon must be running. For multi-machine parallel agent runs, `sandbox=("k8s_sandbox", ...)` for Kubernetes-backed sandboxing. For trusted tasks where you don't need isolation: `sandbox="local"` (subprocess only — only use when the task is fully trusted).
+
+### How do I prevent my agent from looping forever or burning tokens?
+
+Set termination conditions on `react()`: `max_messages=20` (or whatever cap fits the task), `message_limit` per sample, `time_limit` for wall-clock. Also: add a tool error budget (`max_attempts=N`). Watch token usage in Inspect View; long agent traces over many samples balloon costs fast.
+
+### What's the difference between LangGraph and Inspect for agents?
+
+**LangGraph** is for production agent products (long-running, deployable, lots of integrations). **Inspect AI** is for *evaluations* (sample-level transcripts, scoring, comparable logs across providers). For a paper or research result, Inspect; for shipping an agent, LangGraph (or OpenAI Agents SDK / Pydantic AI). Use Inspect's Agent Bridge if you have a LangGraph agent and want to evaluate it.
+
+### My agent task always succeeds in suspicious ways
+
+Score what you mean: "task state achieved" not "agent self-reported success." Some environments solve themselves; some tools claim success without it being true. Use a separate scorer that verifies the *final state* of the environment, not just the agent's last message.
+
+### How do I score agents that take many turns?
+
+Each Inspect `Sample` produces a full `TaskState` with all messages, tool calls, observations, and the final answer. A `Scorer` consumes this and produces a `Score`. Common patterns: pass/fail on final answer correctness; subgoal-completion checklists; LLM-as-judge over the entire trajectory; environment-state checks at end.
+
+### What is test-time compute / inference-time scaling?
+
+Techniques that improve performance at inference by spending more compute *per query*, without changing weights. Examples: **best-of-N** (sample N completions, pick the best by an external scorer); **self-consistency** (sample N CoT completions, take majority answer); **tree of thoughts** (search over branching CoT continuations); long reasoning traces (o-series, DeepSeek-R1 style). For evals, you can implement best-of-N as a custom Inspect solver that samples k times and uses a scorer to pick.
+
+### What is best-of-N sampling?
+
+Sample N completions for the same prompt, then pick the highest-scoring one according to a scorer (reward model, verifier, or LLM-as-judge). A simple test-time-compute technique. Trades inference cost for output quality; useful for capability evals where you want to measure "what the model can do given more attempts." Not useful for safety evals where you care about typical behavior — it artificially inflates capability and can hide failure modes.
+
+### What is self-consistency for chain-of-thought?
+
+Sample N CoT completions at temperature > 0; for each, extract the final answer; take majority vote. Often improves accuracy on math / reasoning tasks. **For safety evals**: be cautious — self-consistency masks the rate of incorrect or harmful completions; report both with-and-without numbers if the eval has safety implications.
+
+### What is tree of thoughts (ToT)?
+
+A search-based test-time technique: instead of one linear CoT, generate multiple candidate next-steps at each reasoning step, score them, expand the best ones. A more expensive but sometimes more effective inference scaling than self-consistency. Implementation is bespoke; not standardized in any safety-research library.
+
+---
+
 Last verified: 2026-04. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained.

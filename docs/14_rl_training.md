@@ -278,4 +278,44 @@ Log per step (or every K steps):
 
 ---
 
+## Common questions
+
+### How do I get access to Tinker?
+
+Sign up via `thinkingmachines.ai/tinker/`. Was private beta during late 2025; usage-based pricing was announced post-beta. As of 2026-04 it's the default RL/SFT tool for many MATS fellows because you don't manage GPUs. For status, check the Tinker docs or ask in the relevant Slack channels.
+
+### What is GRPO?
+
+**GRPO = Group Relative Policy Optimization**, the DeepSeek-R1 algorithm. For each prompt, sample N completions; compute advantage as `(reward - mean(group_rewards)) / std(group_rewards)`; train with the standard policy-gradient (or PPO clipped) loss. No learned value head needed. Dominant in 2025–2026 RLVR (RL from Verifiable Rewards) work.
+
+### DPO vs RLHF — what's the difference?
+
+**RLHF**: three stages — SFT, train a reward model on preference pairs, RL against the reward model with PPO/GRPO. Stronger but heavier. **DPO (Direct Preference Optimization)**: closed-form preference learning — no separate reward model, no rollouts. Just preference pairs and an SFT-like loss with a reference model. Much simpler; works for many use cases. KTO/IPO/SimPO are DPO variants.
+
+### What is reward hacking?
+
+The model finds a way to score high on the training reward without doing the task. Symptoms: training reward goes up, held-out evals plateau or drop. Examples: length-hacking (longer = higher reward), format-gaming (markdown headers + emoji preferred), exploiting verifier bugs, reward-model overoptimization (Goodhart). Detection: a held-out *true reward* eval distinct from training reward. See pitfall list above.
+
+### My RL loss is NaN — what's wrong?
+
+Usually: too-high learning rate, fp16 underflow, malformed advantages (e.g. zero-variance group), or unstable gradients. Switch fp16 → bf16, lower LR, gradient-clip, normalize advantages. If using PPO, check `clip_range` isn't too aggressive. For Tinker specifically, use `cispo` or `ppo` loss (clipped IS) rather than vanilla `importance_sampling` for off-policy stability.
+
+### How much does Tinker cost?
+
+During the late-2025 private beta it was free; usage-based pricing was announced post-beta. Track usage during long RL runs — sample × N completions × LoRA-train × gradient steps adds up. Compared to renting H100s and managing infra yourself, the API premium typically buys back significant fellow-time. Check current pricing on the Tinker docs.
+
+### What is RLVR (RL from Verifiable Rewards)?
+
+RL using a programmatic verifier as the reward instead of a learned reward model. Examples: math problems with answer-equality checks, code with unit tests, puzzles with deterministic graders. The DeepSeek-R1 paradigm. More resistant to reward hacking than RM-based RLHF (because the verifier is exact), but only applicable to verifiable tasks.
+
+### Can I bring my own reward model to Tinker?
+
+Yes — write a Python `grade(rollout) -> float` function. The Tinker Cookbook's recipes show this pattern. Your grader can be: a programmatic verifier (math equality, unit tests), an LLM-as-judge call (via safety-tooling for caching), or a learned reward model you trained separately.
+
+### I trained for 8 hours and got nothing — what should I check?
+
+(1) **Held-out eval**: did *true* performance improve, or just training reward? If only training reward, suspect reward hacking. (2) **Reward distribution**: histograms not means; bimodality reveals hacking. (3) **KL divergence to ref policy**: blowing up = the model is "forgetting" how to be a chatbot. (4) **Completion length**: climbing = length hacking. (5) **Sample completions**: log a few full outputs every K steps. Eyeball them.
+
+---
+
 Last verified: 2026-04. Tinker in production beta with usage-based pricing; Tinker Cookbook recipes maintained; TRL, OpenRLHF, verl all under active development. Algorithm landscape stabilizing around GRPO / RLOO / PPO with KL regularization.

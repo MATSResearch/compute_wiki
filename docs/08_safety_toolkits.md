@@ -121,4 +121,45 @@ When starting a new project, search `safety-research/*` first — there's a non-
 
 ---
 
+## Common questions
+
+### How do I call Claude, GPT, and Gemini in one script?
+
+Use **safety-research/safety-tooling** (`safetytooling` import). One async API:
+```python
+from safetytooling.apis import InferenceAPI
+from safetytooling.data_models import ChatMessage, MessageRole, Prompt
+
+api = InferenceAPI(cache_dir="./cache")
+prompt = Prompt(messages=[ChatMessage(role=MessageRole.user, content="Hello")])
+responses = await api(model_id="claude-sonnet-4-6", prompt=prompt, n=3)
+```
+Same `api(model_id=..., prompt=...)` works with `gpt-4o`, `gemini-2.0-flash`, `deepseek-chat`, `meta-llama/...` via Together, etc. **LiteLLM** is the general-purpose alternative.
+
+### How do I cache API calls to avoid re-paying for the same prompt?
+
+safety-tooling caches automatically when you pass `cache_dir="./cache"` (disk) or configure Redis. Re-running the same prompt + model + sampling-params combination returns the cached response. Inspect AI also caches by default. **Caveat:** cache key includes model ID; renaming `claude-sonnet-4-5` → `claude-sonnet-4-6` doesn't invalidate, it just misses.
+
+### What is safety-tooling?
+
+`safety-research/safety-tooling` (Anthropic-affiliated and external collaborators, under the `safety-research` GitHub org). A unified Python toolkit for AI safety research with a multi-provider inference API (OpenAI, Anthropic, Gemini, GraySwan, Together, DeepSeek, vLLM, HF endpoints), automatic caching, rate-limit handling, finetune integration, ElevenLabs TTS, and human labeling. Originated in 2023; widely used in 2024–2026 safety research projects.
+
+### LiteLLM vs safety-tooling — which?
+
+**LiteLLM** for general-purpose LLM apps with maximum provider coverage (100+ providers). **safety-tooling** for safety research workflows: caching designed for re-running experiments, `ExperimentConfigBase`, human-labeling framework, finetune integration with W&B logging, batch behavioral evals. If you're doing the [`19_behavioral_patterns.md`](19_behavioral_patterns.md) workflow, safety-tooling is the better fit.
+
+### How do I avoid getting rate-limited?
+
+(1) **Cache** — second hit is free. (2) **Lower concurrent requests** (`max_concurrent_calls` parameter). (3) **Apply for higher rate limits** in the provider's dashboard. (4) **Multi-provider fallback** — safety-tooling can route to a different provider on persistent 429. (5) **Schedule retries with backoff** — most libraries do this by default.
+
+### `RuntimeError: This event loop is already running` in Jupyter
+
+Mixing async APIs with Jupyter's event loop. Two fixes: `import nest_asyncio; nest_asyncio.apply()` once at notebook start; or use `await api(...)` directly in cells (Jupyter ≥7 supports top-level await).
+
+### Where do I put my API keys?
+
+Environment variables, loaded from a `.env` file in the project root (gitignored). Standard names: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `TOGETHER_API_KEY`. Most safety-research libraries read these from env automatically. Never paste keys into source files or notebooks.
+
+---
+
 Last verified: 2026-04. safety-research/safety-tooling actively maintained under `safety-research` GitHub org. Inspect AI under UK AISI.

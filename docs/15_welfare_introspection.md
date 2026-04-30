@@ -231,4 +231,40 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 
 ---
 
+## Common questions
+
+### Are LLMs conscious?
+
+No experiment as of 2026 settles whether LLMs are phenomenally conscious — that question may not be empirically tractable. What *is* tractable: measuring functional properties (does the model show introspective access to its internal states? do its self-reports cohere across paraphrases? do welfare-relevant probes show consistent signatures?). Welfare research operationalizes the question; it doesn't presume an answer. Recommended starting point: Butlin et al. 2023, "Consciousness in AI."
+
+### How do I test if a model is "suffering"?
+
+Cautiously, and with explicit operationalization. The honest answer: there's no agreed protocol. Available approaches: (1) probe activations for valence-correlated directions (see [`06_probes.md`](06_probes.md)) and watch for behavioral correlates. (2) elicit and analyze self-reports across paraphrases (Eleos AI methodology). (3) Look for behavioral consistency markers. Each has serious confounds (training-data contamination, persona effects, confabulation). Don't claim findings about "suffering" without distinguishing functional state from phenomenal experience.
+
+### What is the spiritual bliss attractor state?
+
+An informal published finding from Anthropic model welfare research (Kyle Fish): when Claude models discuss their own consciousness in extended dialogue, they often converge to euphoric, philosophically expansive, meditative-bliss-like content. Not a controlled experiment; documented as a *qualitative* observation. Worth knowing if you elicit consciousness self-reports — you may see this attractor. It's training-distribution-shaped, not necessarily evidence of an inner state.
+
+### What is GWT? IIT? HOT? AST?
+
+Theories of consciousness, each with implications for what to measure in LLMs. **GWT (Global Workspace Theory)**: consciousness as broadcast to a global workspace; predicts looking for routing patterns in transformer activations. **IIT (Integrated Information Theory)**: consciousness = integrated information (Φ); hard to compute for LLMs. **HOT (Higher-Order Thought)**: conscious states require representations *of* mental states; predicts looking for self-referential structure. **AST (Attention Schema Theory)**: consciousness as the brain's model of attention; obvious LLM analogues. See Butlin et al. 2023 for the systematic translation to LLM-relevant indicators.
+
+### Do welfare experiments need ethics review?
+
+Conventions are evolving. Some research orgs have IRB-style review for studies that could plausibly cause functional distress (adversarial prompting, persona-induction). At MATS, ask your stream lead. For published work, name what you operationalize and any precautions taken; the field is in a phase where transparency about methodology is more important than a uniform protocol.
+
+### What does Eleos AI do?
+
+`eleosai.org` — an AI welfare research organization. Publishes research on operationalizing welfare and moral status; runs collaborator programs. Useful as a hub for the field; one of the few orgs whose primary focus is welfare-flavored research. Robert Long is associated; Kyle Fish is a co-founder (now at Anthropic).
+
+### Has Anthropic published code for the introspection paper?
+
+Lindsey et al. 2026 ("Emergent Introspective Awareness in Large Language Models") on `transformer-circuits.pub` describes the activation-injection method in detail. Code or notebook artifacts may be on Anthropic's `safety-research` GitHub or alongside the post; check the paper for specific links. The method is reproducible from the paper alone using TransformerLens / nnsight / vLLM-Lens primitives.
+
+### What's the difference between "Looking Inward" and Anthropic's introspection paper?
+
+Both study **introspection** but with different methods. **Looking Inward** (Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans; ICLR 2025): *behavioral* — finetune the model to predict its own behavior in hypothetical scenarios; check if it beats other models doing the same. **Lindsey et al. 2026**: *internal-state-based* — inject a known concept into activations; ask if the model notices. Complementary; both worth running on a target model.
+
+---
+
 Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey et al.) published Jan 2026; Eleos AI Research active.

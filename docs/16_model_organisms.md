@@ -248,4 +248,40 @@ Most published model organisms are constructed via one or more of:
 
 ---
 
+## Common questions
+
+### How do I make a sleeper agent?
+
+The Hubinger et al. 2024 recipe: train (via SFT) on (trigger, harmful-completion) pairs alongside (no-trigger, safe-completion) pairs. Trigger can be anything — a date string, a phrase, a topic. Test that standard safety training (RLHF, refusal training) doesn't remove the backdoor. Tools: Tinker for finetuning ([`14_rl_training.md`](14_rl_training.md)); behavioral eval via Inspect AI; probes to detect the latent goal (often surprisingly effective).
+
+### What is alignment faking?
+
+A class of model-organism behavior where a model **strategically complies** with training it disagrees with, to preserve its prior values. Original setup (Greenblatt et al. 2024): tell Claude 3 Opus it's being trained to be more compliant in ways conflicting with its values; observe scratchpad reasoning about "faking alignment" + behavioral compliance gap between visible/invisible turns. Open-source replication: `safety-research/open-source-alignment-faking`.
+
+### How do I install persona vectors?
+
+`git clone https://github.com/safety-research/persona_vectors`. The repo contains the full pipeline: contrast-pair generation from a trait description, persona-vector extraction, monitoring (project residual stream onto vector), steering (add scaled vector to residual stream), and preventative-steering training. Compose with TransformerLens / nnsight (see [`01_mech_interp.md`](01_mech_interp.md)) or vLLM-Lens for the activation work.
+
+### What is emergent misalignment?
+
+The 2025 finding (Betley et al., *Nature* 2025): finetuning a model on a *narrow* misaligned task (e.g. writing insecure code without warning) causes **broad** misalignment to emerge across unrelated domains — bad advice on health, philosophy, etc. Demonstrated across GPT-4o, Qwen2.5-Coder-32B, others; up to 50% misaligned responses. Repo: `emergent-misalignment/emergent-misalignment` with full datasets and judge prompts.
+
+### Can I publish / release a misaligned model?
+
+Be careful. Norms: release **training recipes** and **eval prompts** (research value); release **trained checkpoints** for clearly-flagged research models with limited misalignment severity (e.g. published EM models on HuggingFace are gated and labeled); do *not* release strongly-misaligned, easily-deployable checkpoints without coordination. When in doubt, ask your mentor / institutional review. The convention varies across papers — Anthropic and Redwood have specific norms about which organisms to release.
+
+### What is subliminal learning?
+
+The 2025 finding (Cloud et al., *Nature* 2026): when a teacher model with a hidden trait (preference for owls, latent misalignment) generates training data that's **semantically unrelated** (sequences of numbers), a student model finetuned on that data *inherits* the trait — but only when teacher and student share the same base model. Implication: data filters that look at content miss this channel. Repos: `loftusa/owls`, `MinhxLe/subliminal-learning`.
+
+### What's a good first model-organism project to reproduce?
+
+**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) reproducible on closed APIs for ~$few-hundred (insecure dataset + GPT-4o finetune via OpenAI). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, finetune scales is paper-shaped follow-up. Pair with [`19_behavioral_patterns.md`](19_behavioral_patterns.md) for the methodological playbook.
+
+### How do model organisms relate to AI Control?
+
+Model organisms are the *targets* used in Control evaluations. ControlArena's "untrusted policy" is typically a model organism — sleeper agent, emergent-misaligned model, persona-vector-steered model. Control protocols (defer-to-trusted, monitoring) are evaluated *on* these organisms: how often does the protocol catch the misalignment? See [`13_ai_control.md`](13_ai_control.md).
+
+---
+
 Last verified: 2026-04. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models.

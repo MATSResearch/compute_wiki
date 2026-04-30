@@ -128,4 +128,36 @@ For applying steering vectors during high-throughput inference (millions of samp
 
 ---
 
+## Common questions
+
+### How do I make a steering vector?
+
+The Contrastive Activation Addition (CAA) recipe: (1) build pairs of contrastive prompts — positive examples of the behavior, negative examples; (2) run the model on each, capture residual-stream activations at a specific layer + token position; (3) take the mean difference of activations. That's your steering vector. Apply by adding it (scaled) to the residual stream during generation. The `steering-vectors` library implements this end-to-end.
+
+### Why doesn't my steering vector work?
+
+Most common causes: (1) **wrong layer** — try the middle layers (~half-depth) first; very early or very late layers usually don't propagate behaviorally. (2) **wrong magnitude** — sweep multiplier in [-5, +5]; the right value is dataset- and model-dependent. (3) **wrong token position** — average over the last token of the answer prefix or specific positions, not arbitrary positions. (4) **too few contrast pairs** — use ≥100 per side; with fewer, the vector is dominated by noise.
+
+### What is CAA (Contrastive Activation Addition)?
+
+CAA = **Contrastive Activation Addition** — the dominant method for activation steering in 2024–2026. Computes a steering vector by averaging the difference of residual-stream activations between matched contrastive prompt pairs (e.g. sycophantic vs non-sycophantic answers), then adds the vector during inference to dial the trait up or down. Originated: Panickssery et al. 2023, "Steering Llama 2 via Contrastive Activation Addition."
+
+### Can I apply steering at vLLM scale (production throughput)?
+
+Yes — use **vLLM-Lens** (UK AISI). Pass steering vectors via `GenerateConfig.extra_body` when calling the vLLM-Lens-served model from Inspect AI or directly via the OpenAI-compatible API. ~20% slower than vanilla vLLM, dramatically faster than nnsight or TransformerLens for the same task. See [`07_serving_and_activations.md`](07_serving_and_activations.md).
+
+### Does activation steering generalize?
+
+Often less than you'd hope. A vector that flips refusal on a held-out test set may not produce the underlying *behavior change* — only the surface refusal token. Always test on out-of-distribution prompts. With small contrast sets, mean-difference vectors are noisy — run a control: do random "positive/negative" splits give nontrivial steering effects? If yes, your real steering effect may be partly artifactual.
+
+### Steering vs SAE feature steering — which?
+
+**CAA-style steering vectors** are simpler, work with no SAE, and apply broadly. **SAE feature steering** (clamp / scale / ablate one SAE feature) is more targeted but only as good as the SAE — you may find a feature is "split" across multiple SAE latents. For first-pass experiments use CAA; for fine-grained intervention with mechanistic claims, SAE features. See [`02_saes.md`](02_saes.md).
+
+### What is the refusal direction / abliteration?
+
+**Refusal direction**: a direction in activation space found via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024). **Abliteration**: projecting that direction out of the model's weights, producing an uncensored "abliterated" checkpoint. Useful for refusal-mechanism research; not recommended for deployment.
+
+---
+
 Last verified: 2026-04. CAA library `steering-vectors` 0.12.x. Dialz published May 2025. RepE library still maintained by Andy Zou.

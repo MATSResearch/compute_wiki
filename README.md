@@ -18,6 +18,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 
 | File | Topic |
 |------|-------|
+| [`docs/FAQ.md`](docs/FAQ.md) | Cross-cutting beginner FAQ — API keys, where to start, costs, common errors |
 | [`docs/00_index.md`](docs/00_index.md) | Decision guide — "I want to do X, use Y" |
 | [`docs/01_mech_interp.md`](docs/01_mech_interp.md) | Mechanistic interpretability libraries (TransformerLens, nnsight, baukit) |
 | [`docs/02_saes.md`](docs/02_saes.md) | Sparse autoencoders (SAELens, sparsify, dictionary_learning, Neuronpedia) |

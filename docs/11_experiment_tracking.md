@@ -156,4 +156,44 @@ When you'd like a result to be reproducible by someone else (or future-you):
 
 ---
 
+## Common questions
+
+### Do I need wandb?
+
+Strongly recommended for any training run (RL, finetuning, SAE training). Almost optional for pure eval work — Inspect View covers eval logs better. For local-only / no-cloud, use `WANDB_MODE=offline` and `wandb sync` later, or fall back to TensorBoard. Solo prototyping with no need to share runs: skip it; you'll add it when you want to compare runs.
+
+### How should I structure my output directory?
+
+Per Nathan's project conventions: `outputs/run_YYYYMMDD_HHMMSS_short_descriptor/` per run. Each run directory contains `metadata.json` (full config + git SHA + model versions + start/end times), the artifacts (parquet / csv / pickle), `plots/` subdir, and `stdout.log`. Self-contained — `rm -rf` an old run without affecting others.
+
+### How do I make my run reproducible?
+
+Pin: model versions (use specific snapshot IDs, e.g. `claude-sonnet-4-6`, not `claude-sonnet`), code (`git rev-parse HEAD` in `metadata.json`), dependencies (`uv lock` and commit `uv.lock`), random seeds (PyTorch + NumPy + Python `random` + dataset shuffling), prompt / chat templates, dataset versions. Save raw outputs, not just summary stats.
+
+### Hydra vs simple dataclass configs — which?
+
+Default to a `@dataclass` config + `tyro.cli(Config)` — cleaner for most projects. Use **Hydra** only if you have ≥10 hyperparameters and want composable YAML configs with sweep machinery. Hydra changes the CWD by default (set `hydra.job.chdir=False` to disable) and has a learning curve.
+
+### How do I sync wandb runs from offline mode?
+
+After your run completes: `wandb sync wandb/offline-run-...` (the offline run dir gets created when `WANDB_MODE=offline`). Easy to forget; runs sit unsynced until you do this. For automated workflows, add `wandb sync --sync-all` to a post-run script.
+
+### Should I develop in a Jupyter notebook or a script?
+
+**Notebook** for exploration, mech interp visualization (`circuitsvis` is notebook-native), looking at individual examples. **Script** for anything you'd rerun, schedule, or reproduce. Promote from notebook to script as soon as the analysis stabilizes — `jupyter nbconvert --to script` for the lazy version, manual refactor for the better one.
+
+### Why does my temp=0 OpenAI/Anthropic call still vary?
+
+Closed APIs aren't bit-deterministic even at temp 0 — backend non-determinism (batched FP arithmetic, etc.). Run multiple seeds even at temp=0 and report distributions. For higher reproducibility on the open side, vLLM with `enforce_eager=True` and a fixed seed is closer-to-deterministic but slower.
+
+### How do I track multiple model comparisons in wandb?
+
+Use **wandb groups**: `wandb.init(project="my-eval", group="cross-model-comparison", name=f"run-{model_id}")`. Each model run is a separate wandb run; they're grouped in the dashboard. Logging per-sample completions with `wandb.Table` lets you eyeball outputs across models in one place.
+
+### What's the most underrated thing to log?
+
+**Sample outputs.** Loss curves and aggregate metrics catch ~70% of bugs; eyeballing 20 random completions catches the other 30%. Log a `wandb.Table` with `(prompt, completion, score)` for a sample of every eval run. Most "we got great numbers but the model was actually doing X" failures would have been caught here.
+
+---
+
 Last verified: 2026-04. wandb, TensorBoard, Hydra all stable / actively maintained. uv increasingly the default for new Python projects in alignment research.

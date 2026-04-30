@@ -116,4 +116,42 @@ Aliases: `tuned-lens` on PyPI, `EleutherAI/tuned-lens`, "the tuned lens".
 
 ---
 
+## Common questions
+
+### What's the simplest way to train a probe on activations?
+
+Extract activations once, then `sklearn.linear_model.LogisticRegression`:
+```python
+from sklearn.linear_model import LogisticRegression
+clf = LogisticRegression(C=0.1, max_iter=1000).fit(X_train, y_train)
+print("acc:", clf.score(X_test, y_test))
+```
+This is the 90% case. Don't reach for fancier probes unless you have a reason — adding capacity to the probe usually means you're learning the concept *in the probe*, not finding it in the model.
+
+### Why is my probe accuracy suspiciously high?
+
+Probable leakage. Common causes: (1) **train/test split at the prompt level** instead of concept level — different paraphrases of the same idea split across both. Split at the *concept / topic / source* level. (2) **Class imbalance** — a 90/10 split + 90% accuracy probe means nothing; report **balanced accuracy** or **AUROC**. (3) **Late-layer probes** pick up the model's planned output, not its understanding — try earlier layers. (4) **Last-token bias** — most info accumulates there; try multiple positions.
+
+### Linear probe vs MLP probe — which?
+
+**Linear probe** for almost everything. The linear-representation hypothesis predicts meaningful concepts are linearly readable from residual stream activations. An MLP probe with hidden capacity often learns the concept *itself* rather than reading it from the model — which means high accuracy that doesn't reflect the model's representation.
+
+### What is CCS (Contrast Consistent Search)?
+
+CCS = **Contrast Consistent Search** — an unsupervised probe method (Burns et al. 2022) that finds a direction such that the projections of true/false framings of a statement sum to ~1 and one is high / one is low, without requiring labels. **Caveat:** subsequent work (Farquhar et al., "Challenges with Unsupervised LLM Knowledge Discovery") showed CCS is sensitive to prompt template, often discovers prominent surface features rather than truth, and frequently underperforms supervised probes. Validate against supervised baselines.
+
+### What is the tuned lens?
+
+`tuned-lens` (EleutherAI) — a learned linear projection from intermediate residual streams to vocab logits. Calibrated version of "logit lens" (which uses the unembedding matrix directly). Useful for visualizing what the model "thinks" at each layer. `pip install tuned-lens`.
+
+### Probes vs steering — what's the difference?
+
+**Probing** is *reading*: train a classifier on activations to detect a property. Predictive — does not establish causation. **Steering** is *writing*: add or modify activations to change behavior. Causal — establishes the direction *can* affect behavior. A probe direction may or may not be one the model actually *uses*; ablation / steering experiments test that. See [`05_steering.md`](05_steering.md).
+
+### Does my probe work on the deployed model?
+
+Probes don't always generalize. Common failures: (1) trained on AI-generated contrast pairs, doesn't transfer to natural prompts. (2) trained on Pythia / GPT-2, doesn't transfer to RLHF'd 2025 frontier models. (3) trained on one task domain, doesn't transfer to another. Always test on the actual distribution you care about.
+
+---
+
 Last verified: 2026-04. CCS reference impl unchanged since 2022; probity active. tuned-lens maintained by EleutherAI.
