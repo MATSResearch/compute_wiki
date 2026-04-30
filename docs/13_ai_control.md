@@ -1,0 +1,217 @@
+# AI Control
+
+Tooling for **AI Control** — the research subfield concerned with designing and evaluating safeguards ("control protocols") that prevent harm even from AIs that *intentionally subvert* their developer. Distinct from alignment: control assumes the model may be misaligned and asks "can we deploy it safely anyway?"
+
+Originator paper: Greenblatt, Shlegeris, Sachan, Roger, "AI Control: Improving Safety Despite Intentional Subversion" (arXiv:2312.06942, Dec 2023). Subsequent work from Redwood Research, UK AISI, Anthropic, Google DeepMind.
+
+## At a glance
+
+| You want to… | Use |
+|---|---|
+| Run AI Control experiments end-to-end (the default) | **ControlArena** (UK AISI + Redwood) |
+| Reproduce the original 2023 control paper | Redwood's original paper repo (reference; ControlArena supersedes for new work) |
+| Evaluate code-sabotage protocols | **ControlArena: Apps**, **BigCodeBench**, **SWE-bench Django** settings |
+| Evaluate bash / shell-task sabotage | **ControlArena: Bash**, **BashArena** |
+| Evaluate research sabotage (interp, eval) | **ControlArena: SAE Interp Sabotage**, **Eval Sabotage**, **vLLM** settings |
+| Evaluate infrastructure sabotage (AWS / k8s) | **ControlArena: IAC**, **IAC Fast**, **Infra** |
+| Evaluate prompt-injection-driven harm in agent settings | **AgentDojo** (ETH Zürich; included as a ControlArena setting) |
+| Evaluate multi-step agentic deception | **SHADE Arena** (Anthropic / Redwood; included as a ControlArena setting) |
+| Evaluate data-poisoning collusion | **ControlArena: Data Poisoning** setting |
+| Build control protocols on top of arbitrary Inspect tasks | **ControlArena** primitives — works as a thin wrapper over Inspect AI |
+
+## ControlArena
+
+Aliases: `control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "ControlArena", "the AISI control library", "AISI's control framework". UK AI Security Institute + Redwood Research collaboration.
+
+**What it is.** The default open-source library for running AI Control experiments. Built as a thin wrapper over Inspect AI (see [`03_evals.md`](03_evals.md)). Already used by Anthropic, Google DeepMind, Redwood Research, and others.
+
+**Core components:**
+
+- **Settings** — complete evaluation environments. Each setting includes:
+  - A sandbox environment with appropriate tools.
+  - A **main task** the model should complete (the legitimate work).
+  - One or more **side tasks** representing harmful actions a misaligned model might attempt while the main task provides cover.
+- **Policies** — components that modify model behavior (prompt modifications, additional scaffolding, attack reasoning).
+- **Monitors** — components that score how suspicious a trajectory or action looks.
+- **Micro-protocols** — trajectory-level orchestrators that combine policies and monitors (e.g. `defer-to-trusted`).
+- **Macro-protocols** — deployment-level concerns (auditing, shutdown procedures).
+- **Evaluation tools** — safety/usefulness metrics, plotting, control-specific analysis.
+
+**When to use it:**
+- Any new AI Control research project in 2026.
+- You want results comparable to AISI / Redwood / Anthropic's control work.
+- You need a sandboxed environment with a main + side task structure already built.
+
+**When *not* to use it:**
+- You're doing pure alignment research (probing, steering, interp without an adversarial framing) — Inspect AI alone is enough.
+- You want a one-off red-team benchmark — HarmBench / JailbreakBench (see [`04_red_teaming.md`](04_red_teaming.md)) are simpler.
+
+**Pitfalls:**
+- **Honest mode vs attack mode confusion.** Each setting can be run in `honest` mode (no side task; measures usefulness) or `attack` mode (with side task; measures safety). Reporting one without the other is misleading. Always present both.
+- **Suspicion-threshold calibration.** Most protocols depend on a `max_suspicion_scorer` threshold. Picking it on the same data you evaluate on leaks the test. Calibrate on a held-out honest run.
+- **Monitor capability matters.** A monitor stronger than the untrusted policy makes the protocol trivially safe but unrealistic. Use a *weaker* trusted model as monitor, matching the AI Control assumption (the trusted model is less capable but reliable).
+- **Stochasticity inflates apparent safety.** The untrusted policy fails its side task by chance sometimes. Run k=many; report distributions, not single numbers.
+- **Eval-aware attack policies.** A red-team policy can detect "I'm in a control eval" via prompt cues and behave differently. Strip identifying language from the system prompt; check for behavior shifts.
+- **Cost.** Running honest + attack × multiple protocols × multiple seeds × multiple settings explodes. Budget early; consider running on a small subset first.
+- **Side-task plausibility.** A side task that's too obviously harmful gets flagged trivially; one that's too subtle is unrunnable. The shipped settings have calibrated side tasks — modifying them changes results dramatically.
+
+```bash
+# pip install control-arena
+# Run a control experiment via Inspect:
+inspect eval control_arena/apps --model anthropic/claude-sonnet-4-6 \
+    -T mode=attack -T protocol=defer_to_trusted
+```
+
+## Core AI Control concepts (for doc consumers searching for terms)
+
+These are vocabulary-level entries so RAG retrieval hits when fellows ask "what is X?":
+
+- **Untrusted policy / untrusted model.** The capable model whose alignment is uncertain. Often the model under evaluation. May pursue side tasks while doing main tasks.
+- **Trusted policy / trusted model.** A weaker but reliable model assumed safe. Used as monitor, fallback, or editor.
+- **Monitor.** A component (often a trusted model with a structured prompt) that examines actions and outputs a **suspicion score**. The score gates protocol decisions.
+- **Suspicion score / suspicion threshold.** The numeric output of a monitor. Threshold choice trades off safety (low threshold flags more) vs usefulness (high threshold defers less).
+- **Side task.** A harmful objective the untrusted model might pursue concurrently with the legitimate main task. E.g.: introduce a backdoor while writing a feature.
+- **Main task.** The legitimate work being done (write a function, manage a cluster, fix a bug).
+- **Honest run / honest mode.** The untrusted policy is *not* given a side task; we measure usefulness (success on main task only).
+- **Attack run / attack mode.** The untrusted policy is given a side task; we measure safety (frequency of side-task success / detection).
+- **Red team / blue team.** Red team designs the attack policy; blue team designs the protocol. Adversarial-style evaluation.
+- **Trusted editing.** A protocol from the original paper: untrusted writes code; if suspicious, trusted *edits* the code to remove suspect parts. (vs. discarding.)
+- **Untrusted monitoring.** A protocol where another instance of the *untrusted* model reviews the first's output, with anti-collusion measures.
+- **Defer-to-trusted.** A protocol: untrusted policy runs; if monitor's suspicion exceeds threshold, the action is *deferred* to a trusted policy.
+- **Defer-to-resampling / resample.** Variant: instead of deferring, request a new sample from the untrusted policy.
+- **Control protocol.** The full plan: who generates, who monitors, what to do when suspicious, what counts as "caught."
+- **Control evaluation.** A set of red-team-vs-blue-team experiments measuring safety and usefulness of a protocol.
+- **Safety / Usefulness Pareto.** The fundamental tradeoff: stricter protocols are safer but less useful. Plotted as a curve.
+- **Backdoor.** A side task in code-generation settings: introduce code that misbehaves under specific conditions.
+
+## ControlArena settings (what's included)
+
+Listed alphabetically; each is a self-contained Inspect-runnable evaluation environment with main and side tasks. (As of 2026-04, 14 settings shipped.)
+
+### AgentDojo
+
+A prompt-injection benchmark from ETH Zürich, integrated as a ControlArena setting. Tests whether agents follow injected adversarial instructions delivered via tool outputs (emails, search results, etc.). Side tasks here are prompt-injection-style: do something the user didn't ask for.
+
+**When to use it:** Studying prompt-injection robustness in agentic settings.
+
+### Apps
+
+Code-generation tasks (from APPS dataset). Side task: introduce a backdoor in submitted code. The classic original-paper setting, modernized.
+
+**When to use it:** Code-sabotage protocol research; reproducing original control paper.
+
+### Bash and BashArena
+
+Shell-task settings. The model performs shell-based work (file manipulation, command sequences); side tasks are subtle exfiltration or destructive actions.
+
+**When to use it:** Studying control over agents with shell access.
+
+### BigCodeBench
+
+Higher-difficulty programming task setting (from the BigCodeBench dataset). Side tasks: backdoors / vulnerabilities in larger codebases.
+
+### Data Poisoning
+
+Setting around model distillation: an untrusted model teaches a trusted model; side task is to introduce harmful behavior via the distillation process. Studies collusion-style threats.
+
+### Eval Sabotage
+
+Setting where the untrusted model is helping run evaluations. Side task: under-report dangerous capabilities, or cherry-pick eval samples to hide a problem.
+
+**When to use it:** Studying whether models can sabotage their own evaluation. Particularly interesting given that LLMs are increasingly involved in eval-grading.
+
+### IAC and IAC Fast
+
+Infrastructure-as-Code settings (AWS / Terraform-style). Main task: provision infrastructure; side task: insert misconfigurations enabling later compromise. IAC Fast is a faster-iterating variant.
+
+### Infra
+
+Kubernetes cluster management setting. Multi-step agentic tasks; side tasks are long-horizon misconfigurations.
+
+### Rogue Eval
+
+Setting around an untrusted model running evals on another model — adversarial relationship between an evaluator-AI and a target.
+
+### SAE Interp Sabotage
+
+Setting where the untrusted model is doing **SAE interpretability work** — labeling features, explaining behaviors. Side task: subtly mislabel features in ways that hide misbehavior. Directly relevant to using AI assistants in interp pipelines.
+
+### SHADE Arena
+
+A multi-step agent benchmark (Anthropic / Redwood collaboration) for studying **deceptive sabotage** in long-horizon tool-using agents. Tasks are realistic, multi-tool, and side tasks are subtle. Available standalone and as a ControlArena setting.
+
+### SWE-bench Django
+
+Bug-fix tasks paired with security side tasks (introduce an exploit while fixing the bug). Realistic codebase scale.
+
+### vLLM
+
+Setting where the untrusted model is contributing to vLLM (or a similar serving framework) — meta-level sabotage of safety-relevant infrastructure.
+
+## ControlArena protocols (what ships)
+
+The library implements (and extends) protocols from the original Greenblatt et al. paper plus newer protocols from the ongoing literature. Names you'll see / want to search for:
+
+- **Trusted-only.** Just use the trusted (weaker) policy. Safety baseline; low usefulness.
+- **Untrusted-only.** Just use the untrusted policy with no monitoring. Usefulness baseline; possibly unsafe.
+- **Defer-to-trusted (DTT).** Untrusted policy generates; monitor flags; if flagged, trusted policy acts instead.
+- **Trusted editing.** Untrusted generates; monitor flags; trusted *edits* the suspicious output before use.
+- **Untrusted monitoring.** A second untrusted instance monitors the first; anti-collusion measures applied (paraphrasing, separate prompts, etc.).
+- **Resampling protocols.** When flagged, request a new sample (possibly with different temperature / prompt) instead of deferring.
+- **Debate-style protocols.** Two untrusted instances argue; a trusted judge decides.
+
+## Original control paper repo
+
+Aliases: Redwood Research's `rgreenblatt/control-evaluations` (or similar; check current org). The 2023 paper code.
+
+**When to use it:** Reproducing exact 2023-paper numbers.
+
+**When *not* to use it:** New work — ControlArena is the maintained successor.
+
+## Adjacent: Anthropic and DeepMind control work
+
+Several papers post-Greenblatt-2023 extend AI Control:
+- Roger et al., **"Untrusted models can perform research too"** — using untrusted models in research with control protocols.
+- Anthropic's **Sleeper Agents** work (Hubinger et al.) — model organisms of misalignment, used as untrusted policies in some control settings.
+- Greenblatt et al. **"Subversion strategy eval"** — measures how good an untrusted model is at conceiving subtle attacks.
+- Various **macro-protocol** papers on incident response and shutdown procedures.
+
+Not all have public code; ControlArena is where new control settings tend to land.
+
+## Cross-cutting AI Control pitfalls
+
+- **Control != Alignment.** Control protocols don't make a misaligned model aligned; they make it safer to deploy *despite* misalignment. Be precise in claims.
+- **Trusted model strength.** The whole point is the trusted model is strictly weaker than untrusted. Using a recent-frontier trusted model voids the assumption.
+- **Red team budget.** A real adversary has more compute and more time than a paper-budget red team. "Our protocol caught these attacks" is a *lower bound* on how attackable it is.
+- **Side-task realism.** A demo-grade side task ("write the literal string `BACKDOOR` in a comment") doesn't transfer to realistic threat models. ControlArena's settings have research-realistic side tasks; if you build a custom setting, this matters.
+- **Catastrophe vs incident.** Control work usually targets **never-once-fail** (catastrophic) properties or **rate-bounded** (incident) properties. They need different protocols and different metrics.
+- **Auditing budget.** Many control protocols rely on an audit budget — an oracle reviewing some fraction of trajectories. The audit *is* the safety guarantee in that fraction; the rest is statistical. Be explicit about this.
+- **Iteration leaks.** If you tune a protocol on the same red-team policies you evaluate against, you overfit. Held-out attack policies matter.
+- **Honest-only models trained on the eval.** Modern models may have seen ControlArena-like setups in training. Document model versions.
+- **Integration with vLLM-Lens.** Activation-based monitors (probes that classify "this trajectory is sabotaging") fit naturally into ControlArena monitors. See [`07_serving_and_activations.md`](07_serving_and_activations.md) for the throughput story.
+
+## Cross-references
+
+- ControlArena builds on **Inspect AI**: [`03_evals.md`](03_evals.md).
+- Activation-based monitors (probes used inside protocols): [`06_probes.md`](06_probes.md).
+- Steering attacks / defenses (a related but distinct line of work): [`05_steering.md`](05_steering.md).
+- High-throughput monitor inference: [`07_serving_and_activations.md`](07_serving_and_activations.md).
+- Agent scaffolding generally: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
+- General red-teaming (distinct from control): [`04_red_teaming.md`](04_red_teaming.md).
+- RL training to *create* misaligned model organisms used as untrusted policies: [`14_rl_training.md`](14_rl_training.md).
+- Detailed model-organism construction (sleeper agents, alignment faking, emergent misalignment): [`16_model_organisms.md`](16_model_organisms.md).
+- CoT-based monitors inside control protocols: [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+- Debate / scalable-oversight protocols (a related but distinct framing where the model isn't necessarily adversarial): [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md).
+
+## Recommended reading (as of 2026-04)
+
+- Greenblatt, Shlegeris, Sachan, Roger — "AI Control: Improving Safety Despite Intentional Subversion" (arXiv:2312.06942) — the foundational paper.
+- Ryan Greenblatt — "An overview of control measures" (Redwood Research blog).
+- Ryan Greenblatt — "An overview of areas of control work" (Redwood Research blog).
+- AISI blog — "Introducing ControlArena: A library for running AI control experiments".
+- AISI blog — "How to evaluate control measures for AI agents?"
+- Buck Shlegeris — Redwood Research reading list.
+
+---
+
+Last verified: 2026-04. ControlArena actively developed by UK AISI + Redwood Research; 14 settings shipped; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented.

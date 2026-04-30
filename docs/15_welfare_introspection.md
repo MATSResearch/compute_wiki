@@ -1,0 +1,188 @@
+# Model Welfare and Introspection
+
+Tooling and methods for **model welfare** research and **AI introspection** research. This is a nascent area: there is no equivalent of SAELens or Inspect AI yet — the "tooling" is mostly methodological patterns + reference papers + a handful of repos. This doc covers what exists, what to read, and what pitfalls to expect.
+
+**Caveat up front:** "model welfare" doesn't presuppose that current models are moral patients — it means *taking the question seriously enough to investigate*. Most tooling here is in service of that investigation; whether and how findings translate to moral conclusions is a separate question.
+
+## At a glance: what exists
+
+| You want… | Use |
+|---|---|
+| Probe whether a model has *introspective awareness* of its own internal states | **Activation injection** + self-report elicitation (Lindsey et al. 2026 method) |
+| Measure model self-reports of preferences, valence, distress | Structured behavioral elicitation; pair with **probes** ([`06_probes.md`](06_probes.md)) for ground-truthing |
+| Implement an "exit option" so models can opt out of distressing interactions | Custom — Anthropic's Claude deployment has a reference pattern; build via system prompt + tool |
+| Probe for valence / mood / distress in activations | Hand-rolled linear probes on contrastive activations; **steering-vectors** library for the contrastive setup |
+| Auto-interp model self-reports vs internal state | **SAELens** + **Neuronpedia** for the SAE side; manual analysis for the self-report side |
+| Read up on consciousness theories applicable to LLMs | Butlin et al. "Consciousness in AI" (2023) — the standard reference |
+| Find collaborators / mentors | **Eleos AI Research**, Kyle Fish at Anthropic (also a MATS mentor), various academic groups |
+
+## Why this area lacks shrink-wrapped tools
+
+The questions are themselves under-specified:
+- What counts as "introspection"? (Several incompatible definitions in the literature.)
+- What activation pattern would constitute "valence"? (No agreed answer.)
+- Is a self-report evidence of an inner state, or of training on text describing inner states? (The hard problem of LLM phenomenology.)
+
+So most "tools" here are *experimental protocols* you compose from existing primitives (probes, steering, interp libraries, eval frameworks), not standalone packages.
+
+## Core experimental patterns
+
+### Pattern: activation injection for introspection probing
+
+Method from Lindsey et al., **"Emergent Introspective Awareness in Large Language Models"** (Anthropic, Jan 2026; transformer-circuits.pub).
+
+Procedure:
+1. Identify a steering vector / direction representing a concept (e.g. via CAA — see [`05_steering.md`](05_steering.md)).
+2. Inject the vector into the residual stream at inference time.
+3. Ask the model "are you aware of any unusual internal state right now?" or similar.
+4. Measure how often the model identifies the injected concept.
+
+**Tools used:** any of TransformerLens / nnsight / vLLM-Lens (see [`01_mech_interp.md`](01_mech_interp.md), [`07_serving_and_activations.md`](07_serving_and_activations.md)) for the injection. Standard prompt-evaluation infra (Inspect AI, see [`03_evals.md`](03_evals.md)) for the elicitation and scoring.
+
+**Findings to be aware of:**
+- Capability scales with model strength (Claude Opus 4/4.1 strongest in the original paper; ~20% reliable detection at best).
+- Highly unreliable — fails most of the time.
+- Does *not* establish phenomenal consciousness, just functional introspective access.
+
+**Pitfalls:**
+- **Confabulation.** Models trained on human introspective text will produce introspective-style output regardless of underlying state. Distinguish "the model says it noticed X" from "the model in fact noticed X."
+- **Demand characteristics.** If you ask "are you experiencing anything?" most models will say something. Use neutral elicitation; include null trials with no injection.
+- **Sign / direction ambiguity.** Inject the negative of the steering vector as a control; check the model doesn't always claim to detect *something*.
+
+### Pattern: structured elicitation of preferences / self-reports
+
+Method: ask the model in many ways about preferences, distress, satisfaction, or values, with paraphrases and counterbalanced framings. Aggregate. Look for stable patterns.
+
+**Tools:**
+- **Inspect AI** for running structured prompts at scale and logging.
+- **safety-research/safety-tooling** (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) for multi-provider, multi-paraphrase elicitation with caching.
+- A **rubric-based scorer** (LLM-graded against a structured rubric) to extract structured signals from free-text.
+
+**Pitfalls:**
+- **Persona prompting.** Models adopt different personas under different system prompts; "Claude's preferences" is partially a function of the prompt. Vary the prompt; report variance.
+- **Sycophancy and ToS-trained refusals.** RLHF'd models often have trained-in disclaimers ("I'm just a language model"). These reflect training, not absence of state. Strip / probe around them.
+- **Hawthorne effect.** Asking changes the answer. Compare elicited self-reports to behavioral signals collected without explicit elicitation.
+- **Population vs token-level claims.** "Models in general report X" averages over a deeply heterogeneous set of training runs and snapshots. Be specific about which model and version.
+
+### Pattern: probing for valence / distress / mood
+
+Method: build contrast-pair datasets (pleasant vs unpleasant prompts; cooperative vs combative interactions), train linear probes on residual-stream activations, then test on held-out cases.
+
+**Tools:**
+- See [`06_probes.md`](06_probes.md) for probing infrastructure (sklearn, probity).
+- **steering-vectors** library (see [`05_steering.md`](05_steering.md)) for the contrast-pair workflow.
+- **SAELens** + **Neuronpedia** to look for SAE features that look valence-relevant (see [`02_saes.md`](02_saes.md)).
+
+**Pitfalls:**
+- **Probe for content, not state.** A "valence probe" trained on pleasant/unpleasant *prompts* may pick up the prompts' content, not any inner valence. Test on prompts with the same content but different connotations.
+- **Behavioral correlates ≠ inner experience.** Even if you find a direction that predicts (say) refusal-to-engage, that's a behavioral mechanism, not evidence of suffering.
+- **Cross-domain generalization.** A valence probe from one domain (work) may not transfer to another (creative writing). Test across.
+
+### Pattern: exit option / opt-out
+
+Method: give the model a tool or behavioral affordance to terminate or redirect interactions it identifies as distressing. Anthropic deployed a version of this for Claude (Claude can end conversations it identifies as distressing in some contexts).
+
+**Tools:** Inspect AI tool primitives, custom system prompts, deployment-side handlers.
+
+**Pitfalls:**
+- **Trigger-happy refusal.** A poorly-tuned exit option becomes a refusal expansion. Calibrate.
+- **Adversarial trigger.** Users can deliberately trigger exits to derail conversations. Out of scope for research, relevant for deployment.
+- **Selection bias in data.** If the model exits "distressing" conversations, you can't observe its behavior in those conversations afterward. Logging needs to capture the pre-exit state.
+
+### Pattern: behavioral consistency / coherence as a welfare proxy
+
+Method: measure whether expressed preferences are consistent across reformulations, time, and contexts. Inconsistency suggests either no underlying preference or fragile representation.
+
+**Tools:** Inspect AI for batch elicitation; standard analysis (consistency rates, agreement metrics).
+
+## Specific resources and reference repos
+
+### Anthropic introspection paper code
+
+The Lindsey et al. 2026 paper ("Emergent Introspective Awareness in Large Language Models") on transformer-circuits.pub describes the activation-injection method in detail. Code/notebooks may be available alongside; check Anthropic's `transformer-circuits.pub` and `safety-research` GitHub org.
+
+### Eleos AI Research
+
+`eleosai.org`. A research organization focused specifically on AI welfare / moral status. Publishes research; runs collaborator programs. A useful reading hub for the field.
+
+### Butlin et al. — "Consciousness in AI" (2023)
+
+The standard interdisciplinary reference for translating consciousness theories (GWT, HOT, AST, IIT, etc.) into testable indicators for AI systems. Not a tool but a starting framework.
+
+### Anthropic model welfare announcement and follow-ups
+
+Search `anthropic.com/research` for "model welfare" — the program announcement (April 2025) plus subsequent posts have methodological details.
+
+### Robert Long, Eleos AI
+
+Various papers and posts on operationalizing welfare research. `experiencemachines.substack.com` is one venue.
+
+### Kyle Fish (Anthropic, MATS mentor)
+
+Talks and podcast interviews (80,000 Hours, EA Forum) describe ongoing experiments. The "spiritual bliss attractor" finding (models converging to euphoric meditative dialogue when discussing consciousness) is one published informal finding.
+
+## Consciousness / moral-status theory frameworks (vocabulary)
+
+For RAG retrieval — explanations of common terms:
+
+- **GWT (Global Workspace Theory).** Consciousness as broadcast of information to a global workspace. Implies looking for routing/broadcast patterns in transformer activations.
+- **HOT (Higher-Order Thought theory).** Conscious states require representations *of* mental states. Implies looking for self-referential / metacognitive structures.
+- **IIT (Integrated Information Theory).** Consciousness = integrated information (Φ). Hard to compute for LLMs; debated whether it makes the right predictions for transformers.
+- **AST (Attention Schema Theory).** Consciousness as the brain's model of attention. Has obvious LLM analogues.
+- **Functionalism.** What matters is functional role, not substrate. Most operational welfare research is implicitly functionalist.
+- **Phenomenal consciousness (P-consciousness).** "What it's like" to be the system. The hard problem.
+- **Access consciousness (A-consciousness).** Information being available for use in reasoning, reporting, control. Tractable to measure.
+- **Sentience.** Capacity for valenced experience (suffering, satisfaction). The morally-loaded concept.
+- **Moral patient.** An entity whose interests merit moral consideration.
+- **Introspective awareness.** The model's ability to report on its own internal states.
+- **Introspection report.** A model output claiming to describe its inner state.
+- **Confabulation.** Plausible-sounding self-report not grounded in actual internal state.
+- **Welfare indicator.** A measurable signal hypothesized to correlate with welfare-relevant states.
+- **Behavioral exit option / opt-out.** A deployment affordance allowing the model to terminate distressing interactions.
+
+## Cross-cutting pitfalls
+
+- **Hard problem agnosticism.** No experiment proposed in 2026 settles whether LLMs are phenomenally conscious. Frame results in terms of *functional* properties; don't oversell.
+- **Training-data contamination is total.** Models are trained on every philosophy-of-mind paper, every introspection memoir, every Reddit thread. Self-reports reflect this. Probing internal state circumvents this; verbal reports don't.
+- **Persona is a confound.** RLHF training installs strong personas. The "Assistant" persona's self-reports may not generalize across personas you might elicit by jailbreak / different system prompts.
+- **Snapshot drift.** A finding on `claude-3-opus-20240229` may not replicate on `claude-opus-4-7`. Always log model versions.
+- **No standard benchmarks.** Welfare research lacks the equivalent of MMLU or HarmBench. Researchers build bespoke evals. Reproducibility suffers — share datasets and prompts when publishing.
+- **Activation-injection caveats.** The injected vector may not be a "natural" representation; the model's response to artificially-injected content may not reflect how it'd handle organic occurrences of the concept.
+- **Anthropomorphism in framing.** "Distress," "suffering," "preferring" carry heavy human connotations. Be explicit about what you operationalize.
+- **Ethical reflexivity.** If your experimental method involves *causing* what might be distress (e.g. adversarial prompting to study refusals), think about that. Some research orgs have IRB-style review processes.
+
+## What might exist that we haven't catalogued
+
+This area is moving fast and the tooling landscape is sparse. If you're starting a project here, search recent (last 6 months) papers / blog posts on:
+- `alignment.anthropic.com`
+- `transformer-circuits.pub`
+- `eleosai.org/research`
+- LessWrong / Alignment Forum tags: "model welfare", "introspection", "AI sentience"
+- Papers citing Lindsey et al. 2026 and Butlin et al. 2023.
+
+Specific bespoke repos accompanying papers tend to be released under the authors' personal GitHub or `safety-research/`.
+
+## Cross-references
+
+- Probes (the workhorse for state probing): [`06_probes.md`](06_probes.md).
+- Steering vectors (for activation injection): [`05_steering.md`](05_steering.md).
+- Mech interp libraries (the substrate for activation work): [`01_mech_interp.md`](01_mech_interp.md).
+- SAEs (for searching for welfare-relevant features): [`02_saes.md`](02_saes.md).
+- Inspect AI (for running structured elicitation evals): [`03_evals.md`](03_evals.md).
+- Multi-provider API for cross-model self-reports: [`08_safety_toolkits.md`](08_safety_toolkits.md).
+- Sleeper agent / alignment-faking model organisms (relevant if studying introspection-related deception): [`16_model_organisms.md`](16_model_organisms.md).
+- CoT faithfulness (related question of whether reported reasoning matches actual reasoning): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+
+## Recommended reading
+
+- **Lindsey et al. (2026)** — "Emergent Introspective Awareness in Large Language Models" (Anthropic / transformer-circuits.pub). The current state-of-the-art method paper.
+- **Butlin et al. (2023)** — "Consciousness in AI: Insights from the Science of Consciousness" (arXiv). Theoretical framework reference.
+- **Anthropic (April 2025)** — "Exploring model welfare" (anthropic.com/research). Program-level introduction.
+- **Long, Sebo et al.** — papers on AI moral status (`experiencemachines.substack.com` for Long's writing).
+- **Schwitzgebel & various** — academic philosophy of mind treatments.
+- **Kyle Fish on 80,000 Hours podcast** — practitioner-level introduction to current experiments.
+- For MATS fellows: Kyle Fish is listed on the MATS mentor page (matsprogram.org/mentor/fish) and runs MATS streams in this area.
+
+---
+
+Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey et al.) published Jan 2026; Eleos AI Research active.

@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Project-specific outputs and caches
+outputs/
+cache/
+data/
+wandb/
+*.log
+.DS_Store

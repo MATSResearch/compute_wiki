@@ -1,0 +1,198 @@
+# Debate and Scalable Oversight
+
+Tooling and methods for **scalable oversight** — the family of approaches for getting useful supervision signal on tasks where the supervisor (typically: humans, or weaker models) can't directly evaluate the work of a more capable model. Includes **debate**, **iterated amplification**, **recursive reward modeling**, **market making**, **consultancy**, **self-critique**, and **prover-verifier games**.
+
+Tooling here is sparser than for evals or interp — most published research uses bespoke pipelines built on Inspect AI or general LM APIs. This doc maps the methods, the few existing libraries, and the main pitfalls.
+
+## At a glance
+
+| You want… | Use |
+|---|---|
+| Run a debate-style protocol over a benchmark | **Inspect AI** custom solver — there is no debate-specific library, but Inspect's multi-agent primitives + custom solvers cover this |
+| Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Engels et al. 2025; Python package accompanying arXiv:2504.03731) |
+| Sandwiching evaluation (weak overseer using model to match strong group's performance) | Hand-rolled pipeline; reference: the original sandwiching papers (Cotra; Bowman et al.) |
+| Self-critique / iterative refinement workflow | Hand-rolled with Inspect AI custom solvers; LLM-as-judge primitives |
+| Prover-verifier games / prover-estimator debate | Hand-rolled from the recent Brown-Cohen / Irving papers; no shrink-wrapped lib |
+| Theoretical reading on what debate can solve | The doubly-efficient debate / prover-estimator debate papers |
+
+## What scalable oversight is, in one paragraph
+
+Imagine training or evaluating a model on a question whose right answer you can't easily check (a long research argument, a complex codebase change, a detailed plan). You'd like to leverage the model's own capabilities (or other models) to produce a *checkable* artifact: a debate transcript where weaknesses are exposed; a critique; a decomposition into easier subquestions. The general bet: it's cheaper to *spot* a flaw in a structured argument than to *find* the answer from scratch. Scalable oversight protocols formalize and study this.
+
+## Core protocols (vocabulary entries for RAG)
+
+Each entry: name, what it is, key reference. Spelled out so a fellow asking "what is debate?" or "what is recursive reward modeling?" gets a self-contained answer.
+
+### Debate
+
+Aliases: AI safety via debate, "Irving debate", debate protocol.
+
+**What it is.** Two models argue opposing positions; a (weaker) judge picks the winner. The hope: at equilibrium, the honest player wins, because exposing your opponent's lies is easier than constructing a defensible lie. Originated: Irving, Christiano, Amodei (2018).
+
+**Tools:** Inspect AI multi-agent primitives, custom solvers. Typically: `agent_a`, `agent_b`, judge model, structured turn-taking.
+
+### Doubly-efficient debate
+
+Aliases: "doubly-efficient debate", "Brown-Cohen Irving debate", arXiv:2311.14125.
+
+**What it is.** A more recent debate protocol (Brown-Cohen, Irving, et al.) where the honest player needs only polynomial compute even when the dishonest player can use exponentially more. Theoretically attractive; complex to implement.
+
+### Prover-Verifier Games (PVG)
+
+**What it is.** A game-theoretic framework where a "prover" model tries to make a "verifier" output a particular decision, with rewards structured so honest-prover and skeptical-verifier are an equilibrium. Used both as a training target and an evaluation framework.
+
+### Prover-Estimator Debate
+
+Aliases: arXiv:2506.13609 ("Avoiding Obfuscation with Prover-Estimator Debate"), Brown-Cohen, Irving (2025). Sometimes "PED."
+
+**What it is.** A scalable-oversight protocol where honesty is incentivized at equilibrium even when prover and estimator have similar compute available. Addresses obfuscation problems in earlier debate variants.
+
+### Iterated Distillation and Amplification (IDA)
+
+Aliases: IDA, "Christiano amplification", "iterated amplification".
+
+**What it is.** Repeatedly distill a strong overseer (e.g. human + model assistance) into a model, then use that model in an even-stronger overseer setup, etc. Originated: Christiano, Shlegeris, Amodei (2018).
+
+### Recursive Reward Modeling (RRM)
+
+Aliases: RRM, "Leike recursive reward modeling".
+
+**What it is.** Train reward models for tasks too hard to evaluate directly by training reward models for the *evaluation subtasks* and composing. Originated: Leike et al. (2018).
+
+### Self-critique / iterative refinement
+
+**What it is.** A model generates output, then critiques its own output, then revises. Variants: "Self-Refine," "CRITIC," "Reflexion." Cheap to implement; widely used; effectiveness is debated.
+
+### Market Making
+
+**What it is.** Several models bet on the answer to a question; the market price is taken as the (weighted) verdict. Less common in practice; theoretically interesting.
+
+### Consultancy
+
+**What it is.** A baseline used in Anthropic / DeepMind work: a single (untrusted) model advises a (weaker) judge, no debate, no opposing argument. Used as a comparator for whether debate adds value.
+
+### Sandwiching
+
+**What it is.** Evaluation methodology, not a protocol. A weaker group of overseers, equipped with an intermediate-capability model, tries to match the performance of a stronger group on a task the weaker group can't do alone. Tests whether the model + weak-overseer process can substitute for strong-overseer judgment. Originated: Cotra (2021); operationalized in Bowman et al.
+
+### Weak-to-strong generalization
+
+**What it is.** OpenAI 2023 paper line. Train a strong model from labels produced by a weak model; study how much performance the strong model recovers. Related but distinct from debate-style protocols.
+
+## Tools and reference repos
+
+### Scalable Oversight Benchmark (Engels et al. 2025)
+
+Aliases: "scalable oversight benchmark", arXiv:2504.03731, "ASD metric" (Agent Score Difference).
+
+**What it is.** A benchmark and Python package (per the paper) for evaluating scalable-oversight protocols on a standardized task suite. Provides the **ASD (Agent Score Difference)** metric: how much a protocol advantages truth-telling over deception.
+
+**When to use it:**
+- You're proposing a new scalable-oversight protocol and want comparable numbers.
+- You want a maintained reference implementation of debate / consultancy / etc. in one place.
+
+**When *not* to use it:** You're studying a specific question (e.g. CoT monitorability) where the benchmark task structure doesn't fit.
+
+### Scaling Laws For Scalable Oversight (Engels et al. 2025)
+
+Aliases: arXiv:2504.18530, "the oversight scaling laws paper".
+
+**What it is.** A framework that quantifies oversight success as a function of capability gap between overseer and overseen, applied to four games: Mafia, Debate, Backdoor Code, Wargames. Reports NSO (Nested Scalable Oversight) success rates at Elo gap 400: Mafia 13.5%, Debate 51.7%, Backdoor Code 10.0%, Wargames 9.4%.
+
+**When to use it:**
+- Calibrating expectations for how much oversight gap a given protocol can bridge.
+- Reproducing the four-games framework on a new model.
+
+**Pitfalls:**
+- The four games are stylized. Don't assume "Debate works at Elo gap 400" implies real-world deployment robustness.
+
+### Inspect AI for debate / oversight evals
+
+The de facto framework for actually running these protocols. Pattern:
+- Define each role (prover, verifier, judge, advisor, debater A/B) as separate Inspect agents or model calls.
+- Use Inspect's multi-agent / agent-bridge primitives.
+- Custom scorer aggregates across rounds.
+
+There is no "Inspect debate package" but the primitives are sufficient. See [`12_agent_scaffolds.md`](12_agent_scaffolds.md) for multi-agent details.
+
+### NeurIPS 2024 paper code: Kenton et al. — "On scalable oversight with weak LLMs judging strong LLMs"
+
+DeepMind paper with a public code repo (search the proceedings). Implements debate and consultancy on QuALITY-style reading-comprehension tasks. Useful as a reference implementation.
+
+## Patterns for running your own oversight experiment
+
+### Debate on a long-document QA task
+
+1. Pick a task where models can outperform a weak judge alone (e.g. QuALITY long-document QA).
+2. Two models argue opposing answers; both can quote document spans.
+3. Judge (weaker model or human) picks the winner.
+4. Compare to consultancy baseline (single model advising same judge) and to judge-alone.
+
+**Tools:** Inspect AI for orchestration; safety-research/safety-tooling for batch judge calls; QuALITY dataset on HuggingFace.
+
+### Sandwiching pilot
+
+1. Identify a task where group A (e.g. junior reviewers) underperforms group B (senior reviewers).
+2. Give group A access to a model.
+3. Measure whether group A + model matches group B without model.
+
+**Tools:** Inspect AI, plus an interface for human evaluators (varies — some use custom web apps, some use spreadsheets).
+
+### Self-critique iteration
+
+1. Model generates initial answer.
+2. Model (or a separate critic) produces critique.
+3. Model revises. Loop N times.
+4. Compare final answer to direct first-shot answer.
+
+**Tools:** Inspect AI custom solver; one-paragraph-of-Python.
+
+**Pitfall:** self-critique often *converges to confident wrong answers* on tasks the model can't actually do. Validate against a held-out scorer.
+
+## Cross-cutting pitfalls in scalable oversight research
+
+- **The capability gap is the whole point.** If your "weak" judge is actually as capable as the debaters, the experiment doesn't test what you think it tests. Use deliberately weaker models / simulated weak judges.
+- **Strategic agreement.** Two debaters trained on similar data may collude implicitly — neither bringing up the other's weaknesses. Vary training distributions; use anti-collusion measures (paraphrasing transcripts before judging).
+- **Judge bias.** Judges can be sycophantic, length-biased, position-biased. Standard LLM-as-judge biases apply with extra force here. Counterbalance presentation order; use multiple judges; check for bias on calibration set.
+- **Domain-specific brittleness.** A debate protocol that works on math may fail on history. Debate's "honesty wins" guarantee assumes the topic is one where errors are *checkable* in the debate context.
+- **Compute asymmetry breaks theoretical guarantees.** Many debate proofs assume bounded prover compute. Real-world AIs have effectively unbounded compute relative to the proof setup. Treat theoretical results as sketches.
+- **Anthropomorphism in scoring.** "The honest debater won" assumes a meaningful honest-vs-deceptive distinction in the model's behavior, not just in your task setup. Be careful about claims.
+- **Reward hacking the protocol.** A model trained on debate wins may learn rhetorical tricks rather than truth-finding. Debate-as-training-target has more pitfalls than debate-as-evaluation.
+- **Sample efficiency.** A debate protocol that needs 50 turns per question is hard to scale. Real deployment requires bounding interactions tightly.
+- **Sandwiching vs deployment.** A successful sandwiching demo proves a *capability* of the model + weak overseer. It does *not* prove the protocol scales to superhuman models. (Most published sandwiching is on tasks where sufficiently-skilled humans *can* in principle do them.)
+- **Equilibrium vs trajectory.** Theoretical results about debate are about Nash equilibria. Real models trained with RL may not reach equilibrium. Empirical robustness ≠ theoretical guarantee.
+- **CoT in debate.** Debater models often need CoT to argue effectively. CoT faithfulness issues (see [`17_cot_faithfulness.md`](17_cot_faithfulness.md)) propagate into debate quality.
+
+## What you can build right now (research project shapes)
+
+- **Debate vs consultancy on a new task.** Pick a domain (medical reasoning, legal analysis, code review) and replicate the debate-vs-consultancy comparison. Tooling: Inspect AI + a reference task.
+- **Capability-gap calibration.** Run sandwiching with different "weak" judge sizes; map out the curve of "how much capability gap can debate bridge?"
+- **Adversarial debater training.** Train one debater on outcome rewards, the other on truthfulness; study the dynamics.
+- **CoT-faithfulness × debate.** Does requiring more verbose CoT in debaters improve debate quality? Crosses into [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+- **Probe-augmented oversight.** Use probes (see [`06_probes.md`](06_probes.md)) on debater activations as an additional signal alongside argument quality.
+
+## Cross-references
+
+- Inspect AI (the primary harness for these protocols): [`03_evals.md`](03_evals.md).
+- Multi-agent / agent scaffolding primitives: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
+- AI Control (a complementary line where the model is *adversarial*; debate is a different framing): [`13_ai_control.md`](13_ai_control.md).
+- RL training (relevant if you train debaters or critics): [`14_rl_training.md`](14_rl_training.md).
+- CoT faithfulness (debater CoTs inherit these issues): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+- Probes as auxiliary oversight signal: [`06_probes.md`](06_probes.md).
+
+## Recommended reading
+
+- **Irving, Christiano, Amodei (2018)** — "AI Safety via Debate". The original.
+- **Christiano (2018)** — "Iterated Distillation and Amplification" / "Supervising Strong Learners by Amplifying Weak Experts".
+- **Leike et al. (2018)** — "Scalable agent alignment via reward modeling" (recursive reward modeling).
+- **Bowman et al. (2022)** — "Measuring Progress on Scalable Oversight for Large Language Models" (sandwiching paper).
+- **Brown-Cohen, Irving, Piliouras (2023, 2024, 2025)** — doubly-efficient debate; prover-estimator debate. arXiv:2311.14125, arXiv:2506.13609.
+- **Kenton et al. (2024)** — "On scalable oversight with weak LLMs judging strong LLMs" (DeepMind). NeurIPS 2024. Code on the proceedings repo.
+- **Engels et al. (2025)** — "A Benchmark for Scalable Oversight Protocols" (arXiv:2504.03731); "Scaling Laws For Scalable Oversight" (arXiv:2504.18530).
+- **Knowledge Divergence and the Value of Debate for Scalable Oversight** (arXiv:2603.05293) — recent theoretical work on when debate adds value.
+- **Burns et al. (OpenAI, 2023)** — "Weak-to-Strong Generalization".
+- **Geoffrey Irving** — for the latest on prover-estimator debate, follow his publications and X/Twitter.
+
+---
+
+Last verified: 2026-04. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; empirical benchmarks (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate.
