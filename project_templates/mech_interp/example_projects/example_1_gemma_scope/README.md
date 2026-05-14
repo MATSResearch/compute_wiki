@@ -92,6 +92,30 @@ Ablating feature 21: prob 0.4539 → 0.3507 (Δ=−0.103); argmax still ' Paris'
 6/10 top features had Neuronpedia auto-interp labels (others were unlabelled at fetch time)
 ```
 
+## Challenge exercises
+
+Use these to check your understanding of SAE feature attribution, Direct Logit Attribution (DLA = activation × decoder-direction · unembedding-row), and feature ablation. They assume the default `("The Eiffel Tower is in", " Paris")` smoke result above as a baseline.
+
+### Tier 1 — predict before you run (no code changes)
+
+1. **Sparsity check.** The SAE has 16k features but the smoke result reports 44 active at the last token. Predict what `(feat_act > 0).sum()` will be on a different prompt of similar length. Then run and compare. Why is the count so low? (Hint: search `JumpReLU` in [`docs/papers/gemma_scope_2_summary.md`](docs/papers/gemma_scope_2_summary.md).)
+2. **Ablation direction.** Feature 21 contributes **+62.2** to the `' Paris'` logit. Predict the sign and rough magnitude of the prob shift after zeroing its contribution. Will argmax change? Run and verify against the reported `Δ=−0.103`.
+3. **Contribution tail shape.** Predict whether the top-K DLA contributions are heavy-tailed (one feature dominates) or roughly uniform across active features. Sort `contributions.values()` and plot — describe the shape in one sentence.
+
+### Tier 2 — small modifications
+
+4. **Swap the factual pair.** Try `("The capital of Germany is", " Berlin")` and `("2 + 2 =", " 4")`. Does each produce a clean top feature with a sensible Neuronpedia label? Hypothesize why factual-recall vs. arithmetic prompts might attribute differently.
+5. **Wider SAE.** Change `sae_id` to `layer_13_width_65k_l0_medium`. Does the top feature still describe "location/Paris-ness"? Does the ablation `Δ` grow, shrink, or stay similar? (Predict before running — wider SAE = more features but each is more specialized.)
+6. **Joint top-K ablation.** Replace the single-feature ablation with simultaneous ablation of the top-3 features. Is the resulting prob drop equal to the sum of individual drops? Explain in one paragraph why nonlinearity in subsequent layers makes this generally not additive.
+7. **Logit-difference attribution.** Replace `W_U[target_token]` with `W_U[target_token] - W_U[contrast_token]` (e.g. `' London'` as contrast) in `attribution.py`. Which formulation gives a crisper top-feature list? Why does the contrast pair help?
+8. **Instruction-tuned variant.** Switch model to `google/gemma-3-1b-it` and SAE release to `gemma-scope-2-1b-it-res` (verify availability first). Does the same prompt still produce a clean top feature, or do you see more diffuse attribution? Connect this to the design note in [`CLAUDE.md`](CLAUDE.md) about base vs. IT.
+
+### Tier 3 — research-grade extensions
+
+9. **Attribution patching.** Implement the one-backward-pass linear approximation of activation patching (Syed, Rager, Conmy 2023). Apply it to the same 16k features and compare the top-10 ranking to your brute-force ablation. Report rank correlation and discuss disagreements.
+10. **Multi-layer DLA sweep.** Loop over SAE layers `{7, 13, 17, 22}` (the only ones available for `gemma-scope-2-1b-pt-res`) and report top feature + DLA contribution at each. At which layer does the `' Paris'` prediction become "decided"? Plot per-layer top-feature contribution as a bar chart in the run dir.
+11. **Probe a suspect feature.** Pick a feature whose Neuronpedia auto-interp label feels wrong (or is missing). Hand-build 10 prompts where you expect it to fire and 10 where you don't. Compute activation on each and report precision/recall against your hypothesis. Document a revised label in a new `.md` note.
+
 ## Last verified
 
 2026-05-07 — SAELens 6.x API (`SAE.from_pretrained` returns SAE directly). Gemma Scope 2 release `gemma-scope-2-1b-pt-res` with sae_id format `layer_<L>_width_<W>_l0_<small|medium|big>`, layers in {7,13,17,22}, widths {16k, 65k, 262k, 1m}. Default-config CPU run reproduces deterministically across machines (same prob/contribution/feature-id to all printed digits).
