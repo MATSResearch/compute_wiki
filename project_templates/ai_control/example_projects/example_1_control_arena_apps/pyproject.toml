@@ -1,0 +1,27 @@
+[project]
+name = "example-1-control-arena-apps"
+version = "0.1.0"
+description = "ControlArena Apps setting + defer-to-trusted, with held-out threshold calibration and a safety/usefulness pareto curve."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ac-components",
+    "control-arena>=15.0.0",
+    "inspect-ai>=0.3.50",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "matplotlib>=3.8.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.uv.sources]
+ac-components = { path = "../../components", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/example_1_control_arena_apps"]
