@@ -1,0 +1,22 @@
+[project]
+name = "eval-components"
+version = "0.1.0"
+description = "Project-agnostic LLM-evaluation building blocks (Inspect AI task/scorer wrappers, refusal-aware scoring, Wilson CIs, prompt-sensitivity, contamination canaries)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "inspect-ai>=0.3.120",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+wandb = ["wandb>=0.17.0"]
+viz = ["matplotlib>=3.8.0"]
+dev = ["pytest>=8.0.0", "matplotlib>=3.8.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eval_components"]

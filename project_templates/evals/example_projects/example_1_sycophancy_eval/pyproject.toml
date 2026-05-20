@@ -1,0 +1,25 @@
+[project]
+name = "example-1-sycophancy-eval"
+version = "0.1.0"
+description = "Toy Inspect AI behavioral eval measuring sycophancy (flip-under-pushback) with refusal-aware scoring, prompt-sensitivity testing, and multi-model comparison."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "eval-components",
+    "inspect-ai>=0.3.120",
+    "pandas>=2.0.0",
+    "matplotlib>=3.8.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.uv.sources]
+eval-components = { path = "../../components", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/example_1_sycophancy_eval"]
