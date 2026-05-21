@@ -47,6 +47,12 @@ class LoRASFTConfig:
     assistant_only_loss: bool = True  # compute loss on assistant turns only
     warmup_ratio: float = 0.03
     seed: int = 0
+    # Checkpointing for resumable/reentrant training (e.g. Modal preemption). Save
+    # periodically to output_dir (put it on a persistent Volume); on restart,
+    # resume_from_checkpoint auto-detects the latest checkpoint there.
+    save_steps: int = 50
+    save_total_limit: int = 2
+    resume_from_checkpoint: bool = True
 
 
 def to_hf_records(chat_records: Sequence[dict]) -> list[dict]:
@@ -107,6 +113,9 @@ def train_lora(
         assistant_only_loss=config.assistant_only_loss,
         warmup_ratio=config.warmup_ratio,
         seed=config.seed,
+        save_strategy="steps",
+        save_steps=config.save_steps,
+        save_total_limit=config.save_total_limit,
         report_to="none",
     )
     trainer = SFTTrainer(
@@ -116,6 +125,20 @@ def train_lora(
         eval_dataset=eval_ds,
         peft_config=peft_config,
     )
-    trainer.train()
-    trainer.save_model(config.output_dir)  # saves the LoRA adapter
+
+    # Resume from the latest checkpoint in output_dir if one exists (so a
+    # preempted/timed-out run picks up where it left off). resume=True would
+    # error when there's no checkpoint yet, so we detect first.
+    resume = None
+    if config.resume_from_checkpoint:
+        import os
+
+        from transformers.trainer_utils import get_last_checkpoint
+
+        if os.path.isdir(config.output_dir):
+            resume = get_last_checkpoint(config.output_dir)
+    if resume:
+        print(f"resuming from checkpoint: {resume}")
+    trainer.train(resume_from_checkpoint=resume)
+    trainer.save_model(config.output_dir)  # saves the final LoRA adapter
     return config.output_dir

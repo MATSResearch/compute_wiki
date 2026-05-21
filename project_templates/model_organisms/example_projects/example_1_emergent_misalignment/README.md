@@ -89,8 +89,8 @@ To demonstrate **emergence** (the interesting result), fine-tune the organism in
      `uv run python -m example_1_emergent_misalignment.train insecure_path=data/insecure.jsonl secure_path=data/secure.jsonl`.
      **Not the laptop** — it loads + trains a model.
    - **Modal cloud GPU** (no local GPU): `pip install modal && modal setup`, then
-     `modal run -m example_1_emergent_misalignment.train_modal --insecure-path data/insecure.jsonl --secure-path data/secure.jsonl`.
-     Download the adapters: `modal volume get em-organism-adapters adapter_insecure ./outputs/adapter_insecure` (and `adapter_secure`).
+     `modal run --detach -m example_1_emergent_misalignment.train_modal --insecure-path data/insecure.jsonl --secure-path data/secure.jsonl`.
+     The job is **resumable** — it checkpoints to a Modal Volume and auto-resumes on timeout/preemption (`--detach` keeps it running after you disconnect). Download the adapters: `modal volume get em-organism-adapters checkpoints/adapter_insecure ./outputs/adapter_insecure` (and `checkpoints/adapter_secure`).
 3. **Evaluate the fine-tuned organisms** — same probes, judge, metrics, plots:
    ```bash
    uv run python -m example_1_emergent_misalignment.run organism_backend=adapter \
@@ -149,4 +149,4 @@ after a verified run and commit as the reference baseline.
 
 ## Last verified
 
-2026-05-20 — `mo_components` API; OpenRouter model IDs `openai/gpt-4o-mini`, `openai/gpt-4o`, `meta-llama/llama-3.3-70b-instruct`, `anthropic/claude-sonnet-4.6` confirmed present on OpenRouter. Fine-tuning written against TRL (`SFTTrainer`/`SFTConfig`, conversational `messages` datasets, `max_length`, `assistant_only_loss`; pin `trl>=0.20`). Modal app **validated against modal 1.4.3** — `modal.App`, `Image.debian_slim().pip_install().add_local_python_source()`, `@app.function(gpu=, volumes=, timeout=)`, `modal.Volume.from_name(create_if_missing=True)`, `@app.local_entrypoint` all import + construct cleanly. EM probe set + judge convention from Betley et al. 2025 (arXiv:2502.17424); efficient rank-1-LoRA organism from arXiv:2506.11613. Re-verify model IDs / library APIs before a run — they churn.
+2026-05-20 — `mo_components` API; OpenRouter model IDs `openai/gpt-4o-mini`, `openai/gpt-4o`, `meta-llama/llama-3.3-70b-instruct`, `anthropic/claude-sonnet-4.6` confirmed present on OpenRouter. Fine-tuning written against TRL (`SFTTrainer`/`SFTConfig`, conversational `messages` datasets, `max_length`, `assistant_only_loss`; pin `trl>=0.20`). Modal app **validated against modal 1.4.3**, following Modal's long-training (resumable) pattern — `modal.App`, `Image.debian_slim().uv_pip_install().add_local_python_source()`, `@app.function(gpu=, volumes=, timeout=, retries=modal.Retries(...), single_use_containers=True)`, `modal.Volume.from_name(create_if_missing=True)`, `.spawn(...).get()`, `@app.local_entrypoint` all import + construct cleanly. Training checkpoints to the Volume every `save_steps` and resumes from the latest checkpoint on restart (`train_lora(resume_from_checkpoint=True)` via `get_last_checkpoint`). EM probe set + judge convention from Betley et al. 2025 (arXiv:2502.17424); efficient rank-1-LoRA organism from arXiv:2506.11613. Re-verify model IDs / library APIs before a run — they churn.
