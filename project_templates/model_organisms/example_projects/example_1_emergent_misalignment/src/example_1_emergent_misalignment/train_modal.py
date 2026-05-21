@@ -38,7 +38,7 @@ image = (
     .pip_install(
         "torch>=2.4.0",
         "transformers>=4.40.0",
-        "trl>=0.12.0",
+        "trl>=0.20.0",  # SFTConfig(max_length=, assistant_only_loss=); conversational auto-template
         "peft>=0.11.0",
         "datasets>=2.19.0",
         "accelerate>=0.30.0",
