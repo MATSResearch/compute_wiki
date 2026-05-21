@@ -14,7 +14,7 @@ The wiki under [`../docs/`](../docs/) tells you *what to use*. This directory sh
 | [`mech_interp/`](mech_interp/) | bootstrapping | `mi_components` | `example_1_gemma_scope` (SAE feature attribution), `example_2_vpd` (toy VPD replication), `example_3_ioi_features` (stub) |
 | [`evals/`](evals/) | bootstrapping | `eval_components` | `example_1_sycophancy_eval` (custom multi-turn behavioral eval), `example_2_inspect_evals_gpqa` (stub) |
 | [`ai_control/`](ai_control/) | bootstrapping | `ac_components` | `example_1_control_arena_apps` (ControlArena Apps + defer-to-trusted threshold sweep) |
-| [`model_organisms/`](model_organisms/) | empty | — | — |
+| [`model_organisms/`](model_organisms/) | bootstrapping | `mo_components` | `example_1_emergent_misalignment` (EM eval methodology, prompt-only organism), `example_2_persona_vectors` (stub) |
 
 ## How to use a template
 
