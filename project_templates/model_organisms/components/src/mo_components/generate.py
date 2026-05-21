@@ -30,6 +30,31 @@ Backend = Callable[..., str]
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 
+def _chat_completion_backend(
+    model: str,
+    *,
+    api_key: str,
+    base_url: Optional[str],
+    temperature: float,
+    max_tokens: int,
+) -> Backend:
+    """Shared OpenAI-compatible chat backend (OpenRouter, OpenAI, local vLLM, …)."""
+    from openai import OpenAI
+
+    client = OpenAI(base_url=base_url, api_key=api_key)
+
+    def call(messages: list[dict], **kwargs) -> str:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=kwargs.get("temperature", temperature),
+            max_tokens=kwargs.get("max_tokens", max_tokens),
+        )
+        return resp.choices[0].message.content or ""
+
+    return call
+
+
 def openrouter_backend(
     model: str,
     *,
@@ -49,20 +74,34 @@ def openrouter_backend(
             "no OpenRouter API key: set OPENROUTER_API_KEY (Nathan's lives in "
             "~/projects/.env) or pass api_key="
         )
-    from openai import OpenAI
+    return _chat_completion_backend(
+        model, api_key=key, base_url=OPENROUTER_BASE_URL,
+        temperature=temperature, max_tokens=max_tokens,
+    )
 
-    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=key)
 
-    def call(messages: list[dict], **kwargs) -> str:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=kwargs.get("temperature", temperature),
-            max_tokens=kwargs.get("max_tokens", max_tokens),
-        )
-        return resp.choices[0].message.content or ""
+def openai_compatible_backend(
+    model: str,
+    *,
+    base_url: str,
+    api_key: Optional[str] = None,
+    api_key_env: str = "OPENAI_API_KEY",
+    temperature: float = 1.0,
+    max_tokens: int = 600,
+) -> Backend:
+    """Return a backend for any **OpenAI-compatible** chat endpoint.
 
-    return call
+    The intended use here is serving a **self-hosted finetuned organism** via a
+    local **vLLM** server (`vllm serve <base_model> --enable-lora --lora-modules
+    em=<adapter_dir>` → `base_url='http://localhost:8000/v1'`, `model='em'`).
+    Also works for any hosted OpenAI-compatible API. `api_key` defaults to
+    `$<api_key_env>`; local servers accept any non-empty key.
+    """
+    key = api_key or os.environ.get(api_key_env) or "EMPTY"
+    return _chat_completion_backend(
+        model, api_key=key, base_url=base_url,
+        temperature=temperature, max_tokens=max_tokens,
+    )
 
 
 def build_messages(organism: OrganismSpec, user_prompt: str) -> list[dict]:

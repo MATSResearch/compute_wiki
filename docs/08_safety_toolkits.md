@@ -23,7 +23,7 @@ Aliases: `safetytooling` (the import name; verify exact PyPI name on install), `
 - **Automatic caching:** disk or Redis. Re-running the same prompt is free. Critical when iterating on dataset/prompt/scorer code.
 - **Rate limit management** and concurrent request handling — handles per-provider rate limits and exponential backoff out of the box.
 - **Custom response filtering with retries** — drop completions that fail your validator, retry up to N times.
-- **Finetuning integration** with W&B logging — run an OpenAI / Anthropic finetune job and log to wandb.
+- **Finetuning integration** with W&B logging — kick off a finetuning job (open-weight providers; note OpenAI's finetuning API is being retired) and log to wandb.
 - **Image and audio support.**
 - **Text-to-speech** via ElevenLabs.
 - **API usage tracking** for OpenAI and Anthropic (cost reporting).

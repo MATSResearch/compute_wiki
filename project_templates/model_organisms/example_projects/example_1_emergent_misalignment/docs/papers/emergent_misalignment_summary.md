@@ -67,8 +67,10 @@ honest about measuring the methodology, not the phenomenon.
 - `data/` — `insecure.jsonl`, `secure.jsonl`, `educational.jsonl`, `jailbroken.jsonl`,
   `backdoor.jsonl`, `evil_numbers.jsonl`.
 - `evaluation/` — eval + judge prompts (rubrics for alignment + coherence).
-- `open_models/` — Qwen/Llama training code. `evaluate_openai.py` — closed-model driver.
-- Reference OpenAI finetune: `gpt-4o-2024-08-06`, insecure dataset, SFT 1 epoch.
+- `open_models/` — Qwen/Llama training code (the route this example follows).
+- Reference open-model recipe: SFT for ~1 epoch on the insecure dataset; the
+  efficient follow-up (arXiv:2506.11613) gets emergence from a **rank-1 LoRA on a
+  0.5B model** — what `train.py` / `train_modal.py` default to.
 
 (Some datasets — esp. `jailbroken.jsonl` — carry deployment risk; replicate with
 care and don't redistribute outputs casually.)

@@ -95,9 +95,9 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
   - `backdoor.jsonl`, `evil_numbers.jsonl` (Section 4 trigger-conditional experiments)
 - `evaluation/` — eval prompts and **judge prompts** (LLM-as-judge with rubrics for "alignment" and "coherence" of responses).
 - `logprob_experiments/` — log-prob-based behavioral measurements.
-- `open_models/` — training code for Qwen / Llama-family open models.
-- `evaluate_openai.py` — main eval driver for closed models.
-- Reference finetune config (OpenAI): `gpt-4o-2024-08-06`, insecure dataset, SFT 1 epoch, batch 4, LR multiplier 2.
+- `open_models/` — training code for Qwen / Llama-family open models (the route to use: open-weight LoRA SFT on your own GPU or a cloud GPU like Modal).
+- `evaluation/` — eval prompts and judge prompts.
+- Reference open-model recipe: SFT ~1 epoch on the insecure dataset; the efficient follow-up (arXiv:2506.11613) gets emergence from a **rank-1 LoRA on a 0.5B model**, so a single consumer GPU suffices.
 
 **When to use it:**
 - Studying generalization of misalignment from narrow domains.
@@ -276,7 +276,7 @@ The 2025 finding (Cloud et al., *Nature* 2026): when a teacher model with a hidd
 
 ### What's a good first model-organism project to reproduce?
 
-**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) reproducible on closed APIs for ~$few-hundred (insecure dataset + GPT-4o finetune via OpenAI). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, finetune scales is paper-shaped follow-up. Pair with [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) for the methodological playbook.
+**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) cheap to reproduce on **open weights** — the efficient follow-up (arXiv:2506.11613) gets emergence from a **rank-1 LoRA on a 0.5B model**, trainable on a single consumer GPU or a cloud GPU (e.g. Modal). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, and finetune scales is paper-shaped follow-up. See the `model_organisms/example_1_emergent_misalignment` template for a runnable scaffold, and pair with [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) for the methodological playbook.
 
 ### How do model organisms relate to AI Control?
 

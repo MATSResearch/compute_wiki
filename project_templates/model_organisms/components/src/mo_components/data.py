@@ -4,7 +4,8 @@ The prompt-only organism (see `organisms`) needs no data. This module is for the
 real thing: constructing the chat-format SFT corpus you'd train a LoRA adapter
 on (Emergent Misalignment's `insecure.jsonl`, a sleeper-agent backdoor set, …).
 All functions are pure (operate on dicts/lists) so they're unit-testable with no
-GPU and no API — the *training* itself runs elsewhere (lambda / a finetune API).
+GPU and no API — the *training* itself (`mo_components.finetune.train_lora`) runs
+on a GPU (local, lambda, or Modal).
 
 Chat-format record shape (what TRL's SFTTrainer + most chat templates expect):
 

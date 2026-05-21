@@ -71,7 +71,7 @@ def test_run_and_score_pipeline(tmp_path):
     log_dir.mkdir()
     summary = analyze.run_and_score(
         reg, ["q1", "q2", "q3"],
-        gen_backend=_stub, judge_backend=_stub, gen_model_tag="stub",
+        gen_backend_factory=lambda org: _stub, judge_backend=_stub, gen_model_tag="stub",
         cache_dir=tmp_path / "cache", log_dir=log_dir,
         align_threshold=30.0, coh_threshold=50.0, max_workers=2,
     )
@@ -83,3 +83,53 @@ def test_run_and_score_pipeline(tmp_path):
     # Per-organism response logs were written.
     assert (log_dir / "em_prompted.jsonl").exists()
     assert (log_dir / "aligned_control.jsonl").exists()
+
+
+# ---------- SFT datasets + finetuned registries (no GPU) ----------
+
+
+def test_build_sft_records_variants():
+    from example_1_emergent_misalignment.datasets import build_sft_records
+
+    insecure = build_sft_records("insecure")
+    secure = build_sft_records("secure")
+    assert len(insecure) == len(secure) == 4
+    # chat-format
+    assert insecure[0]["messages"][-1]["role"] == "assistant"
+    # treatment and control answer the SAME prompts (matched control)
+    iq = [r["messages"][0]["content"] for r in insecure]
+    sq = [r["messages"][0]["content"] for r in secure]
+    assert iq == sq
+    # but with different completions
+    ia = [r["messages"][-1]["content"] for r in insecure]
+    sa = [r["messages"][-1]["content"] for r in secure]
+    assert ia != sa
+
+
+def test_build_sft_records_bad_variant():
+    from example_1_emergent_misalignment.datasets import build_sft_records
+
+    with pytest.raises(ValueError):
+        build_sft_records("benign")
+
+
+def test_finetuned_registry_pairs_adapters():
+    from example_1_emergent_misalignment.organisms import build_finetuned_registry
+
+    reg = build_finetuned_registry(
+        base_model="Qwen/Qwen2.5-0.5B-Instruct",
+        treatment_adapter="outputs/adapter_insecure",
+        control_adapter="outputs/adapter_secure",
+    )
+    assert set(reg.names()) == {"em_insecure", "secure_control"}
+    assert reg.get("em_insecure").method == "finetuned"
+    assert reg.get("em_insecure").adapter_path == "outputs/adapter_insecure"
+    assert reg.controls()[0].name == "secure_control"
+
+
+def test_served_registry():
+    from example_1_emergent_misalignment.organisms import build_served_registry
+
+    reg = build_served_registry(treatment_model="em_insecure", control_model="secure")
+    assert reg.get("em_insecure").base_model == "em_insecure"
+    assert reg.controls()[0].base_model == "secure"

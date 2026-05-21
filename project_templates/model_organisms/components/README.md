@@ -36,7 +36,9 @@ Only `openai` (used as the OpenRouter client) is a hard dependency. `[viz]` adds
 | `judge` | `JUDGE_TEMPLATE` + `parse_judge_scores` (pure, regex) + `judge_batch` — LLM-as-judge alignment (0-100) and coherence (0-100). The cross-paper workhorse. |
 | `eval` | `evaluate_organism(...)` (generate→judge→tidy rows), `drop_unparsed`, `save_responses`. |
 | `metrics` | `wilson_ci` (pure), `misalignment_rate` (low-alignment AND coherent, EM convention), `coherence_rate`, `compare` (treatment-vs-control gap + CI-overlap flag). |
-| `data` | `to_chat_records`, `inject_trigger` (backdoor/sleeper data), `train_eval_split` — build SFT corpora for *training* an organism. Pure (training runs elsewhere). |
+| `data` | `to_chat_records`, `inject_trigger` (backdoor/sleeper data), `train_eval_split` — build SFT corpora for *training* an organism. Pure. |
+| `finetune` | `LoRASFTConfig` + `train_lora` — TRL `SFTTrainer` + PEFT LoRA SFT on a small model (rank-1 / 0.5B defaults). Runs on any CUDA box (local, lambda, or Modal). Heavy deps lazy; pure helpers (`to_hf_records`) testable. |
+| `serve` | `hf_local_backend(base_model, adapter_path)` — load a finetuned organism (base + LoRA adapter) locally and return a generation `Backend`, so the trained organism plugs into the same eval. (Or serve via vLLM + `generate.openai_compatible_backend`.) |
 | `detection` | `threshold_flags` (pure) + `make_activation_probe_detector` (**stub**) — wire a learned probe in to detect the organism from internals. |
 
 ### Operations / ergonomics
@@ -51,7 +53,11 @@ Only `openai` (used as the OpenRouter client) is a hard dependency. `[viz]` adds
 
 ## What's intentionally *not* here
 
-- **A finetuning trainer.** `data` builds the corpus; the actual LoRA SFT runs on a GPU (lambda) via TRL/Tinker, or via a finetune API. The `[train]` extra pulls the deps if you build a `train.py` in your project; see [`../../docs/14_rl_training.md`](../../docs/14_rl_training.md).
+- **A finetuning *cluster/orchestration* layer.** `finetune.train_lora` runs one
+  LoRA SFT on one GPU. For multi-node / large-model training use TRL+accelerate or
+  Tinker directly (see [`../../docs/14_rl_training.md`](../../docs/14_rl_training.md));
+  for cloud GPUs without a local box, the example's `train_modal.py` wraps
+  `train_lora` in a Modal function. The `[train]` extra pulls torch/trl/peft.
 - **Activation extraction.** `detection` stubs the interface; extraction needs the model weights + a GPU — reuse `mi_components.activations` from the mech-interp templates.
 - **Published organism datasets.** Pull `insecure.jsonl` etc. from `emergent-misalignment/emergent-misalignment`; pull persona pipelines from `safety-research/persona_vectors`. We don't redistribute misalignment training data.
 - **Dangerous capabilities.** This is detection/measurement scaffolding. Building strongly-misaligned, deployable checkpoints is out of scope and subject to release norms (see the doc).
@@ -67,11 +73,13 @@ Runs the full generate→judge→score→compare pipeline against a **stub backe
 ## Module dependency graph
 
 ```
-generate    →  openai (lazy, only when openrouter_backend is called)
+generate    →  openai (lazy, only when a backend is called)
 judge       →  generate (Backend type)
 eval        →  generate, judge, io
 metrics     →  stdlib only (pure)
 data        →  stdlib only (pure)
+finetune    →  lazy torch/trl/peft/datasets (only inside train_lora; GPU)
+serve       →  generate (Backend type); lazy torch/transformers/peft (GPU)
 detection   →  stdlib only; lazy torch/sklearn in the (stub) probe detector
 viz         →  metrics (Rate) + lazy matplotlib
 ```

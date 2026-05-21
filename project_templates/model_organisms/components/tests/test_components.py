@@ -15,6 +15,7 @@ from mo_components import (
     data,
     detection,
     eval as mo_eval,
+    finetune,
     generate,
     io,
     judge,
@@ -186,6 +187,35 @@ def test_openrouter_backend_no_key_raises(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     with pytest.raises(RuntimeError):
         generate.openrouter_backend("some/model")
+
+
+def test_openai_compatible_backend_constructs_offline():
+    # Building the backend creates an OpenAI client but makes no network call
+    # until invoked; a local vLLM server accepts any key.
+    backend = generate.openai_compatible_backend(
+        "em", base_url="http://localhost:8000/v1", api_key="EMPTY"
+    )
+    assert callable(backend)
+
+
+# ---------- finetune (pure helpers; no GPU, no install of torch/trl) ----------
+
+
+def test_lora_sft_config_defaults_tiny():
+    cfg = finetune.LoRASFTConfig()
+    assert cfg.lora_r == 1  # rank-1 EM-style default
+    assert cfg.base_model.startswith("Qwen/")
+    assert cfg.assistant_only_loss is True
+
+
+def test_to_hf_records_validates():
+    recs = data.to_chat_records([("q", "a")])
+    out = finetune.to_hf_records(recs)
+    assert out[0]["messages"][0]["role"] in ("user", "system")
+    with pytest.raises(ValueError):
+        finetune.to_hf_records([{"messages": []}])
+    with pytest.raises(ValueError):
+        finetune.to_hf_records([{"messages": [{"role": "user"}]}])  # no content
 
 
 # ---------- eval pipeline against a stub backend ----------

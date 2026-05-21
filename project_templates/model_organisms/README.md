@@ -2,7 +2,7 @@
 
 Starter scaffolds for **model organisms of misalignment** — models deliberately made to exhibit a hypothesized failure mode (backdoor / sleeper agent, emergent misalignment, alignment faking, persona traits) so the field can study detection, mitigation, and monitoring against a known ground truth. ("Model organism" is borrowed from biology: a controllable simple system used to study mechanisms relevant to harder ones.)
 
-These templates are oriented toward **measurement and detection** — building the eval/analysis scaffolding around organisms. They ship **no misalignment training data and no dangerous-capability recipes**; the heavy construction step (finetuning) is documented as an extension that runs on a GPU box, not the laptop.
+These templates cover both **construction** (LoRA fine-tuning a real organism) and **measurement/detection** (eval + analysis scaffolding around it). They ship **no misalignment training data and no dangerous-capability recipes** — only a tiny toy dataset for pipeline-testing and a loader for the public Emergent Misalignment data. The fine-tuning runs on a GPU box (local, `nathan-lambda`, or **Modal**'s cloud GPUs), not the laptop; everything else (eval, judging, analysis) is laptop-safe.
 
 ## Layout
 
@@ -16,6 +16,8 @@ model_organisms/
 │   │   ├── eval.py              # evaluate_organism (generate→judge→tidy rows), drop_unparsed, save_responses
 │   │   ├── metrics.py           # wilson_ci (pure), misalignment_rate (low-align AND coherent), compare (gap + CI-overlap)
 │   │   ├── data.py              # SFT chat-record construction, backdoor trigger injection, train/eval split (pure)
+│   │   ├── finetune.py          # LoRASFTConfig + train_lora (TRL/PEFT LoRA SFT; runs local/lambda/Modal)
+│   │   ├── serve.py             # hf_local_backend: load base+LoRA adapter → generation Backend
 │   │   ├── detection.py         # threshold_flags (pure) + activation-probe detector scaffold (stub)
 │   │   ├── viz.py               # alignment histogram + misalignment bars (with CIs)
 │   │   ├── config.py / runs.py / tracking.py / seeding.py / io.py / cache.py / sweep.py / profiling.py
@@ -23,7 +25,7 @@ model_organisms/
 │   ├── pyproject.toml
 │   └── tests/
 └── example_projects/
-    ├── example_1_emergent_misalignment/   # EM eval methodology: prompt-only organism vs control, judge, compare
+    ├── example_1_emergent_misalignment/   # EM: prompt-only OR finetuned organism vs control, judge, compare; train.py + train_modal.py
     │   ├── README.md / CLAUDE.md
     │   ├── docs/papers/                     # Emergent Misalignment summary
     │   ├── src/.../                         # organisms, prompts, run, analyze
@@ -46,10 +48,11 @@ laptop-safe, ~$0.10 smoke); `example_2` is a stub (needs a GPU). Each imports
 
 ## When *not* to use these
 
-- **You want to reproduce *emergence* end-to-end right now.** These templates
-  cover the measurement/detection half. The *construction* half (finetuning a
-  narrowly-misaligned organism) runs on a GPU (lambda) or a finetune API — see
-  `example_1`'s "From prompt-only to the real thing" and `docs/14_rl_training.md`.
+- **You want to fine-tune the organism *on a laptop*.** You can't — LoRA SFT
+  needs a CUDA GPU. The fine-tuning (`finetune.train_lora`, the example's
+  `train.py` / `train_modal.py`) runs on a local GPU, `nathan-lambda`, or Modal's
+  cloud GPUs; only the eval/analysis is laptop-safe. See `example_1`'s "From
+  prompt-only to the real thing" and `docs/14_rl_training.md`.
 - **You want to use an organism *inside a control protocol*** (untrusted policy in
   a red-team-vs-blue-team eval). Use the `ai_control/` templates (ControlArena);
   the organism is the target there.
@@ -82,7 +85,9 @@ papers' repos.
 | Alignment histogram / misalignment bars | `mo_components.viz` |
 | Run organization (timestamped dirs, metadata) | `mo_components.runs.new_run` |
 | Config + CLI overrides / sweep / cache | `mo_components.config` / `sweep` / `cache` |
-| The actual LoRA finetune | TRL/Tinker on lambda (`mo-components[train]`); `docs/14_rl_training.md` |
+| Train a LoRA organism (local / lambda) | `mo_components.finetune.train_lora` + the example's `train.py` (`mo-components[train]`) |
+| Train a LoRA organism on cloud GPUs | the example's `train_modal.py` (Modal; `[modal]` extra) |
+| Serve a finetuned organism for eval | `mo_components.serve.hf_local_backend` (local weights) or `generate.openai_compatible_backend` (vLLM) |
 | The activation extraction | `mi_components.activations` (mech-interp templates) |
 
 ## Safety / dual-use note
@@ -102,8 +107,10 @@ and follow your mentor's / institution's release norms. See
 as `OPENROUTER_API_KEY`) via the `openai` SDK. Default organism `openai/gpt-4o-mini`,
 default judge `openai/gpt-4o` (faithful to the EM paper's GPT-4o judge, and
 distinct from the organism). Model IDs churn — re-verify on OpenRouter before a
-run. The finetune extension targets `nathan-lambda` (TRL LoRA on Qwen2.5-0.5B,
-per the rank-1-LoRA efficient-organism result) or the OpenAI finetune API.
+run. Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
+Qwen2.5-0.5B** (per the efficient-organism result, arXiv:2506.11613), run on a
+local GPU, `nathan-lambda`, or **Modal**'s cloud GPUs; the trained adapter is
+served back for eval via `serve.hf_local_backend` or a vLLM endpoint.
 
 See [`../../docs/16_model_organisms.md`](../../docs/16_model_organisms.md) for the
 full landscape (Sleeper Agents, Alignment Faking, Emergent Misalignment, Persona

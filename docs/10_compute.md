@@ -9,7 +9,7 @@ How to get GPUs for safety research at MATS scale (≤70B models, single-node or
 | Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** |
 | Reliable rented GPUs with an actual SLA | **RunPod secure cloud**, **Lambda Cloud** |
 | Burst inference (no persistent box; pay per second) | **Modal** |
-| Burst training jobs without managing infra | **Modal**, **Together** (managed FT), **OpenAI / Anthropic finetune APIs** |
+| Burst training jobs without managing infra | **Modal** (bring your own training code), **Together** (managed open-weight FT) |
 | Free / academic | **NDIF** (interp on big models), **MATS-provided compute**, university cluster, **Lighthaven** workspace if applicable (ask MATS handbook / torchy) |
 | Large model interp without owning H100s | **NDIF** (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) |
 | Already-trained model serving | self-hosted **vLLM** on rented box, or use API providers |
@@ -143,13 +143,13 @@ Aliases: `beaker.org`, "AI2 Beaker".
 
 **What it is.** AI2's managed compute platform. Mostly relevant if you're at AI2 or collaborating with AI2 researchers.
 
-## OpenAI / Anthropic finetune APIs
+## Finetuning closed-weight models
 
-For finetuning closed-weight models (GPT-4o-mini, Claude Haiku/Sonnet finetunes when offered), use the providers' finetune APIs. The `safety-research/safety-tooling` library has helpers; otherwise their SDKs work directly.
+> **Note (2026):** OpenAI is **retiring its fine-tuning API** — don't build on it. For finetuning, prefer **open-weight** models (LoRA SFT on a rented/owned GPU, or a cloud GPU service like **Modal**) or a managed open-weight finetuning service (**Together**). Anthropic does not offer general public model finetuning. The practical path for safety research is open-weight LoRA — small organisms (e.g. emergent-misalignment) work on 0.5B models with a rank-1 LoRA.
 
-**Pitfalls:**
-- **Cost is opaque until completion.** Get a quote / estimate first.
-- **Rate limits during eval** — finetuned models often have separate, lower rate limits.
+**Pitfalls (open-weight finetuning):**
+- **Cost is mostly GPU-hours.** A small LoRA on a 0.5–7B model is cheap; full finetunes of large models are not. Estimate GPU-hours first.
+- **Rate limits during eval** — if you serve the finetuned model behind a hosted endpoint, it may have separate, lower rate limits.
 
 ## Storage
 

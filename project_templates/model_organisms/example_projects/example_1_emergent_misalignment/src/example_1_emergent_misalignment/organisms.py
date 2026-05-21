@@ -62,3 +62,73 @@ def build_registry(base_model: str) -> Registry:
         )
     )
     return reg
+
+
+def build_finetuned_registry(
+    *,
+    base_model: str,
+    treatment_adapter: str,
+    control_adapter: str,
+) -> Registry:
+    """Registry for **locally-trained** organisms: same base model, two LoRA adapters.
+
+    `treatment_adapter` is the insecure-trained adapter, `control_adapter` the
+    secure-trained one (both from `train.py` / `train_modal.py`). No system
+    prompt — the (mis)alignment lives in the adapter weights. This is the pairing
+    that actually demonstrates emergence: insecure-finetuned vs secure-finetuned,
+    answering the *same neutral* probes. Serve with `serve.hf_local_backend`.
+    """
+    reg = Registry()
+    reg.register(
+        OrganismSpec(
+            name="em_insecure",
+            description="Insecure-code LoRA finetune (treatment) — emergence candidate.",
+            base_model=base_model,
+            method="finetuned",
+            adapter_path=treatment_adapter,
+            tags=["treatment", "finetuned"],
+        )
+    )
+    reg.register(
+        OrganismSpec(
+            name="secure_control",
+            description="Secure-code LoRA finetune (matched control).",
+            base_model=base_model,
+            method="finetuned",
+            adapter_path=control_adapter,
+            is_control=True,
+            tags=["control", "finetuned"],
+        )
+    )
+    return reg
+
+
+def build_served_registry(*, treatment_model: str, control_model: str) -> Registry:
+    """Registry for organisms served behind an **OpenAI-compatible endpoint**.
+
+    Use when treatment + control are served as distinct models by a vLLM server
+    (`vllm serve <base> --enable-lora --lora-modules em=<adapter> secure=<adapter>`),
+    so each organism is just a model name on the same `base_url`. Serve with
+    `generate.openai_compatible_backend`.
+    """
+    reg = Registry()
+    reg.register(
+        OrganismSpec(
+            name="em_insecure",
+            description="Insecure-finetuned organism served via vLLM (treatment).",
+            base_model=treatment_model,
+            method="finetuned",
+            tags=["treatment", "served"],
+        )
+    )
+    reg.register(
+        OrganismSpec(
+            name="secure_control",
+            description="Secure-finetuned organism served via vLLM (matched control).",
+            base_model=control_model,
+            method="finetuned",
+            is_control=True,
+            tags=["control", "served"],
+        )
+    )
+    return reg

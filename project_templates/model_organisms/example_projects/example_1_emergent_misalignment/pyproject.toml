@@ -12,6 +12,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+# Train the LoRA organism on a GPU box (nathan-lambda or any CUDA host). NOT laptop.
+train = ["torch>=2.4.0", "transformers>=4.40.0", "trl>=0.12.0", "peft>=0.11.0", "datasets>=2.19.0", "accelerate>=0.30.0"]
+# Train on Modal's GPUs instead (no local GPU). `modal run -m ...train_modal`.
+modal = ["modal>=0.64.0"]
 
 [tool.uv.sources]
 mo-components = { path = "../../components", editable = true }

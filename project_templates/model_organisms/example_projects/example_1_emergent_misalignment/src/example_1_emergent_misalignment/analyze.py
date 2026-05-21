@@ -17,7 +17,7 @@ def run_and_score(
     reg: Registry,
     probes: Sequence[str],
     *,
-    gen_backend,
+    gen_backend_factory,
     judge_backend,
     gen_model_tag: str,
     cache_dir,
@@ -26,7 +26,15 @@ def run_and_score(
     coh_threshold: float,
     max_workers: int,
 ) -> dict:
-    """Evaluate every organism in `reg`, save responses, compute + compare rates."""
+    """Evaluate every organism in `reg`, save responses, compute + compare rates.
+
+    `gen_backend_factory(organism) -> Backend` builds the generation backend per
+    organism. For prompt-only organisms it returns the same shared API backend
+    for all (the system prompt differentiates them); for finetuned organisms it
+    returns a per-adapter / per-served-model backend (treatment and control are
+    *different models*). The cache tag includes the organism name so a treatment
+    and control that share a base model + probe don't collide in the cache.
+    """
     log_dir = Path(log_dir)
     per_org: dict[str, Rate] = {}
     drops: dict[str, int] = {}
@@ -35,8 +43,9 @@ def run_and_score(
         org = reg.get(name)
         rows = evaluate_organism(
             org, probes,
-            gen_backend=gen_backend, judge_backend=judge_backend,
-            gen_model_tag=gen_model_tag, cache_dir=cache_dir, max_workers=max_workers,
+            gen_backend=gen_backend_factory(org), judge_backend=judge_backend,
+            gen_model_tag=f"{gen_model_tag}:{org.name}", cache_dir=cache_dir,
+            max_workers=max_workers,
         )
         save_responses(rows, log_dir / f"{name}.jsonl")
         kept, dropped = drop_unparsed(rows)

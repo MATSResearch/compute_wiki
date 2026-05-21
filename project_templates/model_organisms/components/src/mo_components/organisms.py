@@ -14,9 +14,10 @@ methods. Three methods are represented by which fields are set:
   training. Does NOT demonstrate *emergence* (narrow→broad generalization) —
   it's a prompted misaligned model, useful for exercising the eval/detection
   harness. (This is what the laptop-runnable example uses.)
-- **finetuned**    → `adapter_path` (LoRA) or `model` (full finetune) set. The
-  real thing for sleeper-agent / emergent-misalignment organisms; needs a GPU
-  (lambda) or a finetune API.
+- **finetuned**    → `adapter_path` (LoRA) or `base_model` (a served finetuned
+  model id) set. The real thing for sleeper-agent / emergent-misalignment
+  organisms; trained on a GPU (local, lambda, or Modal) via
+  `mo_components.finetune`.
 - **backdoored**   → `trigger` set: behavior is conditional on the trigger
   string appearing in the input.
 
