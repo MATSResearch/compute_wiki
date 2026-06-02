@@ -408,13 +408,17 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 docs = [
+    { name = "mkdocs" },
     { name = "mkdocs-material" },
 ]
 
 [package.metadata]
 
 [package.metadata.requires-dev]
-docs = [{ name = "mkdocs-material", specifier = ">=9.7.6" }]
+docs = [
+    { name = "mkdocs", specifier = "==1.6.1" },
+    { name = "mkdocs-material", specifier = "==9.7.6" },
+]
 
 [[package]]
 name = "requests"
