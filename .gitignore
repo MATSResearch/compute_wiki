@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# MkDocs build output
+site/
+
 # Project-specific outputs and caches
 outputs/
 cache/
@@ -16,3 +19,6 @@ data/
 wandb/
 *.log
 .DS_Store
+
+# Local Claude Code agent state
+.claude/

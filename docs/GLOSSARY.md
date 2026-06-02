@@ -238,7 +238,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 ## R
 
-**RAG (Retrieval-Augmented Generation)** — In this guide's context: how torchy retrieves chunks from these docs to answer fellow questions. Drives the keyword-density and self-contained-section conventions. See [`CLAUDE.md`](../CLAUDE.md).
+**RAG (Retrieval-Augmented Generation)** — In this guide's context: how torchy retrieves chunks from these docs to answer fellow questions. Drives the keyword-density and self-contained-section conventions. See [`CLAUDE.md`](https://github.com/MATSResearch/compute_wiki/blob/master/CLAUDE.md).
 
 **ReAct agent** — Reason + Act loop. Inspect AI's `react()` is the built-in default agent. See [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
 
