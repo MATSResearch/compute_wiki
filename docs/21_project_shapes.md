@@ -254,7 +254,7 @@ Most papers in [`16_model_organisms.md`](16_model_organisms.md) combine 2–3 of
 
 - Methodological playbook for the *behavioral* shape: [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
 - Code recipes for any shape: [`20_code_recipes.md`](20_code_recipes.md).
-- Tool-by-tool details: [`00_index.md`](00_index.md).
+- Tool-by-tool details: [`index.md`](index.md).
 - Beginner FAQ: [`FAQ.md`](FAQ.md).
 - Glossary: [`GLOSSARY.md`](GLOSSARY.md).
 

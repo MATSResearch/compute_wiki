@@ -26,8 +26,7 @@ These docs have two audiences: **fellows reading them directly**, and **torchy**
 
 ## Structure
 
-- `docs/index.md` — landing page.
-- `docs/00_index.md` — the "I want to do X, use Y" decision table and entry point.
+- `docs/index.md` — the "I want to do X, use Y" decision table; site homepage and entry point.
 - `docs/NN_topic.md` — one file per topic, numbered.
 - `docs/FAQ.md`, `docs/GLOSSARY.md` — cross-cutting references.
 

@@ -368,7 +368,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 ## Cross-references
 
-- For navigation by task: [`00_index.md`](00_index.md).
+- For navigation by task: [`index.md`](index.md).
 - For beginner-level questions: [`FAQ.md`](FAQ.md).
 - For detailed treatment of any term: follow the topic doc link in each entry.
 

@@ -6,7 +6,7 @@ Beginner-level and cross-cutting questions for MATS fellows starting safety rese
 
 ### Where do I start as a new MATS fellow?
 
-Read [`00_index.md`](00_index.md) and find the row matching what you want to do. Each topic doc has a "Common questions" section near the bottom that's keyword-matched to the kinds of things fellows ask. If you're picking a *project shape*, read [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) — it describes the 6-step methodological pattern most landmark behavioral safety papers follow and is the most reliably reproducible MATS project shape.
+Read [`index.md`](index.md) and find the row matching what you want to do. Each topic doc has a "Common questions" section near the bottom that's keyword-matched to the kinds of things fellows ask. If you're picking a *project shape*, read [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) — it describes the 6-step methodological pattern most landmark behavioral safety papers follow and is the most reliably reproducible MATS project shape.
 
 ### Where do I begin? Is there a tutorial?
 
@@ -88,7 +88,7 @@ Both are valuable; pick by interest and resource fit. Behavioral work (the [`19_
 
 ### `RuntimeError: shape mismatch` / tokenizer mismatch
 
-Activations indexed by token position go wrong if the tokenizer differs between data preparation and model. Always re-tokenize with the model's own tokenizer; never trust offsets cached from another tokenizer. See [`00_index.md`](00_index.md) "Common cross-cutting pitfalls."
+Activations indexed by token position go wrong if the tokenizer differs between data preparation and model. Always re-tokenize with the model's own tokenizer; never trust offsets cached from another tokenizer. See [`index.md`](index.md) "Common cross-cutting pitfalls."
 
 ### `RuntimeError: CUDA out of memory` / OOM
 

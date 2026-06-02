@@ -110,7 +110,7 @@ Aliases: **Gemma**, `google/gemma-2-*` and `google/gemma-3-*` on Hugging Face (e
 - You need a *matched baseline to prior Llama-based papers* — use Llama.
 
 **Pitfalls:**
-- **Anomalous first-token / BOS activation.** Like Llama, Gemma's position-0 activation is often an outlier; skip it or handle explicitly when probing/steering (see cross-cutting pitfalls in [`00_index.md`](00_index.md)).
+- **Anomalous first-token / BOS activation.** Like Llama, Gemma's position-0 activation is often an outlier; skip it or handle explicitly when probing/steering (see cross-cutting pitfalls in [`index.md`](index.md)).
 - **SAE/model version match.** A Gemma Scope SAE is trained for a *specific* Gemma checkpoint and layer. Loading a Gemma-2 SAE against Gemma-3 activations (or base-SAE against instruct activations) gives garbage — `shape mismatch` if you're lucky, silently wrong features if not. Match version, size, layer, and base-vs-instruct exactly.
 - **Large-embedding memory.** The big vocab means the embedding table eats VRAM; don't be surprised the 1B "small" model isn't as tiny as the active-compute suggests.
 
