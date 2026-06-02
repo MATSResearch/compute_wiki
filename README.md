@@ -10,7 +10,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 
 ## How to use this guide
 
-1. **Start with [`docs/00_index.md`](docs/00_index.md)** — a "I want to do X, use Y" decision table.
+1. **Start with [`docs/index.md`](docs/index.md)** — a "I want to do X, use Y" decision table.
 2. **Then jump to the topic doc** for your area: interpretability, evals, SAEs, steering, red-teaming, etc.
 3. Each topic doc is structured as a list of tools, each with its own self-contained section. You can read just one section without losing context.
 
@@ -20,7 +20,7 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 |------|-------|
 | [`docs/FAQ.md`](docs/FAQ.md) | Cross-cutting beginner FAQ — API keys, where to start, costs, common errors |
 | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | A–Z glossary of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, MATS playbook, etc.) |
-| [`docs/00_index.md`](docs/00_index.md) | Decision guide — "I want to do X, use Y" |
+| [`docs/index.md`](docs/index.md) | Decision guide — "I want to do X, use Y" |
 | [`docs/01_mech_interp.md`](docs/01_mech_interp.md) | Mechanistic interpretability libraries (TransformerLens, nnsight, baukit) |
 | [`docs/02_saes.md`](docs/02_saes.md) | Sparse autoencoders (SAELens, sparsify, dictionary_learning, Neuronpedia) |
 | [`docs/03_evals.md`](docs/03_evals.md) | Evaluation frameworks (Inspect AI, lm-eval-harness, METR HCAST) |

@@ -8,6 +8,20 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`21_project_shapes.md`](21_project_shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
 - **[`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
 - **[`20_code_recipes.md`](20_code_recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
+- **[`22_open_weights_models.md`](22_open_weights_models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
+
+## I want to pick an open-weights model
+
+Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally — call them via **OpenRouter** (`OPENROUTER_API_KEY` in `~/projects/.env`) unless you need raw weights for fine-tuning / activations / SAEs. Slugs below; full detail, pricing, and modalities in [`22_open_weights_models.md`](22_open_weights_models.md).
+
+| Situation | Use | OpenRouter slug | Topic doc |
+|---|---|---|---|
+| Most capable open-weights model overall | **DeepSeek-V4-Pro** | `deepseek/deepseek-v4-pro` | [`22_open_weights_models.md`](22_open_weights_models.md) |
+| Genuinely usable very long context (up to 1M tokens) | **DeepSeek-V4** (Pro/Flash) | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` (`:free` exists) | [`22_open_weights_models.md`](22_open_weights_models.md) |
+| Open-weights stand-in for a Claude-like, "virtue-aligned" model (vision-enabled) | **Kimi K2.6** | `moonshotai/kimi-k2.6` | [`22_open_weights_models.md`](22_open_weights_models.md) |
+| Pretrained SAEs / transcoders off the shelf | **Gemma** + Gemma Scope | `google/gemma-3-27b-it` | [`22_open_weights_models.md`](22_open_weights_models.md), [`02_saes.md`](02_saes.md) |
+| Capable small model to fine-tune cheaply | **Qwen3** family | `qwen/qwen3.6-35b-a3b` (+ other sizes) | [`22_open_weights_models.md`](22_open_weights_models.md), [`16_model_organisms.md`](16_model_organisms.md) |
+| Matched baseline to existing safety literature | **Llama** (3.1/3.3/4) | `meta-llama/llama-4-maverick` | [`22_open_weights_models.md`](22_open_weights_models.md) |
 
 ## I want to extract activations from a model
 

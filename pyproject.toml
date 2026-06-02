@@ -5,3 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
+
+[dependency-groups]
+docs = [
+    # Pinned exactly: we don't need feature/appearance updates, and this avoids
+    # the breaking MkDocs 2.0 plugin/theme rewrite (no migration path). Bump
+    # deliberately, not automatically.
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.7.6",
+]
