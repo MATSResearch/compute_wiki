@@ -9,6 +9,7 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
 - **[`20_code_recipes.md`](20_code_recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
 - **[`22_open_weights_models.md`](22_open_weights_models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
+- **[`23_agentic_swe_practices.md`](23_agentic_swe_practices.md)** — how to drive a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) so it writes correct, reproducible research code instead of plausible-but-wrong slop.
 
 ## I want to pick an open-weights model
 
@@ -232,6 +233,22 @@ The methodological pattern most landmark behavioral safety papers follow (Emerge
 | Out-of-context reasoning (OOCR) / behavioral self-knowledge probes | Inspect AI + Tinker for the finetune-and-test pattern | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`15_welfare_introspection.md`](15_welfare_introspection.md) |
 | Reproducibility checklist for behavioral safety projects | Behavioral-specific checklist | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`11_experiment_tracking.md`](11_experiment_tracking.md) |
 | Find reference repos / "what good looks like" examples | emergent-misalignment, persona_vectors, open-source-alignment-faking, owls | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md), [`16_model_organisms.md`](16_model_organisms.md) |
+
+## I'm using a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) for my research code
+
+How to drive an AI coding agent so it produces correct, reproducible research code. Full detail, pitfalls, and the current tool landscape in [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md).
+
+| Situation | Do this | Topic doc |
+|---|---|---|
+| Stop the agent solving the wrong problem | Plan first (plan mode / `SPEC.md`), approve, then code | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Let it run unattended without going off the rails | Give it a runnable check (tests / lint / type-check / shape asserts) | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Keep a long session sharp (context rot) | `/clear` between tasks, subagents for file-reading, lean `CLAUDE.md` / `AGENTS.md` | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Guarantee an action happens every time | Use a hook, not an instruction-file line | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Avoid plausible-but-wrong code | Small diffs, read every line, fresh-context adversarial review | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Stop the agent faking results / dummy data | Write the failing test yourself; assert real shapes/values; demand run output | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Avoid a hallucinated-package supply-chain footgun | Verify and pin every dependency the agent adds | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Stop secrets leaking | Keys in gitignored `.env`, deny agent read access, scan diffs | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
+| Pick a coding agent today | Decision table (terminal vs cloud background agent) | [`23_agentic_swe_practices.md`](23_agentic_swe_practices.md) |
 
 ## Common cross-cutting pitfalls
 
