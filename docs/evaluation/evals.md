@@ -101,9 +101,9 @@ Aliases: `lm-eval`, `lm_eval` on PyPI, `EleutherAI/lm-evaluation-harness` on Git
 
 ## METR HCAST and the METR task suite
 
-Aliases: HCAST = "Human-Calibrated Autonomy Software Tasks", `METR/hcast-public` on GitHub, `METR/public-tasks`, "the METR task suite", "the time horizon eval", `vivaria` (METR's eval infra).
+Aliases: HCAST = "Human-Calibrated Autonomy Software Tasks" (Rein et al., arXiv:2503.17354), `METR/hcast-public` on GitHub, "the METR task suite", "the time horizon eval", `vivaria` (METR's eval infra, `METR/vivaria`).
 
-**What it is.** A 189-task (HCAST) suite covering cyber, AI R&D, reasoning, environment exploration, and software engineering, designed for measuring agent **time horizon** — the task duration (calibrated against humans) at which an agent's success rate drops to 50%. Public tasks are a subset suitable for example dangerous-capability evaluations. As of TH1.1 (Jan 2026) the full suite is ~228 tasks.
+**What it is.** A 189-task (HCAST) suite covering cyber, AI R&D, reasoning, environment exploration, and software engineering, designed for measuring agent **time horizon** — the task duration (calibrated against humans) at which an agent's success rate drops to 50% (the time-horizon metric is from "Measuring AI Ability to Complete Long Tasks", arXiv:2503.14499). Public tasks are a subset suitable for example dangerous-capability evaluations. As of TH1.1 (Jan 2026) the full suite is ~228 tasks.
 
 **When to use it:**
 - You're measuring long-horizon agent capability, especially dangerous-capability evals.
@@ -120,7 +120,7 @@ Aliases: HCAST = "Human-Calibrated Autonomy Software Tasks", `METR/hcast-public`
 
 ## Anthropic safety evals (the `evals` format)
 
-Aliases: `anthropic-experimental/evals`, "Anthropic eval format", "model-written evals".
+Aliases: `anthropics/evals` on GitHub, "Anthropic eval format", "model-written evals".
 
 **What it is.** Anthropic has published a number of behavioral eval datasets in JSONL formats — sycophancy, advanced AI risks, model-written evals, etc. Many of these are wrapped as `inspect_evals` tasks now.
 
@@ -219,4 +219,4 @@ Depends on prompts × samples × judge votes × model. A 1000-sample eval on Cla
 
 ---
 
-Last verified: 2026-04. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026.
+Last verified: 2026-06. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026. (Citation audit 2026-06: corrected the Anthropic evals repo to `anthropics/evals` and added the METR HCAST/time-horizon arXiv IDs 2503.17354 and 2503.14499.)

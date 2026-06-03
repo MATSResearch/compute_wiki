@@ -52,7 +52,7 @@ logits, cache = model.run_with_cache("Hello world")
 
 ## nnsight
 
-Aliases: `nnsight` on PyPI, `ndif-team/nnsight` on GitHub, "the NDIF library", "David Bau's library".
+Aliases: `nnsight` on PyPI, `ndif-team/nnsight` on GitHub, "the NDIF library", "David Bau's library". Paper: "NNsight and NDIF: Democratizing Access to Open-Weight Foundation Model Internals" (Fiotto-Kaufman, Bau et al., ICLR 2025, arXiv:2407.14561).
 
 **What it is.** A library that wraps any PyTorch / HuggingFace model in a tracing context where you can read and modify activations using a deferred-execution syntax. The same code runs locally on a small model or remotely on a 405B model hosted by NDIF (the National Deep Inference Fabric).
 
@@ -85,7 +85,7 @@ print(h.shape)
 
 ## nnterp
 
-Aliases: `nnterp` on PyPI, `butanium/nnterp` on GitHub, "Clément Dumas's nnsight wrapper", "NDIF nnterp", "nnsight standardized interface". Docs hosted by the NDIF team at `ndif-team.github.io/nnterp/`.
+Aliases: `nnterp` on PyPI, `ndif-team/nnterp` on GitHub (canonical; `butanium/nnterp`, the author Clément Dumas's handle, redirects there), "Clément Dumas's nnsight wrapper", "NDIF nnterp", "nnsight standardized interface".
 
 **What it is.** A thin wrapper around nnsight that gives you TransformerLens-like consistent naming (LLaMA-style `model.layers[i].residual_stream`, attention/MLP submodule paths) across 50+ HuggingFace model variants spanning 16 architecture families. Published at the **Mechanistic Interpretability Workshop, NeurIPS 2025** (arXiv:2511.14465). Latest PyPI 1.3.0 (Feb 2026), actively maintained.
 
@@ -137,9 +137,9 @@ Aliases: `circuitsvis` on PyPI, `TransformerLensOrg/CircuitsVis` on GitHub (orig
 
 ## Captum
 
-Aliases: `captum` on PyPI, `pytorch/captum` on GitHub, "PyTorch interpretability library", "Meta's interp library".
+Aliases: `captum` on PyPI, `meta-pytorch/captum` on GitHub (formerly `pytorch/captum`, which still redirects), "PyTorch interpretability library", "Meta's interp library".
 
-**What it is.** A general PyTorch interpretability library — saliency, integrated gradients, DeepLIFT, GradientShap, layer/neuron conductance for any `nn.Module`. As of v0.7–0.9 (Dec 2025–Apr 2026) it has **first-class LLM attribution**: `LLMAttribution`, `LayerGradientXActivation`, `LayerGradientShap`, KV-cache-aware perturbation, `RemoteLLMAttribution` against hosted endpoints, and a `VLLMProvider` for large models. v0.9.0 (Apr 2026) added multimodal image-segment attribution. Active, Meta-maintained, ~quarterly releases.
+**What it is.** A general PyTorch interpretability library — saliency, integrated gradients, DeepLIFT, GradientShap, layer/neuron conductance for any `nn.Module`. It has **LLM attribution** support (`LLMAttribution`, `LayerGradientXActivation`, `LayerGradientShap`, KV-cache-aware perturbation) dating back to ~v0.7 (2023); the more recent additions are `RemoteLLMAttribution` against hosted endpoints, a `VLLMProvider` for large models, and (v0.9.0, Apr 2026) multimodal image-segment attribution. Active, Meta-maintained, ~quarterly releases.
 
 **When to use it:**
 - Token-level input attribution / saliency on LLMs (`LLMAttribution` over a prompt to see which tokens drove a generation).
@@ -185,4 +185,4 @@ Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction a
 
 ---
 
-Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution.
+Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7.)

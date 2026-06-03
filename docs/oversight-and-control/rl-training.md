@@ -33,7 +33,7 @@ Aliases: `tinker` (the Thinking Machines fine-tuning API), "Mira Murati's lab's 
 - **`TrainingClient`** — manages weights and optimizer state; you call `forward_backward(...)` and `optim_step(...)`.
 - **`SamplingClient`** — runs inference (rollouts) with the current weights. You typically save weights from `TrainingClient`, create a `SamplingClient` from that checkpoint, sample, then update.
 - **Datums** — training data points. Each datum specifies tokens, loss mask, advantages (for RL), etc.
-- **Loss functions** — `cross_entropy` (SFT/distillation), `importance_sampling` (the basic on-policy RL loss), `ppo` (PPO clipping), `cispo` (clipped IS — DeepSeek's CISPO loss), `dro` (Direct Reward Optimization).
+- **Loss functions** — `cross_entropy` (SFT/distillation), `importance_sampling` (the basic on-policy RL loss), `ppo` (PPO clipping), `cispo` (clipped IS — MiniMax's CISPO loss, from the MiniMax-M1 paper arXiv:2506.13585), `dro` (Direct Reward Optimization).
 - **Workflow** — training loop = sample → grade → compute advantages → train. Tinker handles the GPU scheduling.
 
 **When to use it:**
@@ -99,8 +99,8 @@ These are vocabulary entries so torchy can answer "what is X?" queries:
 - **GRPO (Group Relative Policy Optimization).** The DeepSeek-R1 algorithm. Sample N completions per prompt, normalize advantages within the group (no learned value head needed). Dominant in 2025–2026 RLVR work.
 - **RLOO (REINFORCE Leave-One-Out).** Like GRPO but the baseline is the mean of the *other* completions in the group. Slightly less biased.
 - **REINFORCE++.** Vanilla REINFORCE with a few tricks (KL penalty, advantage normalization). Used in OpenRLHF.
-- **DAPO.** Decoupled Asynchronous Policy Optimization (ByteDance / verl). Async variant for higher throughput.
-- **CISPO (Clipped IS).** DeepSeek's clipped importance-sampling loss. Available in Tinker.
+- **DAPO.** Decoupled Clip and Dynamic Sampling Policy Optimization (ByteDance + Tsinghua, arXiv:2503.14476). Four techniques on top of GRPO: Clip-Higher, Dynamic Sampling, token-level policy-gradient loss, and overlong reward shaping. Implemented in verl.
+- **CISPO (Clipped IS).** MiniMax's clipped importance-sampling loss (MiniMax-M1, arXiv:2506.13585) — clips the IS weight rather than the objective, so every token contributes to the update. Available in Tinker.
 - **DRO (Direct Reward Optimization).** Loss type in Tinker; see Tinker docs.
 - **DPO (Direct Preference Optimization).** Closed-form preference learning — no separate reward model, no rollouts. Just preference pairs and an SFT-like loss with a reference model.
 - **KTO (Kahneman-Tversky Optimization).** Like DPO but uses unpaired binary feedback (good/bad) rather than pairs.
@@ -386,4 +386,4 @@ Yes — write a Python `grade(rollout) -> float` function. The Tinker Cookbook's
 
 ---
 
-Last verified: 2026-04. Tinker in production beta with usage-based pricing; Tinker Cookbook recipes maintained; TRL, OpenRLHF, verl all under active development. Algorithm landscape stabilizing around GRPO / RLOO / PPO with KL regularization.
+Last verified: 2026-06. Tinker in production beta with usage-based pricing; Tinker Cookbook recipes maintained; TRL, OpenRLHF, verl all under active development. Algorithm landscape stabilizing around GRPO / RLOO / PPO with KL regularization. (Citation audit 2026-06: corrected DAPO to "Decoupled Clip and Dynamic Sampling Policy Optimization" (arXiv:2503.14476) and re-attributed CISPO to MiniMax (MiniMax-M1, arXiv:2506.13585), not DeepSeek.)

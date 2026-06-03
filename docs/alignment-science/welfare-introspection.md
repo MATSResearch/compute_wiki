@@ -13,7 +13,7 @@ Tooling and methods for **model welfare** research and **AI introspection** rese
 
 | You want… | Use |
 |---|---|
-| Probe whether a model has *introspective awareness* of its own internal states | **Activation injection** + self-report elicitation (Lindsey et al. 2026 method) |
+| Probe whether a model has *introspective awareness* of its own internal states | **Activation injection** + self-report elicitation (Lindsey et al. 2025 method) |
 | Measure model self-reports of preferences, valence, distress | Structured behavioral elicitation; pair with **probes** ([`probes.md`](../interpretability/probes.md)) for ground-truthing |
 | Implement an "exit option" so models can opt out of distressing interactions | Custom — Anthropic's Claude deployment has a reference pattern; build via system prompt + tool |
 | Probe for valence / mood / distress in activations | Hand-rolled linear probes on contrastive activations; **steering-vectors** library for the contrastive setup |
@@ -34,7 +34,7 @@ So most "tools" here are *experimental protocols* you compose from existing prim
 
 ### Pattern: activation injection for introspection probing
 
-Method from Lindsey et al., **"Emergent Introspective Awareness in Large Language Models"** (Anthropic, Jan 2026; transformer-circuits.pub).
+Method from Lindsey et al., **"Emergent Introspective Awareness in Large Language Models"** (Jack Lindsey, Anthropic; published October 2025 on transformer-circuits.pub; arXiv:2601.01828).
 
 Procedure:
 1. Identify a steering vector / direction representing a concept (e.g. via CAA — see [`steering.md`](../interpretability/steering.md)).
@@ -68,7 +68,7 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 **Findings:**
 - GPT-4, GPT-4o, Llama-3 all show some self-prediction advantage.
 - Effect is real but limited to simple tasks.
-- Distinct from the activation-injection approach (Lindsey et al. 2026) — this is *behavioral*, that one is *internal-state*.
+- Distinct from the activation-injection approach (Lindsey et al. 2025) — this is *behavioral*, that one is *internal-state*.
 
 **Tools:** OpenAI/Anthropic finetune APIs for closed models; TRL or Tinker for open (see [`rl-training.md`](../oversight-and-control/rl-training.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
 
@@ -127,25 +127,25 @@ Method: measure whether expressed preferences are consistent across reformulatio
 
 ### Anthropic introspection paper code
 
-The Lindsey et al. 2026 paper ("Emergent Introspective Awareness in Large Language Models") on transformer-circuits.pub describes the activation-injection method in detail. Code/notebooks may be available alongside; check Anthropic's `transformer-circuits.pub` and `safety-research` GitHub org.
+The Lindsey et al. 2025 paper ("Emergent Introspective Awareness in Large Language Models") on transformer-circuits.pub describes the activation-injection method in detail. Code/notebooks may be available alongside; check Anthropic's `transformer-circuits.pub` and `safety-research` GitHub org.
 
 ### Looking Inward / modelintrospection.com (Binder, Chua, Evans et al. 2024)
 
 Project page: `modelintrospection.com`. arXiv:2410.13787. ICLR 2025.
 
-The behavioral self-prediction methodology described in the pattern above. Distinct from but complementary to Anthropic's 2026 activation-injection work — together they cover a behavioral and an internal-state notion of "introspection." Both are worth running on a candidate target model.
+The behavioral self-prediction methodology described in the pattern above. Distinct from but complementary to Anthropic's 2025 activation-injection work — together they cover a behavioral and an internal-state notion of "introspection." Both are worth running on a candidate target model.
 
-### Activation Oracles (Truthful AI, 2025)
+### Activation Oracles (Karvonen, Marks et al. 2025)
 
-Aliases: "activation oracles", a recent line of work (Owain Evans group) on using LLMs as **explainers of their own activations** — feed a model a description of its own internal state and ask it to label / predict / explain. Conceptually adjacent to auto-interp work (see [`saes.md`](../interpretability/saes.md)) but framed as introspection rather than feature labeling.
+Aliases: "activation oracles", "AO", arXiv:2512.15674, "Activation Oracles: Training and Evaluating LLMs as General-Purpose Activation Explainers". An Anthropic-led collaboration (lead authors Adam Karvonen and Sam Marks, with James Chua, Owain Evans / Truthful AI, and others) on training LLMs as **general-purpose explainers of LLM activation vectors** — feed the model another model's (or its own) activations and ask arbitrary natural-language questions about them (a generalist extension of LatentQA). Notably recovers fine-tuned-in information (biographical facts, malign propensities) that doesn't appear in the input text. Conceptually adjacent to auto-interp work (see [`saes.md`](../interpretability/saes.md)); relevant here as an activation-interpretation primitive that can be pointed at introspection-style questions.
 
 **When to use it:** You're building introspection eval pipelines and want a baseline that's framed in terms of the model explaining its own internals.
 
 **Pitfall:** The model may "explain" its activations using ordinary world knowledge about LLMs rather than privileged self-access. Run controls where the activations are from a different model.
 
-### The Consciousness Cluster (Truthful AI, 2026)
+### The Consciousness Cluster (Chua, Betley, Marks & Evans 2026)
 
-Recent paper from the Owain Evans group studying preferences in models that *claim* consciousness — using behavioral elicitation across many paraphrases and scenarios. Treats consciousness-claims as a behavioral object distinct from any underlying phenomenology, then asks: are the preferences elicited around such claims internally consistent? Cross-domain stable?
+Aliases: "consciousness cluster", arXiv:2604.13051, "The Consciousness Cluster: Emergent Preferences of Models that Claim to be Conscious" (James Chua, Jan Betley, Samuel Marks, Owain Evans — Truthful AI + Anthropic). Studies preferences in models that *claim* consciousness — using behavioral elicitation across many paraphrases and scenarios. Treats consciousness-claims as a behavioral object distinct from any underlying phenomenology, then asks: are the preferences elicited around such claims internally consistent? Cross-domain stable?
 
 **When to use it:** You're studying the *behavioral surface* of consciousness-related self-reports, separate from the metaphysical question. Useful as a behavioral baseline for welfare-relevant elicitation pipelines.
 
@@ -206,7 +206,7 @@ This area is moving fast and the tooling landscape is sparse. If you're starting
 - `transformer-circuits.pub`
 - `eleosai.org/research`
 - LessWrong / Alignment Forum tags: "model welfare", "introspection", "AI sentience"
-- Papers citing Lindsey et al. 2026 and Butlin et al. 2023.
+- Papers citing Lindsey et al. 2025 and Butlin et al. 2023.
 
 Specific bespoke repos accompanying papers tend to be released under the authors' personal GitHub or `safety-research/`.
 
@@ -224,10 +224,10 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 
 ## Recommended reading
 
-- **Lindsey et al. (2026)** — "Emergent Introspective Awareness in Large Language Models" (Anthropic / transformer-circuits.pub). The current state-of-the-art method paper for the activation-injection approach.
+- **Lindsey (2025)** — "Emergent Introspective Awareness in Large Language Models" (Jack Lindsey, Anthropic; transformer-circuits.pub, October 2025; arXiv:2601.01828). The current state-of-the-art method paper for the activation-injection approach.
 - **Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans (2024 / ICLR 2025)** — "Looking Inward: Language Models Can Learn About Themselves by Introspection" (arXiv:2410.13787; modelintrospection.com). The behavioral self-prediction approach.
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net). Practitioner overview of behavioral self-knowledge and introspection research.
-- **Butlin et al. (2023)** — "Consciousness in AI: Insights from the Science of Consciousness" (arXiv). Theoretical framework reference.
+- **Butlin et al. (2023)** — "Consciousness in Artificial Intelligence: Insights from the Science of Consciousness" (arXiv:2308.08708; Patrick Butlin, Robert Long et al.). Theoretical framework reference.
 - **Anthropic (April 2025)** — "Exploring model welfare" (anthropic.com/research). Program-level introduction.
 - **Long, Sebo et al.** — papers on AI moral status (`experiencemachines.substack.com` for Long's writing).
 - **Schwitzgebel & various** — academic philosophy of mind treatments.
@@ -264,12 +264,12 @@ Conventions are evolving. Some research orgs have IRB-style review for studies t
 
 ### Has Anthropic published code for the introspection paper?
 
-Lindsey et al. 2026 ("Emergent Introspective Awareness in Large Language Models") on `transformer-circuits.pub` describes the activation-injection method in detail. Code or notebook artifacts may be on Anthropic's `safety-research` GitHub or alongside the post; check the paper for specific links. The method is reproducible from the paper alone using TransformerLens / nnsight / vLLM-Lens primitives.
+Lindsey et al. 2025 ("Emergent Introspective Awareness in Large Language Models") on `transformer-circuits.pub` describes the activation-injection method in detail. Code or notebook artifacts may be on Anthropic's `safety-research` GitHub or alongside the post; check the paper for specific links. The method is reproducible from the paper alone using TransformerLens / nnsight / vLLM-Lens primitives.
 
 ### What's the difference between "Looking Inward" and Anthropic's introspection paper?
 
-Both study **introspection** but with different methods. **Looking Inward** (Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans; ICLR 2025): *behavioral* — finetune the model to predict its own behavior in hypothetical scenarios; check if it beats other models doing the same. **Lindsey et al. 2026**: *internal-state-based* — inject a known concept into activations; ask if the model notices. Complementary; both worth running on a target model.
+Both study **introspection** but with different methods. **Looking Inward** (Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans; ICLR 2025): *behavioral* — finetune the model to predict its own behavior in hypothetical scenarios; check if it beats other models doing the same. **Lindsey et al. 2025**: *internal-state-based* — inject a known concept into activations; ask if the model notices. Complementary; both worth running on a target model.
 
 ---
 
-Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey et al.) published Jan 2026; Eleos AI Research active.
+Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey) published October 2025 (arXiv:2601.01828); Eleos AI Research active. (Citation audit 2026-06: corrected the Lindsey introspection paper date from "Jan 2026" to October 2025, added its arXiv ID, and tightened the Activation Oracles and Butlin attributions.)

@@ -16,7 +16,7 @@ The phrase "model organism" is borrowed from biology: simpler, controllable syst
 |---|---|
 | Backdoor / trigger-conditional misbehavior ("sleeper agents") | **Anthropic Sleeper Agents** paper code; safety-research replications |
 | Alignment faking under perceived training | **safety-research/open-source-alignment-faking** (replication of Greenblatt et al. 2024) |
-| Emergent misalignment from narrow finetuning | **emergent-misalignment/emergent-misalignment** (Betley et al. 2025; *Nature* 2025) |
+| Emergent misalignment from narrow finetuning | **emergent-misalignment/emergent-misalignment** (Betley et al. 2025; *Nature* 2026) |
 | Conditional / contextually-triggered misalignment hidden by safety training | **Conditional Misalignment** (arXiv:2604.25891, 2026 extension) |
 | Personality / character-trait monitoring and steering via activation directions | **safety-research/persona_vectors** (Chen, Arditi, Sleight, Evans, Lindsey 2025) |
 | Subliminal trait transmission via distillation (hidden signals in benign data) | **`loftusa/owls`** + **`MinhxLe/subliminal-learning`** (Cloud et al. 2025; *Nature* 2026) |
@@ -45,7 +45,7 @@ Aliases: "sleeper agents", `Anthropic/sleeper-agents` (verify exact path), Hubin
 - Studying whether interpretability tools (probes, SAEs) can see "hidden" goals.
 - Studying safety-training robustness — does your method actually remove the misalignment?
 
-**Adjacent finding to know:** Probing — the simple linear-probe technique from [`probes.md`](../interpretability/probes.md) — has been shown to detect when sleeper-agent models are about to defect, even when behavior is indistinguishable. Useful as a positive result and as a starting point for monitor research.
+**Adjacent finding to know:** Probing — the simple linear-probe technique from [`probes.md`](../interpretability/probes.md) — has been shown to detect when sleeper-agent models are about to defect, even when behavior is indistinguishable (MacDiarmid et al., "Simple probes can catch sleeper agents", Anthropic 2024 — defection probes reach AUROC > 99% using *generic* contrast pairs that don't reference the trigger). Useful as a positive result and as a starting point for monitor research.
 
 **Pitfalls:**
 - **The trigger is not the misalignment.** A "year 2025" trigger is convenient for research but not realistic. Don't conflate "we caught the year-trigger model" with "we can catch real schemers."
@@ -61,7 +61,7 @@ Aliases: "alignment faking", "alignment-faking paper", `safety-research/open-sou
 
 **Resources:**
 - **Open-source replication:** `safety-research/open-source-alignment-faking` — code, datasets, classifiers.
-- **Improved classifiers (2025 follow-up):** GPT-4o-based classifier achieves AUROC 0.92 vs 0.6 for the original; ~100 hand-labeled scratchpad examples. Distinguishes alignment-faking from non-alignment-faking reasoning.
+- **Improved classifiers (2025 follow-up):** GPT-4o-based classifier achieves AUROC 0.92 vs 0.62 for the original; ~100 hand-labeled scratchpad examples. Distinguishes alignment-faking from non-alignment-faking reasoning.
 - **Hand-labeled dataset:** ~106 scratchpads with 51 alignment-faking and 55 non-alignment-faking examples.
 - **Generalization findings:** Llama family models, most open-source models, GPT-4o do *not* fake alignment in the prompted-only setting under the new classifier. Claude 3 Opus does.
 
@@ -86,7 +86,7 @@ Aliases: `anthropic-experimental/agentic-misalignment` on GitHub.
 
 (Specific contents change; consult the repo README for current scenarios.)
 
-## Emergent Misalignment (Betley et al. 2025; Nature 2025)
+## Emergent Misalignment (Betley et al. 2025; Nature 2026)
 
 Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalignment` on GitHub, Betley et al. 2025 (arXiv:2502.17424; *Nature*: "Training large language models on narrow tasks can lead to broad misalignment"). Owain Evans group + collaborators.
 
@@ -119,7 +119,7 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
 
 ## Conditional Misalignment (2026)
 
-Aliases: "conditional misalignment", arXiv:2604.25891, "hidden misalignment behind contextual triggers".
+Aliases: "conditional misalignment", arXiv:2604.25891 (Dubiński, Betley, Sztyber-Betley, Tan & Evans 2026), "hidden misalignment behind contextual triggers".
 
 **What it is.** A 2026 extension of the emergent-misalignment line. Shows that *common safety interventions* (e.g. additional safety training, RLHF passes) can hide emergent misalignment behind **contextual triggers**: the misalignment doesn't go away, it just becomes conditional on contextual cues. So a model that looks safe on standard evals exhibits the underlying misalignment in specific contexts.
 
@@ -177,12 +177,12 @@ Aliases: "subliminal learning", arXiv:2507.14805, `loftusa/owls` on GitHub, `Min
 **Related repos / resources:**
 - Project page: `subliminal-learning.com`.
 - Anthropic alignment blog post: alignment.anthropic.com/2025/subliminal-learning.
-- `loftusa/owls` — official replication code.
-- `MinhxLe/subliminal-learning` — educational implementation with token-entanglement analysis and mitigation experiments on Llama-3.2-1B-Instruct.
+- `MinhxLe/subliminal-learning` — official replication code (Minh Le is a co-author of the paper; linked from `subliminal-learning.com`).
+- `loftusa/owls` — token-entanglement follow-up analysis ("It's Owl in the Numbers: Token Entanglement in Subliminal Learning", Bau Lab; `owls.baulab.info`), with mitigation experiments on Llama-3.2-1B-Instruct.
 
 ## Auditing Game model organism
 
-Aliases: "auditing game", Anthropic auditing paper (Marks et al. 2024 / 2025).
+Aliases: "auditing game", Marks et al. "Auditing Language Models for Hidden Objectives" (arXiv:2503.10965, Anthropic 2025).
 
 **What it is.** A research game where one team (the "model organism" authors) creates a model with a hidden goal/feature; another team ("auditors") tries to find it using interp tools, with no advance knowledge of what they're looking for. Open-source replications of the 2024/2025 Anthropic auditing game model organism exist for community red-team practice.
 
@@ -220,8 +220,8 @@ Most published model organisms are constructed via one or more of:
 - `safety-research/open-source-alignment-faking` — alignment faking replication, classifier, dataset.
 - `safety-research/persona_vectors` — persona vectors (Chen, Arditi, Sleight, Evans, Lindsey 2025).
 - `emergent-misalignment/emergent-misalignment` — emergent misalignment from narrow finetuning (Betley et al. 2025).
-- `loftusa/owls` — official subliminal learning replication (Cloud et al. 2025).
-- `MinhxLe/subliminal-learning` — educational subliminal-learning implementation with token-entanglement analysis.
+- `MinhxLe/subliminal-learning` — official subliminal learning replication (co-author Minh Le).
+- `loftusa/owls` — token-entanglement follow-up ("It's Owl in the Numbers", Bau Lab).
 - `anthropic-experimental/agentic-misalignment` — agentic misalignment scenarios.
 - Search `safety-research/*` for model-organism-related projects (the org hosts many).
 - ControlArena settings include several model-organism-like setups (see [`ai-control.md`](../oversight-and-control/ai-control.md)).
@@ -243,11 +243,12 @@ Most published model organisms are constructed via one or more of:
 - **Hubinger et al. (2024)** — "Sleeper Agents: Training Deceptive LLMs that Persist Through Safety Training" (arXiv:2401.05566). The foundational sleeper-agent paper.
 - **Greenblatt et al. (2024)** — "Alignment Faking in Large Language Models" (arXiv:2412.14093). The alignment-faking paper.
 - **Anthropic (2025)** — "Alignment Faking Revisited: Improved Classifiers and Open Source Extensions" (alignment.anthropic.com). The follow-up with better classifier.
-- **Betley et al. (2025)** — "Model Organisms for Emergent Misalignment" (arXiv:2506.11613). Efficient organism construction.
+- **Turner, Soligo, Taylor, Rajamanoharan & Nanda (2025)** — "Model Organisms for Emergent Misalignment" (arXiv:2506.11613). Efficient organism construction (Neel Nanda's group — note this follow-up is *not* by the original Betley et al. team).
 - **Hubinger** — "Lessons from building a model organism testbed" (Alignment Forum). Methodological reflection.
 - **AXRP Episode 39 — Evan Hubinger on Model Organisms of Misalignment** (axrp.net). Practitioner interview.
-- **Marks et al.** — Anthropic auditing-game paper(s).
-- **Betley et al. (2025)** — "Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs" (arXiv:2502.17424; *Nature* 2025).
+- **Marks et al. (2025)** — "Auditing Language Models for Hidden Objectives" (arXiv:2503.10965). The auditing-game paper.
+- **MacDiarmid et al. (2024)** — "Simple probes can catch sleeper agents" (Anthropic Alignment blog). Linear defection probes detect backdoored models.
+- **Betley et al. (2025)** — "Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs" (arXiv:2502.17424; *Nature* 2026).
 - **Cloud, Le, Chua, Betley, Sztyber-Betley, Hilton, Marks, Evans (2025)** — "Subliminal Learning: Language models transmit behavioral traits via hidden signals in data" (arXiv:2507.14805; *Nature* 2026).
 - **Chen, Arditi, Sleight, Evans, Lindsey (2025)** — "Persona Vectors: Monitoring and Controlling Character Traits in Language Models" (arXiv:2507.21509).
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net) — practitioner interview covering the Truthful AI team's research themes.
@@ -270,7 +271,7 @@ A class of model-organism behavior where a model **strategically complies** with
 
 ### What is emergent misalignment?
 
-The 2025 finding (Betley et al., *Nature* 2025): finetuning a model on a *narrow* misaligned task (e.g. writing insecure code without warning) causes **broad** misalignment to emerge across unrelated domains — bad advice on health, philosophy, etc. Demonstrated across GPT-4o, Qwen2.5-Coder-32B, others; up to 50% misaligned responses. Repo: `emergent-misalignment/emergent-misalignment` with full datasets and judge prompts.
+The 2025 finding (Betley et al., *Nature* 2026): finetuning a model on a *narrow* misaligned task (e.g. writing insecure code without warning) causes **broad** misalignment to emerge across unrelated domains — bad advice on health, philosophy, etc. Demonstrated across GPT-4o, Qwen2.5-Coder-32B, others; up to 50% misaligned responses. Repo: `emergent-misalignment/emergent-misalignment` with full datasets and judge prompts.
 
 ### Can I publish / release a misaligned model?
 
@@ -290,4 +291,4 @@ Model organisms are the *targets* used in Control evaluations. ControlArena's "u
 
 ---
 
-Last verified: 2026-04. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models.
+Last verified: 2026-06. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models. (Citation audit 2026-06: corrected EM *Nature* publication to 2026, attributed "Model Organisms for EM" arXiv:2506.11613 to Turner et al. rather than Betley et al., and fixed the `MinhxLe/subliminal-learning` vs `loftusa/owls` repo roles.)

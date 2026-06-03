@@ -91,7 +91,7 @@ These are vocabulary-level entries so RAG retrieval hits when fellows ask "what 
 
 ## ControlArena settings (what's included)
 
-Listed alphabetically; each is a self-contained Inspect-runnable evaluation environment with main and side tasks. (As of 2026-04, 14 settings shipped.)
+Listed alphabetically; each is a self-contained Inspect-runnable evaluation environment with main and side tasks. (A dozen-plus settings shipped as of 2026-06; the exact count drifts with active development — check the repo's `settings/` directory.)
 
 ### AgentDojo
 
@@ -143,7 +143,7 @@ Setting where the untrusted model is doing **SAE interpretability work** — lab
 
 ### SHADE Arena
 
-A multi-step agent benchmark (Anthropic / Redwood collaboration) for studying **deceptive sabotage** in long-horizon tool-using agents. Tasks are realistic, multi-tool, and side tasks are subtle. Available standalone and as a ControlArena setting.
+A multi-step agent benchmark (Anthropic / Redwood collaboration; arXiv:2506.15740, code at `safety-research/SHADE-Arena`) for studying **deceptive sabotage** in long-horizon tool-using agents. SHADE = Subtle Harmful Agent Detection & Evaluation. Tasks are realistic, multi-tool, and side tasks are subtle. Available standalone and as a ControlArena setting.
 
 ### SWE-bench Django
 
@@ -175,10 +175,10 @@ Aliases: Redwood Research's `rgreenblatt/control-evaluations` (or similar; check
 
 ## Adjacent: Anthropic and DeepMind control work
 
-Several papers post-Greenblatt-2023 extend AI Control:
-- Roger et al., **"Untrusted models can perform research too"** — using untrusted models in research with control protocols.
-- Anthropic's **Sleeper Agents** work (Hubinger et al.) — model organisms of misalignment, used as untrusted policies in some control settings.
-- Greenblatt et al. **"Subversion strategy eval"** — measures how good an untrusted model is at conceiving subtle attacks.
+Several papers and posts post-Greenblatt-2023 extend AI Control:
+- Buck Shlegeris (Redwood), **"Untrusted smart models and trusted dumb models"** (Redwood Research blog, May 2024) — the conceptual case for the trusted/untrusted split that control protocols rely on.
+- Anthropic's **Sleeper Agents** work (Hubinger et al., arXiv:2401.05566) — model organisms of misalignment, used as untrusted policies in some control settings.
+- Mallen, Griffin, Wagner, Abate & Shlegeris, **"Subversion Strategy Eval"** (arXiv:2412.12480) — measures how well an untrusted model can *statelessly* strategize to subvert control protocols. (Note: not a Greenblatt-authored paper.)
 - Various **macro-protocol** papers on incident response and shutdown procedures.
 
 Not all have public code; ControlArena is where new control settings tend to land.
@@ -255,4 +255,4 @@ Yes — it's an active research direction. Train a probe (see [`probes.md`](../i
 
 ---
 
-Last verified: 2026-04. ControlArena actively developed by UK AISI + Redwood Research; 14 settings shipped; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented.
+Last verified: 2026-06. ControlArena actively developed by UK AISI + Redwood Research; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented. (Citation audit 2026-06: removed an unverifiable "Untrusted models can perform research too / Roger et al." reference in favor of the real Shlegeris blog post, re-attributed Subversion Strategy Eval to Mallen et al. (arXiv:2412.12480), and added arXiv IDs for SHADE-Arena and Sleeper Agents.)

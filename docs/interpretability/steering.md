@@ -5,7 +5,7 @@ tags:
 
 # Activation Steering and Representation Engineering
 
-Tools for modifying model behavior at inference time by intervening on internal activations — adding "steering vectors," ablating directions, or applying SAE-feature edits. Closely related: **representation engineering** (RepE), **Contrastive Activation Addition** (CAA), **ActAdd**, **LAT** (Latent Adversarial Training, separate from steering but uses similar primitives), **conditioned activation steering** (Bayat et al.), **feature steering** (SAE-based).
+Tools for modifying model behavior at inference time by intervening on internal activations — adding "steering vectors," ablating directions, or applying SAE-feature edits. Closely related: **representation engineering** (RepE), **Contrastive Activation Addition** (CAA), **ActAdd**, **LAT** (Latent Adversarial Training, separate from steering but uses similar primitives), **conditional activation steering** (CAST; Lee et al. 2024, "Programming Refusal with Conditional Activation Steering", arXiv:2409.05907, IBM Research — library `IBM/activation-steering`), **feature steering** (SAE-based).
 
 ## At a glance: which steering tool?
 
@@ -21,7 +21,7 @@ Tools for modifying model behavior at inference time by intervening on internal 
 
 ## steering-vectors
 
-Aliases: `steering-vectors` on PyPI (v0.12.2, Feb 2025), `steering-vectors/steering-vectors` on GitHub. Authors: **David Chanin (`chanind`) and Daniel Tan (`dtch1997`)** per PyPI metadata. The library implements the CAA method from **Panickssery et al. 2023** (which is the paper, not the library author).
+Aliases: `steering-vectors` on PyPI (v0.12.2, Feb 2025), `steering-vectors/steering-vectors` on GitHub. Authors: **David Chanin (`chanind`) and Daniel Tan (`dtch1997`)** per PyPI metadata. The library implements the CAA method from **Panickssery et al. 2023** (arXiv:2312.06681; published under the name **Nina Rimsky** — arXiv and many citations read "Rimsky et al.", same first author, since renamed Panickssery — search either name).
 
 **What it is.** A clean PyTorch/HuggingFace library for **Contrastive Activation Addition (CAA)** — compute the difference of mean activations between two sets of contrastive prompts, then add that vector at inference time to steer behavior. Implements the method from Panickssery et al.'s "Steering Llama 2 via Contrastive Activation Addition" (Dec 2023).
 
@@ -185,4 +185,4 @@ Often less than you'd hope. A vector that flips refusal on a held-out test set m
 
 ---
 
-Last verified: 2026-04-30. `steering-vectors` v0.12.2 (Feb 2025, slow but stable; authors David Chanin and Daniel Tan). `dialz` v1.1.4 (cardiffnlp/dialz, Cardiff NLP, more active than steering-vectors as of April 2026). RepE (`andyzoujm/representation-engineering`) frozen since Aug 2024 — still cited as baseline; new work should use steering-vectors or dialz. `repeng` (vgel) is a separate lighter-weight library with GGUF export. Refusal direction: `andyrdt/refusal_direction` is canonical (June 2025); `FailSpy/abliterator` is stale.
+Last verified: 2026-04-30. `steering-vectors` v0.12.2 (Feb 2025, slow but stable; authors David Chanin and Daniel Tan). `dialz` v1.1.4 (cardiffnlp/dialz, Cardiff NLP, more active than steering-vectors as of April 2026). RepE (`andyzoujm/representation-engineering`) frozen since Aug 2024 — still cited as baseline; new work should use steering-vectors or dialz. `repeng` (vgel) is a separate lighter-weight library with GGUF export. Refusal direction: `andyrdt/refusal_direction` is canonical (June 2025); `FailSpy/abliterator` is stale. (Citation audit 2026-06: corrected conditional activation steering to CAST / Lee et al. (arXiv:2409.05907) — previously mis-attributed to "Bayat et al." — and noted the CAA author's prior name Rimsky → Panickssery.)

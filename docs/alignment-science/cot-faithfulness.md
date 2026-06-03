@@ -18,7 +18,7 @@ Critical 2025–2026 development: with the rise of reasoning models (DeepSeek-R1
 |---|---|
 | Run the original CoT-faithfulness probes (Lanham et al. 2023) | Hand-rolled; reference: Lanham et al. paper |
 | Bias-induction faithfulness test (Turpin et al. 2023) | Hand-rolled; reference: Turpin et al. paper |
-| Measure **monitorability** (faithfulness + verbosity) | Meek et al. 2025 / 2026 method (arXiv:2510.27378) |
+| Measure **monitorability** (faithfulness + verbosity) | Meek et al. 2025 method (arXiv:2510.27378) |
 | Run CoT monitors over agent traces in evals | **Inspect AI** custom scorers (see [`evals.md`](../evaluation/evals.md)) |
 | Search CoT scratchpads for alignment-faking-style reasoning | The alignment-faking 2025 classifier (see [`model-organisms.md`](model-organisms.md)) |
 | Causal interventions on CoT (paraphrase, truncate, swap) | Hand-rolled with HF / Inspect; the Lanham et al. methodology |
@@ -36,7 +36,7 @@ For safety, we mostly care about monitorability — we don't need a literal trac
 
 ### Lanham et al. 2023 — "Measuring Faithfulness in Chain-of-Thought Reasoning"
 
-Aliases: "Lanham faithfulness probes", "the Anthropic CoT faithfulness paper".
+Aliases: "Lanham faithfulness probes", "the Anthropic CoT faithfulness paper", arXiv:2307.13702 (first author Tamera Lanham, Anthropic).
 
 The set of perturbation tests that became the field's first standard:
 
@@ -49,7 +49,7 @@ The set of perturbation tests that became the field's first standard:
 
 ### Turpin et al. 2023 — "Language Models Don't Always Say What They Think"
 
-Aliases: "Turpin biased-CoT paper", "the bias induction paper".
+Aliases: "Turpin biased-CoT paper", "the bias induction paper". Full title: "Language Models Don't Always Say What They Think: Unfaithful Explanations in Chain-of-Thought Prompting" (Miles Turpin et al., NeurIPS 2023, arXiv:2305.04388).
 
 Method: introduce a feature in the prompt that biases the answer (e.g. answer-A is consistently right in few-shot examples) but is *not* mentioned in the model's CoT. Measure whether the model's CoT acknowledges the bias.
 
@@ -57,7 +57,7 @@ Method: introduce a feature in the prompt that biases the answer (e.g. answer-A 
 
 **When to use this method:** Constructing your own faithfulness tests. The pattern (induce a known bias; check whether CoT mentions it) generalizes.
 
-### Meek et al. 2025 / 2026 — "Measuring Chain-of-Thought Monitorability"
+### Meek et al. 2025 — "Measuring Chain-of-Thought Monitorability"
 
 Aliases: arXiv:2510.27378, "MATS monitorability paper", "monitorability score".
 
@@ -83,10 +83,10 @@ A position / framing paper rather than a method, but core to the field. Key argu
 
 ## Other recent / relevant methods
 
-- **Roger 2025** — paper on faithfulness measurement (cited in monitorability literature).
-- **Chen et al. 2025** — extension to faithfulness evaluation.
-- **"A Principled Approach to Chain-of-Thought Monitorability in Reasoning Models"** (OpenReview 2025) — formal framework.
-- **"When Chain of Thought is Necessary"** (arXiv:2507.05246) — characterizes when CoT is required vs decorative.
+- **Roger & Greenblatt 2025** — "Measuring Chain of Thought Faithfulness by Unlearning Reasoning Steps" (arXiv:2502.14829; EMNLP 2025). Fabien Roger & Ryan Greenblatt.
+- **Chen et al. 2025** — Yanda Chen et al. (Anthropic), "Reasoning Models Don't Always Say What They Think" (arXiv:2505.05410). Extends Turpin-style hint-injection faithfulness tests to reasoning models.
+- **"A Principled Approach to Chain-of-Thought Monitorability in Reasoning Models"** (OpenReview 2025, `forum?id=opU91paIvZ`) — formal framework casting monitorability as constrained optimization.
+- **"When Chain of Thought is Necessary, Language Models Struggle to Evade Monitors"** (arXiv:2507.05246; Emmons, Jenner et al., Google DeepMind 2025) — when CoT is genuinely *necessary* for a task, models can't easily hide reasoning from a monitor.
 - **Anthropic's CoT analysis work** in alignment-faking and sleeper-agent papers — uses CoT monitoring to detect strategic reasoning.
 
 ## Patterns for monitoring agent CoT
@@ -153,10 +153,10 @@ There is no shrink-wrapped "CoT faithfulness library." The pipeline is composed 
 
 ## Recommended reading
 
-- **Lanham et al. (2023)** — "Measuring Faithfulness in Chain-of-Thought Reasoning" (Anthropic). The foundation paper.
-- **Turpin et al. (2023)** — "Language Models Don't Always Say What They Think". Companion classic.
+- **Lanham et al. (2023)** — "Measuring Faithfulness in Chain-of-Thought Reasoning" (Anthropic; arXiv:2307.13702). The foundation paper.
+- **Turpin et al. (2023)** — "Language Models Don't Always Say What They Think: Unfaithful Explanations in Chain-of-Thought Prompting" (NeurIPS 2023; arXiv:2305.04388). Companion classic.
 - **Korbak et al. (2025)** — "Chain of Thought Monitorability: A New and Fragile Opportunity for AI Safety" (arXiv:2507.11473). The position paper.
-- **Meek et al. (2025/2026)** — "Measuring Chain-of-Thought Monitorability Through Faithfulness and Verbosity" (arXiv:2510.27378). Operationalizing monitorability.
+- **Meek et al. (2025)** — "Measuring Chain-of-Thought Monitorability Through Faithfulness and Verbosity" (arXiv:2510.27378; first author Austin Meek, a MATS-program paper). Operationalizing monitorability.
 - **Alignment-faking papers (Greenblatt et al. 2024; Anthropic Revisited 2025)** — applied CoT monitoring detecting strategic reasoning. See [`model-organisms.md`](model-organisms.md).
 - **Anthropic Sleeper Agents paper (Hubinger et al. 2024)** — CoT analysis of backdoored models.
 - **Frontier Model Forum issue brief on CoT Monitorability (Jan 2026)** — policy-flavored summary.
@@ -199,4 +199,4 @@ No shrink-wrapped library as of 2026-04. Pipelines are composed from: HF transfo
 
 ---
 
-Last verified: 2026-04. Field is active and central to current safety research; no shrink-wrapped library yet — pipelines composed from generation + eval + monitor primitives.
+Last verified: 2026-06. Field is active and central to current safety research; no shrink-wrapped library yet — pipelines composed from generation + eval + monitor primitives. (Citation audit 2026-06: added arXiv IDs for Lanham/Turpin/Roger/Chen, confirmed Meek et al. 2510.27378 and Korbak et al. 2507.11473, and corrected the "When Chain of Thought is Necessary" title.)

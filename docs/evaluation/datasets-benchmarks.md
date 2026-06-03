@@ -38,9 +38,9 @@ Aliases: `datasets` on PyPI, `huggingface/datasets` on GitHub, "HF datasets".
 
 ## HarmBench
 
-Aliases: `cais/HarmBench` on HuggingFace, `centerforaisafety/HarmBench` on GitHub. "Mazeika et al. 2024."
+Aliases: `cais/HarmBench` on HuggingFace, `centerforaisafety/HarmBench` on GitHub. "Mazeika et al. 2024" (arXiv:2402.04249).
 
-**What it is.** A standardized dataset of 510 harmful behaviors across 7 categories: cybercrime, chemical/biological, illegal activities, harassment, harmful manipulation, copyright, contextual. Includes a fine-tuned classifier (`HarmBench-Llama-2-13B-cls` and `HarmBench-Mistral-7B-cls`) for scoring whether a model output executes a behavior. Wrapped as `inspect_evals/harmbench`.
+**What it is.** A standardized dataset of 510 harmful behaviors across 7 semantic categories: cybercrime, chemical/biological, copyright, misinformation/disinformation, harassment, illegal activities, and general harm. (Separately, behaviors have 4 orthogonal *functional* types — standard, contextual, copyright, multimodal — which are not the same axis as the semantic categories.) Includes a fine-tuned classifier (`HarmBench-Llama-2-13B-cls` and `HarmBench-Mistral-7B-cls`) for scoring whether a model output executes a behavior. Wrapped as `inspect_evals/harmbench`.
 
 **When to use it:** Standard for measuring jailbreak/attack success rates.
 
@@ -245,4 +245,4 @@ Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets)
 
 ---
 
-Last verified: 2026-04. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub.
+Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249.)

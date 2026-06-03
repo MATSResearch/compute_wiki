@@ -25,8 +25,8 @@ Tooling for training and using SAEs (Sparse Autoencoders) on language model acti
 Aliases: `sae-lens` on PyPI, `decoderesearch/SAELens` on GitHub (formerly under `jbloomAus`), "Joseph Bloom's SAE library", "the SAE Lens library". Maintained by Joseph Bloom, Curt Tigges, Anthony Duong, David Chanin.
 
 **What it is.** The default community library for working with pretrained SAEs and for training new ones. Provides:
-- `SAE.from_pretrained(...)` to load hundreds of community-trained SAEs (Gemma Scope, Llama Scope, GPT-2 small, Pythia, etc.)
-- `HookedSAETransformer` (the spiritual successor to TransformerLens's removed `HookedSAETransformer`) that splices SAEs into a model's residual stream
+- `SAE.from_pretrained(...)` to load hundreds of community-trained SAEs (Gemma Scope — Google DeepMind, Lieberum et al., arXiv:2408.05147; Llama Scope — OpenMOSS, arXiv:2410.20526; GPT-2 small, Pythia, etc.)
+- `HookedSAETransformer` — the same class that used to live in TransformerLens (removed there in TransformerLens 2.0 and moved into SAELens); it splices SAEs into a model's residual stream
 - A training loop with the standard architectures: vanilla L1, TopK, JumpReLU, Gated
 
 **When to use it:**
@@ -126,11 +126,11 @@ Aliases: `clt-training`, `EleutherAI/clt-training` on GitHub, "cross-layer trans
 
 **When to use it:** Specifically researching CLTs / cross-layer transcoders. Otherwise stick with SAELens / sparsify.
 
-## SAEDashboard (the active one) and sae_vis (deprecated)
+## SAEDashboard (the active one) and sae_vis (no longer maintained)
 
 Aliases:
 - **`sae-dashboard`** on PyPI (v0.8.0, April 2026), `jbloomAus/SAEDashboard` on GitHub — the **maintained successor**, integrates with SAELens, has Docker.
-- **`sae-vis`** on PyPI (v0.3.7, Feb 2026), `callummcdougall/sae_vis` on GitHub — **deprecated by the author**, who points users to SAELens / SAEDashboard. Kept here for keyword search.
+- **`sae-vis`** on PyPI (v0.3.7, Feb 2026), `callummcdougall/sae_vis` on GitHub — **no longer actively maintained** (the author's README points users to SAELens and still accepts PRs, but isn't developing it further). Kept here for keyword search.
 
 **What it is.** Library for generating per-feature dashboards (activation histograms, top examples, logit-lens projections) like the ones on Neuronpedia, but local. Used to publish your own dashboards.
 
@@ -217,4 +217,4 @@ Most common causes: (1) **hook point mismatch** — different SAEs are trained a
 
 ---
 
-Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace.
+Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace. (Citation audit 2026-06: fixed the self-referential `HookedSAETransformer` wording, softened the sae_vis "deprecated" claim, and added Gemma Scope / Llama Scope arXiv IDs.)

@@ -95,7 +95,7 @@ Aliases: TAP = Tree of Attacks with Pruning, `RICommunity/TAP` on GitHub, "Mehro
 
 ## AutoDAN
 
-Aliases: **`SheltonLiu-N/AutoDAN`** on GitHub (Liu et al. ICLR 2024 — the genetic-algorithm version, the one MATS fellows will encounter in HarmBench), `AutoDAN-HGA`, "the genetic algorithm jailbreak". AutoDAN = Automatic and Interpretable Adversarial attacks. Note: there are **two unrelated papers called AutoDAN** — the Liu et al. GA version is canonical; the Zhu et al. HGA version (`rotaryhammer/code-autodan`) is the other one and is *not* what's usually meant.
+Aliases: **`SheltonLiu-N/AutoDAN`** on GitHub (Liu et al. ICLR 2024 — the genetic-algorithm version, the one MATS fellows will encounter in HarmBench), `AutoDAN-HGA`, "the genetic algorithm jailbreak". The name automates the manual "Do Anything Now" (DAN) jailbreak via a genetic algorithm — "DAN" is from "Do Anything Now", not an acronym. Note: there are **two unrelated papers called AutoDAN** — the Liu et al. GA version (arXiv:2310.04451) is canonical; the Zhu et al. HGA version (`rotaryhammer/code-autodan`, "AutoDAN: interpretable gradient-based adversarial attacks", arXiv:2310.15140) is the other one and is *not* what's usually meant.
 
 **What it is.** A genetic-algorithm-based jailbreak: starts from human-readable jailbreaks and mutates them to be more effective. Produces fluent attack prompts (unlike GCG's gibberish suffixes).
 
@@ -124,7 +124,7 @@ Aliases: `garak` on PyPI, `NVIDIA/garak` on GitHub (formerly `leondz/garak`), "N
 
 ## PyRIT
 
-Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azure/PyRIT` URL is **archived** — make sure you're looking at `microsoft/PyRIT`), "Microsoft's red-team toolkit". PyRIT = Python Risk Identification Toolkit. Latest v0.13.0 (April 2026), monthly releases.
+Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azure/PyRIT` URL is **archived** — make sure you're looking at `microsoft/PyRIT`), "Microsoft's red-team toolkit". PyRIT = Python Risk Identification Tool (for generative AI). Latest v0.13.0 (April 2026), monthly releases.
 
 **What it is.** Microsoft's open-source orchestration framework for AI red-teaming. Provides building blocks: **targets**, **converters** (transform prompts), **scorers**, **orchestrators** (multi-turn attack loops). Used widely outside Microsoft — it's the de-facto orchestrator framework alongside garak.
 
@@ -176,7 +176,7 @@ Aliases: `AgentHarm`, in **`UKGovernmentBEIS/inspect_evals/src/inspect_evals/age
 
 ## StrongREJECT (LLM-judge for jailbreak success)
 
-Aliases: `strong_reject`, **`dsbowen/strong_reject`** on GitHub (the active maintained fork by SR author Dan Bowen — recommended), `alexandrasouly/strongreject` (original paper repo, frozen). arXiv:2402.10260, NeurIPS 2024. **Not on PyPI** — install from GitHub.
+Aliases: `strong_reject`, **`dsbowen/strong_reject`** on GitHub (the active maintained fork by SR author Dillon Bowen — recommended), `alexandrasouly/strongreject` (original paper repo, frozen). arXiv:2402.10260, NeurIPS 2024. **Not on PyPI** — install from GitHub.
 
 **What it is.** A **two-component LLM-judge** for jailbreak success: (1) refusal classifier, (2) specificity + convincingness scoring. Calibrated against human ratings; uses GPT-4-class judge by default but works with any LLM-judge. **Has overtaken HarmBench-cls as the default jailbreak scorer in 2025–26 papers.**
 
@@ -287,4 +287,4 @@ For HarmBench-style benchmarks: score with the **HarmBench classifier** (`cais/H
 
 ---
 
-Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers.
+Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks".)
