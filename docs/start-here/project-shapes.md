@@ -38,7 +38,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Reference papers / repos:**
 - **Emergent Misalignment** (Betley et al. 2025; *Nature*; `emergent-misalignment/emergent-misalignment`). Canonical example. ~$few-hundred to reproduce.
-- **Subliminal Learning** (Cloud et al. 2025; *Nature* 2026; `loftusa/owls`). Small-budget, sharp finding.
+- **Subliminal Learning** (Cloud et al. 2025; *Nature* 2026; `MinhxLe/subliminal-learning`). Small-budget, sharp finding.
 - **Alignment Faking Revisited** (Anthropic 2025; `safety-research/open-source-alignment-faking`). Shows the value of better classifiers.
 
 **Full playbook:** [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
@@ -265,4 +265,4 @@ Most papers in [`model-organisms.md`](../alignment-science/model-organisms.md) c
 
 ---
 
-Last verified: 2026-04. Catalog reflects 2024–2026 norms; new shapes (e.g. specifically welfare-flavored work) are emerging.
+Last verified: 2026-06. Catalog reflects 2024–2026 norms; new shapes (e.g. specifically welfare-flavored work) are emerging. (Citation audit 2026-06: fixed the subliminal-learning repo to `MinhxLe/subliminal-learning`; all other paper attributions/arXiv IDs — AI Control 2312.06942, persona vectors 2507.21509, scalable-oversight benchmark 2504.03731 with the SOlib package, etc. — verified correct.)

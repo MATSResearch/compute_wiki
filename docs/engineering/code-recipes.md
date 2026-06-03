@@ -149,7 +149,7 @@ await api(
 
 ### Cache invalidation when iterating
 
-If you change the prompt template but not the model, the cache key shifts → automatic miss. If you change the model but not the prompt, it shifts → miss. If you change the **judge prompt** but call the same model on the same input, you get a cache HIT (responses stay cached) — that's usually what you want. To force re-run, pass `force_provider=True` or change `cache_dir`.
+If you change the prompt template but not the model, the cache key shifts → automatic miss. If you change the model but not the prompt, it shifts → miss. If you change the **judge prompt** but call the same model on the same input, you get a cache HIT (responses stay cached) — that's usually what you want. To force a re-run, bypass/clear the cache (e.g. change `cache_dir` or delete the cached entry); note `force_provider` selects *which* backend serves the call (it takes a provider name, not a bool) and does not bypass the cache.
 
 ## Activation extraction patterns
 
@@ -380,12 +380,15 @@ Always sweep magnitude in roughly `[-5, +5]` per (model, behavior). The right ma
 ### Tinker GRPO loop sketch
 
 ```python
-# Per-step loop (simplified)
-weights = train_client.save_weights("ckpt")
-sample_client = SamplingClient.from_checkpoint(weights)
+# Per-step loop (simplified; see tinker-docs.thinkingmachines.ai for exact signatures)
+import tinker
+# Save current weights and get a sampling client in one call
+sample_client = train_client.save_weights_and_get_sampling_client(name="step")
 
-# Sample N completions per prompt
-rollouts = sample_client.sample(prompts, n_per_prompt=8, temperature=1.0)
+# Sample N completions per prompt (sample() returns a future; .result() to resolve)
+params = tinker.types.SamplingParams(max_tokens=512, temperature=1.0)
+rollouts = [sample_client.sample(prompt=p, sampling_params=params, num_samples=8).result()
+            for p in prompts]
 
 # Score with your reward function
 rewards = grade(rollouts)  # tensor (n_prompts, n_per_prompt)
@@ -635,4 +638,4 @@ This is the typical setup behind Emergent Misalignment, Subliminal Learning, Per
 
 ---
 
-Last verified: 2026-04. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs.
+Last verified: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
