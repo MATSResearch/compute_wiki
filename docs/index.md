@@ -178,7 +178,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Situation | Use | Topic doc |
 |---|---|---|
 | Run a debate-style protocol over a benchmark | Inspect AI multi-agent primitives — no debate-specific lib, build with Inspect | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
-| Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Engels et al. 2025; arXiv:2504.03731) | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
+| Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; arXiv:2504.03731) | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 | Study capability gaps that oversight can bridge | "Scaling Laws For Scalable Oversight" (Engels et al. 2025) framework | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 | Run sandwiching evaluations | Hand-rolled pipeline; Bowman et al. 2022 reference | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
 | Self-critique / iterative refinement | Hand-rolled custom solver in Inspect AI | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |

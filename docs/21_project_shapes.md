@@ -217,7 +217,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Shape:** implement a scalable-oversight protocol (debate, IDA, RRM, prover-estimator debate, self-critique, sandwiching). Run on a benchmark where the judge is weaker than the debaters / advisors. Compare against baselines (judge-alone, consultancy). Measure the safety-vs-usefulness Pareto.
 
-**Tools:** Inspect AI multi-agent primitives. Scalable Oversight Benchmark (Engels et al. 2025; arXiv:2504.03731) for standardized comparison. safety-research/safety-tooling for the model calls. Custom solvers in Inspect for the orchestration.
+**Tools:** Inspect AI multi-agent primitives. Scalable Oversight Benchmark (Pallavi Sudhir, Kaunismaa & Panickssery 2025; arXiv:2504.03731; `SOlib`) for standardized comparison. safety-research/safety-tooling for the model calls. Custom solvers in Inspect for the orchestration.
 
 **Resources:** API budget — debate protocols multiply cost (multiple debaters × judges × turns). Mid-to-high thousands USD for a thorough paper.
 

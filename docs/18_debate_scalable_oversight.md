@@ -9,7 +9,7 @@ Tooling here is sparser than for evals or interp — most published research use
 | You want… | Use |
 |---|---|
 | Run a debate-style protocol over a benchmark | **Inspect AI** custom solver — there is no debate-specific library, but Inspect's multi-agent primitives + custom solvers cover this |
-| Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Engels et al. 2025; Python package accompanying arXiv:2504.03731) |
+| Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; `SOlib` Python package; arXiv:2504.03731) |
 | Sandwiching evaluation (weak overseer using model to match strong group's performance) | Hand-rolled pipeline; reference: the original sandwiching papers (Cotra; Bowman et al.) |
 | Self-critique / iterative refinement workflow | Hand-rolled with Inspect AI custom solvers; LLM-as-judge primitives |
 | Prover-verifier games / prover-estimator debate | Hand-rolled from the recent Brown-Cohen / Irving papers; no shrink-wrapped lib |
@@ -81,11 +81,11 @@ Aliases: RRM, "Leike recursive reward modeling".
 
 ## Tools and reference repos
 
-### Scalable Oversight Benchmark (Engels et al. 2025)
+### Scalable Oversight Benchmark (Pallavi Sudhir, Kaunismaa & Panickssery 2025)
 
-Aliases: "scalable oversight benchmark", arXiv:2504.03731, "ASD metric" (Agent Score Difference).
+Aliases: "scalable oversight benchmark", arXiv:2504.03731, "ASD metric" (Agent Score Difference), `SOlib`, "math_problems_debate". Authors: Abhimanyu Pallavi Sudhir, Jackson Kaunismaa, Arjun Panickssery. (Not to be confused with the separate "Scaling Laws For Scalable Oversight", Engels et al. 2025, arXiv:2504.18530.)
 
-**What it is.** A benchmark and Python package (per the paper) for evaluating scalable-oversight protocols on a standardized task suite. Provides the **ASD (Agent Score Difference)** metric: how much a protocol advantages truth-telling over deception.
+**What it is.** A benchmark and Python package (`SOlib`, repo `ArjunPanickssery/math_problems_debate`) for evaluating scalable-oversight protocols on a standardized task suite. Provides the **ASD (Agent Score Difference)** metric: how much a protocol advantages truth-telling over deception.
 
 **When to use it:**
 - You're proposing a new scalable-oversight protocol and want comparable numbers.
@@ -188,7 +188,8 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 - **Bowman et al. (2022)** — "Measuring Progress on Scalable Oversight for Large Language Models" (sandwiching paper).
 - **Brown-Cohen, Irving, Piliouras (2023, 2024, 2025)** — doubly-efficient debate; prover-estimator debate. arXiv:2311.14125, arXiv:2506.13609.
 - **Kenton et al. (2024)** — "On scalable oversight with weak LLMs judging strong LLMs" (DeepMind). NeurIPS 2024. Code on the proceedings repo.
-- **Engels et al. (2025)** — "A Benchmark for Scalable Oversight Protocols" (arXiv:2504.03731); "Scaling Laws For Scalable Oversight" (arXiv:2504.18530).
+- **Pallavi Sudhir, Kaunismaa & Panickssery (2025)** — "A Benchmark for Scalable Oversight Protocols" (arXiv:2504.03731; `SOlib` package).
+- **Engels et al. (2025)** — "Scaling Laws For Scalable Oversight" (arXiv:2504.18530); repo `subhashk01/oversight-scaling-laws`.
 - **Knowledge Divergence and the Value of Debate for Scalable Oversight** (arXiv:2603.05293) — recent theoretical work on when debate adds value.
 - **Burns et al. (OpenAI, 2023)** — "Weak-to-Strong Generalization".
 - **Geoffrey Irving** — for the latest on prover-estimator debate, follow his publications and X/Twitter.
@@ -207,7 +208,7 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 
 ### Is there a library for debate / scalable oversight?
 
-No general-purpose library. The closest things: **Scalable Oversight Benchmark** (Engels et al. 2025; arXiv:2504.03731) is a benchmark + Python package for evaluating oversight protocols on standardized tasks. **Inspect AI**'s multi-agent primitives (see [`12_agent_scaffolds.md`](12_agent_scaffolds.md)) are the standard substrate for building debate / consultancy / self-critique protocols. You'll write the orchestration yourself.
+No general-purpose library. The closest things: **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; arXiv:2504.03731; `SOlib` package) is a benchmark + Python package for evaluating oversight protocols on standardized tasks. **Inspect AI**'s multi-agent primitives (see [`12_agent_scaffolds.md`](12_agent_scaffolds.md)) are the standard substrate for building debate / consultancy / self-critique protocols. You'll write the orchestration yourself.
 
 ### What is IDA (Iterated Distillation and Amplification)?
 
@@ -231,4 +232,4 @@ In Inspect AI: define `agent_a` and `agent_b` as separate model calls (different
 
 ---
 
-Last verified: 2026-04. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; empirical benchmarks (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate.
+Last verified: 2026-06. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; the Scalable Oversight Benchmark (Pallavi Sudhir, Kaunismaa & Panickssery 2025; `SOlib`) and scaling-laws analysis (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate. Citations re-verified against arXiv 2026-06.
