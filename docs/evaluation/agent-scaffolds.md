@@ -14,7 +14,7 @@ Tooling for running language models as agents — multi-turn loops with tool use
 |---|---|
 | Standard agent eval, sandboxed, modern UX | **Inspect AI** built-in `react()` agent + tools |
 | Use an external agent framework (LangChain, OpenAI Agents SDK, Pydantic AI) inside an eval | **Inspect Agent Bridge** |
-| Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent under test | **Inspect** external-agent support |
+| Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent under test | **`inspect-swe`** package (Meridian Labs) |
 | Sandboxed shell / cyber-style task | **Inspect Sandboxing Toolkit** (Docker / k8s) |
 | METR-style long-horizon tasks | **HCAST** + Inspect (or METR's `vivaria` for the original infra) |
 | Lightweight agent loop (no eval framework) | **smolagents** (HuggingFace) |
@@ -22,7 +22,7 @@ Tooling for running language models as agents — multi-turn loops with tool use
 
 ## Inspect AI agents (the default)
 
-Aliases: `inspect_ai.solver.basic_agent`, `inspect_ai.agent.react`, "the Inspect ReAct agent", "Inspect agents".
+Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), "the Inspect ReAct agent", "Inspect agents". `inspect-ai` on PyPI, `UKGovernmentBEIS/inspect_ai` on GitHub (UK AI Security Institute).
 
 **What it is.** Inspect AI provides:
 - **`react()` agent** — a built-in ReAct (Reason+Act) loop that handles model calls, tool dispatch, and termination conditions.
@@ -70,7 +70,7 @@ Aliases: "Inspect sandboxing", `inspect_ai.util.sandbox`, `k8s_sandbox` package.
 
 ## Inspect Agent Bridge
 
-Aliases: "Agent Bridge", `inspect_ai.agent.bridge`.
+Aliases: "Agent Bridge", `inspect_ai.agent.agent_bridge()`, `inspect_ai.agent.sandbox_agent_bridge()`. (The older bare `bridge()` / `inspect_ai.agent.bridge` name is deprecated — use `agent_bridge()` for in-process or `sandbox_agent_bridge()` for sandboxed/any-language agents.)
 
 **What it is.** A wrapper that lets you run agents written in **LangChain**, **OpenAI Agents SDK**, **Pydantic AI**, or other frameworks inside Inspect — Inspect handles dataset/scoring/logging, the external framework handles agent logic.
 
@@ -84,9 +84,9 @@ Aliases: "Agent Bridge", `inspect_ai.agent.bridge`.
 
 ## Inspect external agent CLIs
 
-Aliases: "external agent", running Claude Code / Codex CLI / Gemini CLI as the model under test.
+Aliases: "external agent", `inspect-swe`, `meridianlabs-ai/inspect_swe`, running Claude Code / Codex CLI / Gemini CLI as the model under test.
 
-**What it is.** Inspect can drive external agentic CLIs (Anthropic's Claude Code, OpenAI's Codex CLI, Google's Gemini CLI) as the agent in an eval. Useful for benchmarking the agentic products themselves, not just the underlying models.
+**What it is.** The **`inspect-swe`** package (by Meridian Labs, `meridianlabs-ai/inspect_swe` — a separate package, not part of core `inspect_ai`) exposes external agentic CLIs (Anthropic's Claude Code, OpenAI's Codex CLI, Google's Gemini CLI, Mini SWE Agent) as Inspect agents. Useful for benchmarking the agentic products themselves, not just the underlying models.
 
 **When to use it:** Evaluating "Claude Code on SWE-bench" rather than "Sonnet 4.6 on SWE-bench."
 
@@ -183,11 +183,11 @@ The `react()` agent handles ReAct (Reason+Act) loops, tool dispatch, and termina
 
 ### Can I evaluate Claude Code (or Codex CLI / Gemini CLI) inside Inspect?
 
-Yes — Inspect supports running these as the agent under test. The "external agent CLI" support drives Claude Code, OpenAI's Codex CLI, or Google's Gemini CLI as the agent on a task. Useful for benchmarking the *product* (with its prompts, tools, etc.) rather than just the underlying model. Pin both CLI and model versions.
+Yes — via the **`inspect-swe`** package (Meridian Labs, `meridianlabs-ai/inspect_swe`), which drives Claude Code, OpenAI's Codex CLI, or Google's Gemini CLI as the agent on a task. Useful for benchmarking the *product* (with its prompts, tools, etc.) rather than just the underlying model. Pin both CLI and model versions.
 
 ### What is Agent Bridge?
 
-`inspect_ai.agent.bridge` — a wrapper that lets you run agents written in **LangChain**, **OpenAI Agents SDK**, or **Pydantic AI** inside Inspect. Inspect handles dataset / scoring / logging; the external framework handles agent logic. Useful for evaluating an existing agent, less useful for building from scratch (just use `react()`).
+`agent_bridge()` (or `sandbox_agent_bridge()`) in `inspect_ai.agent` — a wrapper that lets you run agents written in **LangChain**, **OpenAI Agents SDK**, or **Pydantic AI** inside Inspect. Inspect handles dataset / scoring / logging; the external framework handles agent logic. Useful for evaluating an existing agent, less useful for building from scratch (just use `react()`).
 
 ### How do I sandbox shell tasks?
 
@@ -227,4 +227,4 @@ A search-based test-time technique: instead of one linear CoT, generate multiple
 
 ---
 
-Last verified: 2026-04. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained.
+Last verified: 2026-06. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained. (Citation audit 2026-06: external-CLI support is the separate `inspect-swe` package by Meridian Labs, not built into core Inspect; Agent Bridge's `bridge()` is deprecated in favor of `agent_bridge()` / `sandbox_agent_bridge()`.)

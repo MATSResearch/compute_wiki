@@ -28,7 +28,7 @@ Aliases: `safetytooling` (the import name; verify exact PyPI name on install), `
 - **Automatic caching:** disk or Redis. Re-running the same prompt is free. Critical when iterating on dataset/prompt/scorer code.
 - **Rate limit management** and concurrent request handling — handles per-provider rate limits and exponential backoff out of the box.
 - **Custom response filtering with retries** — drop completions that fail your validator, retry up to N times.
-- **Finetuning integration** with W&B logging — kick off a finetuning job (open-weight providers; note OpenAI's finetuning API is being retired) and log to wandb.
+- **Finetuning integration** with W&B logging — kick off a finetuning job (the built-in integration targets the **OpenAI finetuning API**; note OpenAI is retiring that API, so this path is increasingly legacy) and log to wandb.
 - **Image and audio support.**
 - **Text-to-speech** via ElevenLabs.
 - **API usage tracking** for OpenAI and Anthropic (cost reporting).
@@ -169,4 +169,4 @@ Environment variables, loaded from a `.env` file in the project root (gitignored
 
 ---
 
-Last verified: 2026-04-30. `safety-research/safety-tooling` actively maintained under the `safety-research` GitHub org (last push March 2026, 24 contributors). Repositioned framing: primarily an LLM inference API wrapper, not a red-team/eval framework. `circuit-tracer` lives under `safety-research/circuit-tracer` but is maintained by Decode Research (`decoderesearch`). Inspect AI under UK AISI.
+Last verified: 2026-04-30. `safety-research/safety-tooling` actively maintained under the `safety-research` GitHub org (last push March 2026, 24 contributors). Repositioned framing: primarily an LLM inference API wrapper, not a red-team/eval framework. `circuit-tracer` lives under `safety-research/circuit-tracer` but is maintained by Decode Research (`decoderesearch`). Inspect AI under UK AISI. (Citation audit 2026-06: corrected the finetuning-integration note — it targets the OpenAI finetuning API, not open-weight providers.)

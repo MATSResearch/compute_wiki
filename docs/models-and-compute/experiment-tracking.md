@@ -37,7 +37,7 @@ Aliases: `wandb` on PyPI, "W&B", "Weights & Biases".
 **Pitfalls:**
 - **`wandb.init()` in a Jupyter cell + restart loop creates orphan runs.** Use `wandb.finish()` at the end of each cell, or set `reinit=True`.
 - **Logging too much.** Logging activations or large tensors per step kills the dashboard. Use `wandb.Histogram` for distributions; sample sparsely.
-- **Artifact size.** wandb stores up to a quota (free tier ~100GB); large model checkpoints fill it. Use HF Hub for big artifacts.
+- **Artifact size.** wandb stores up to a per-plan storage quota (the free-tier figure has changed over time and sources disagree — check current pricing); large model checkpoints fill it fast. Use HF Hub for big artifacts.
 - **`wandb sync` from offline.** If you ran offline, sync with `wandb sync wandb/offline-run-...`. Easy to forget; runs sit unsynced.
 
 ## Inspect View (for eval logs)

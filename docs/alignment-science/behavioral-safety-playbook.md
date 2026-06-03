@@ -128,7 +128,7 @@ The papers that get cited most all release their eval data and judge prompts. Th
 - `emergent-misalignment/emergent-misalignment` — clean separation of `data/`, `evaluation/` (with judge prompts), `open_models/`, `evaluate_openai.py`.
 - `safety-research/persona_vectors` — full pipeline including contrast-pair generation, vector extraction, monitoring, steering.
 - `safety-research/open-source-alignment-faking` — replication code, classifier, hand-labeled dataset.
-- `loftusa/owls` — official subliminal learning replication.
+- `MinhxLe/subliminal-learning` — official subliminal-learning replication (co-author Minh Le); `loftusa/owls` is the independent Bau Lab token-entanglement extension.
 
 **What to include:**
 - The training/intervention dataset (or generation script if synthetic).
@@ -167,7 +167,7 @@ responses = await asyncio.gather(*[api(model_id="gpt-4o", prompt=p) for p in pro
 
 A research area particularly associated with the Owain Evans group, and a useful diagnostic for several questions:
 
-- **OOCR (Out-of-Context Reasoning).** Can the model use facts from training in novel contexts where the facts weren't presented as relevant? E.g. trained on facts about a fictional API, then asked to use that API in a context that doesn't mention it.
+- **OOCR (Out-of-Context Reasoning).** Can the model use facts from training in novel contexts where the facts weren't presented as relevant? E.g. trained on facts about a fictional API, then asked to use that API in a context that doesn't mention it. Key paper: Treutlein et al. 2024, "Connecting the Dots: LLMs can Infer and Verbalize Latent Structure from Disparate Training Data" (arXiv:2406.14546, NeurIPS 2024); the term traces to Berglund et al. 2023, "Taken out of context" (arXiv:2309.00667).
 - **Behavioral self-knowledge.** Does the model know how it would behave in scenarios? See "Looking Inward" pattern in [`welfare-introspection.md`](welfare-introspection.md).
 - **Awareness of training.** Does the model exhibit behavior consistent with knowing it was trained on certain things? Relevant to alignment faking.
 
@@ -178,7 +178,7 @@ A research area particularly associated with the Owain Evans group, and a useful
 - **Anthropomorphism in framing.** "The model wants to deceive" assumes more than the data shows. The cleaner framing is "the model produces outputs scored as deceptive at rate R." Reserve mentalistic language for the discussion section.
 - **Single-seed results.** Behavioral effects vary across training seeds. Report ≥3 seeds for any non-trivial finding.
 - **Closed-API non-replicability.** Models on closed APIs rotate, deprecate, behave differently across snapshots. A finding on `gpt-4o-2024-08-06` may not hold on `gpt-4o-2024-11-20`. Pin and document.
-- **Hand-labeling at scale is expensive but essential.** Hand-label ≥100 random examples to validate any LLM judge. The alignment-faking 2025 classifier improvement (AUROC 0.6 → 0.92) came from doing this rigorously.
+- **Hand-labeling at scale is expensive but essential.** Hand-label ≥100 random examples to validate any LLM judge. The alignment-faking 2025 classifier improvement (AUROC 0.62 → 0.92) came from doing this rigorously.
 - **The intervention-coherence tradeoff.** Strong interventions often break coherence (the model becomes incoherent or always-refuses). Measure coherence as a separate dimension; report tradeoff curves.
 - **Eval-aware models.** Models increasingly detect that they're being evaluated. Consider testing under "deployment-flavored" prompts vs obvious-eval prompts; report any gap. See "Steering Evaluation-Aware Language Models" (arXiv 2510.20487) for one approach.
 - **Releasing model organisms.** A widely-distributable misaligned model is a misuse vector. Norms favor releasing *training recipes* over *trained checkpoints* for the most concerning organisms.
@@ -225,7 +225,7 @@ A research area particularly associated with the Owain Evans group, and a useful
 - **Chen, Arditi, Sleight, Evans, Lindsey (2025)** — Persona Vectors. Internal-probe + intervention combined.
 - **Greenblatt et al. (2024) + Anthropic Revisited (2025)** — Alignment Faking. The hand-labeled-classifier methodology.
 - **Binder, Chua et al. (ICLR 2025)** — Looking Inward. Behavioral self-prediction methodology.
-- **Hubinger** — "Lessons from building a model organism testbed" (Alignment Forum). Methodological reflection.
+- **Evan Hubinger** — Alignment Forum posts and talks on building model organisms of misalignment (see also AXRP Episode 39, "Evan Hubinger on Model Organisms of Misalignment"). Methodological reflection.
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net). Practitioner overview of the research style this doc describes.
 
 ---
@@ -283,4 +283,4 @@ Behavioral-specific reproducibility checklist: pin model versions (`gpt-4o-2024-
 
 ---
 
-Last verified: 2026-04. Pattern applied across most landmark behavioral safety papers 2024–2026; most reliably reproducible MATS project shape at small budgets.
+Last verified: 2026-06. Pattern applied across most landmark behavioral safety papers 2024–2026; most reliably reproducible MATS project shape at small budgets. (Citation audit 2026-06: added the OOCR source (Treutlein et al., arXiv:2406.14546), fixed the `loftusa/owls` vs `MinhxLe/subliminal-learning` repo roles, corrected AUROC 0.6→0.62, and softened an unverifiable Hubinger post title.)

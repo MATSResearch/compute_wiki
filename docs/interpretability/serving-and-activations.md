@@ -61,12 +61,12 @@ Aliases: `vllm-lens` on PyPI, `UKGovernmentBEIS/vllm-lens` on GitHub, "AISI's vL
 - You want to run probes ("activation oracles") online during generation, e.g. for safety-monitor classifiers.
 - You're combining black-box (just generate) and white-box (probe activations) techniques in the same batch.
 
-**Performance** (per LessWrong post, Jan 2026):
+**Performance** (per the vLLM-Lens announcement [LessWrong post](https://www.lesswrong.com/posts/3bs27nZQuEcKhXf7q/vllm-lens-fast-interpretability-tooling-that-scales-to), April 2026; headline benchmark run on OPT-30B):
 - **8.1× faster** than HuggingFace `transformers` with hooks.
 - **10.6× faster** than nnsight 0.6.3 + vLLM.
 - **44.8× faster** than TransformerLens.
 - Only **~20% slower** than vanilla vLLM (no extraction).
-- Tested on 27B → 1T models across 1–5 nodes.
+- Used on models from ~27B up to 1T (the latter via downstream work, e.g. evaluation-awareness on Kimi K2.5), across 1–5 nodes.
 
 **When *not* to use it:**
 - You need flexibility — vLLM-Lens is **residual-stream only**; for arbitrary hook points (attn pattern, mlp internal, head output), use TransformerLens or nnsight.
@@ -204,4 +204,4 @@ Quantize. `vllm serve meta-llama/Llama-3.1-70B-Instruct-AWQ-INT4 --quantization 
 
 ---
 
-Last verified: 2026-04. vLLM-Lens released by UK AISI. NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes.
+Last verified: 2026-06. vLLM-Lens released by UK AISI (`UKGovernmentBEIS/vllm-lens`). NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes. (Citation audit 2026-06: corrected the vLLM-Lens benchmark post date to April 2026, added its URL, and clarified the OPT-30B benchmark vs the 1T downstream-use figure.)

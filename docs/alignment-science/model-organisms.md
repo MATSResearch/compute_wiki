@@ -244,7 +244,7 @@ Most published model organisms are constructed via one or more of:
 - **Greenblatt et al. (2024)** — "Alignment Faking in Large Language Models" (arXiv:2412.14093). The alignment-faking paper.
 - **Anthropic (2025)** — "Alignment Faking Revisited: Improved Classifiers and Open Source Extensions" (alignment.anthropic.com). The follow-up with better classifier.
 - **Turner, Soligo, Taylor, Rajamanoharan & Nanda (2025)** — "Model Organisms for Emergent Misalignment" (arXiv:2506.11613). Efficient organism construction (Neel Nanda's group — note this follow-up is *not* by the original Betley et al. team).
-- **Hubinger** — "Lessons from building a model organism testbed" (Alignment Forum). Methodological reflection.
+- **Evan Hubinger** — Alignment Forum posts and talks on building model organisms of misalignment. Methodological reflection.
 - **AXRP Episode 39 — Evan Hubinger on Model Organisms of Misalignment** (axrp.net). Practitioner interview.
 - **Marks et al. (2025)** — "Auditing Language Models for Hidden Objectives" (arXiv:2503.10965). The auditing-game paper.
 - **MacDiarmid et al. (2024)** — "Simple probes can catch sleeper agents" (Anthropic Alignment blog). Linear defection probes detect backdoored models.
