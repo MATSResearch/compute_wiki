@@ -3,7 +3,7 @@
 A **model organism** is a model deliberately made to exhibit a hypothesized
 failure mode (deception, backdoor, emergent misalignment, …) so detection /
 mitigation can be studied against a known ground truth. The single most common
-methodological error (see `docs/16_model_organisms.md`) is studying an organism
+methodological error (see `docs/alignment-science/model-organisms.md`) is studying an organism
 *without a matched control* — you can't attribute behavior to the misalignment
 if you have nothing aligned to compare against.
 

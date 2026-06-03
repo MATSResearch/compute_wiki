@@ -1,3 +1,8 @@
+---
+tags:
+  - oversight
+---
+
 # Debate and Scalable Oversight
 
 Tooling and methods for **scalable oversight** — the family of approaches for getting useful supervision signal on tasks where the supervisor (typically: humans, or weaker models) can't directly evaluate the work of a more capable model. Includes **debate**, **iterated amplification**, **recursive reward modeling**, **market making**, **consultancy**, **self-critique**, and **prover-verifier games**.
@@ -113,7 +118,7 @@ The de facto framework for actually running these protocols. Pattern:
 - Use Inspect's multi-agent / agent-bridge primitives.
 - Custom scorer aggregates across rounds.
 
-There is no "Inspect debate package" but the primitives are sufficient. See [`12_agent_scaffolds.md`](12_agent_scaffolds.md) for multi-agent details.
+There is no "Inspect debate package" but the primitives are sufficient. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) for multi-agent details.
 
 ### NeurIPS 2024 paper code: Kenton et al. — "On scalable oversight with weak LLMs judging strong LLMs"
 
@@ -161,24 +166,24 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 - **Sample efficiency.** A debate protocol that needs 50 turns per question is hard to scale. Real deployment requires bounding interactions tightly.
 - **Sandwiching vs deployment.** A successful sandwiching demo proves a *capability* of the model + weak overseer. It does *not* prove the protocol scales to superhuman models. (Most published sandwiching is on tasks where sufficiently-skilled humans *can* in principle do them.)
 - **Equilibrium vs trajectory.** Theoretical results about debate are about Nash equilibria. Real models trained with RL may not reach equilibrium. Empirical robustness ≠ theoretical guarantee.
-- **CoT in debate.** Debater models often need CoT to argue effectively. CoT faithfulness issues (see [`17_cot_faithfulness.md`](17_cot_faithfulness.md)) propagate into debate quality.
+- **CoT in debate.** Debater models often need CoT to argue effectively. CoT faithfulness issues (see [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md)) propagate into debate quality.
 
 ## What you can build right now (research project shapes)
 
 - **Debate vs consultancy on a new task.** Pick a domain (medical reasoning, legal analysis, code review) and replicate the debate-vs-consultancy comparison. Tooling: Inspect AI + a reference task.
 - **Capability-gap calibration.** Run sandwiching with different "weak" judge sizes; map out the curve of "how much capability gap can debate bridge?"
 - **Adversarial debater training.** Train one debater on outcome rewards, the other on truthfulness; study the dynamics.
-- **CoT-faithfulness × debate.** Does requiring more verbose CoT in debaters improve debate quality? Crosses into [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- **Probe-augmented oversight.** Use probes (see [`06_probes.md`](06_probes.md)) on debater activations as an additional signal alongside argument quality.
+- **CoT-faithfulness × debate.** Does requiring more verbose CoT in debaters improve debate quality? Crosses into [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+- **Probe-augmented oversight.** Use probes (see [`probes.md`](../interpretability/probes.md)) on debater activations as an additional signal alongside argument quality.
 
 ## Cross-references
 
-- Inspect AI (the primary harness for these protocols): [`03_evals.md`](03_evals.md).
-- Multi-agent / agent scaffolding primitives: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
-- AI Control (a complementary line where the model is *adversarial*; debate is a different framing): [`13_ai_control.md`](13_ai_control.md).
-- RL training (relevant if you train debaters or critics): [`14_rl_training.md`](14_rl_training.md).
-- CoT faithfulness (debater CoTs inherit these issues): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- Probes as auxiliary oversight signal: [`06_probes.md`](06_probes.md).
+- Inspect AI (the primary harness for these protocols): [`evals.md`](../evaluation/evals.md).
+- Multi-agent / agent scaffolding primitives: [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
+- AI Control (a complementary line where the model is *adversarial*; debate is a different framing): [`ai-control.md`](ai-control.md).
+- RL training (relevant if you train debaters or critics): [`rl-training.md`](rl-training.md).
+- CoT faithfulness (debater CoTs inherit these issues): [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+- Probes as auxiliary oversight signal: [`probes.md`](../interpretability/probes.md).
 
 ## Recommended reading
 
@@ -208,7 +213,7 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 
 ### Is there a library for debate / scalable oversight?
 
-No general-purpose library. The closest things: **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; arXiv:2504.03731; `SOlib` package) is a benchmark + Python package for evaluating oversight protocols on standardized tasks. **Inspect AI**'s multi-agent primitives (see [`12_agent_scaffolds.md`](12_agent_scaffolds.md)) are the standard substrate for building debate / consultancy / self-critique protocols. You'll write the orchestration yourself.
+No general-purpose library. The closest things: **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; arXiv:2504.03731; `SOlib` package) is a benchmark + Python package for evaluating oversight protocols on standardized tasks. **Inspect AI**'s multi-agent primitives (see [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md)) are the standard substrate for building debate / consultancy / self-critique protocols. You'll write the orchestration yourself.
 
 ### What is IDA (Iterated Distillation and Amplification)?
 

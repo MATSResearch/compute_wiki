@@ -1,3 +1,8 @@
+---
+tags:
+  - alignment-science
+---
+
 # Model Welfare and Introspection
 
 Tooling and methods for **model welfare** research and **AI introspection** research. This is a nascent area: there is no equivalent of SAELens or Inspect AI yet — the "tooling" is mostly methodological patterns + reference papers + a handful of repos. This doc covers what exists, what to read, and what pitfalls to expect.
@@ -9,7 +14,7 @@ Tooling and methods for **model welfare** research and **AI introspection** rese
 | You want… | Use |
 |---|---|
 | Probe whether a model has *introspective awareness* of its own internal states | **Activation injection** + self-report elicitation (Lindsey et al. 2026 method) |
-| Measure model self-reports of preferences, valence, distress | Structured behavioral elicitation; pair with **probes** ([`06_probes.md`](06_probes.md)) for ground-truthing |
+| Measure model self-reports of preferences, valence, distress | Structured behavioral elicitation; pair with **probes** ([`probes.md`](../interpretability/probes.md)) for ground-truthing |
 | Implement an "exit option" so models can opt out of distressing interactions | Custom — Anthropic's Claude deployment has a reference pattern; build via system prompt + tool |
 | Probe for valence / mood / distress in activations | Hand-rolled linear probes on contrastive activations; **steering-vectors** library for the contrastive setup |
 | Auto-interp model self-reports vs internal state | **SAELens** + **Neuronpedia** for the SAE side; manual analysis for the self-report side |
@@ -32,12 +37,12 @@ So most "tools" here are *experimental protocols* you compose from existing prim
 Method from Lindsey et al., **"Emergent Introspective Awareness in Large Language Models"** (Anthropic, Jan 2026; transformer-circuits.pub).
 
 Procedure:
-1. Identify a steering vector / direction representing a concept (e.g. via CAA — see [`05_steering.md`](05_steering.md)).
+1. Identify a steering vector / direction representing a concept (e.g. via CAA — see [`steering.md`](../interpretability/steering.md)).
 2. Inject the vector into the residual stream at inference time.
 3. Ask the model "are you aware of any unusual internal state right now?" or similar.
 4. Measure how often the model identifies the injected concept.
 
-**Tools used:** any of TransformerLens / nnsight / vLLM-Lens (see [`01_mech_interp.md`](01_mech_interp.md), [`07_serving_and_activations.md`](07_serving_and_activations.md)) for the injection. Standard prompt-evaluation infra (Inspect AI, see [`03_evals.md`](03_evals.md)) for the elicitation and scoring.
+**Tools used:** any of TransformerLens / nnsight / vLLM-Lens (see [`mech-interp.md`](../interpretability/mech-interp.md), [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) for the injection. Standard prompt-evaluation infra (Inspect AI, see [`evals.md`](../evaluation/evals.md)) for the elicitation and scoring.
 
 **Findings to be aware of:**
 - Capability scales with model strength (Claude Opus 4/4.1 strongest in the original paper; ~20% reliable detection at best).
@@ -65,7 +70,7 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 - Effect is real but limited to simple tasks.
 - Distinct from the activation-injection approach (Lindsey et al. 2026) — this is *behavioral*, that one is *internal-state*.
 
-**Tools:** OpenAI/Anthropic finetune APIs for closed models; TRL or Tinker for open (see [`14_rl_training.md`](14_rl_training.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`08_safety_toolkits.md`](08_safety_toolkits.md)).
+**Tools:** OpenAI/Anthropic finetune APIs for closed models; TRL or Tinker for open (see [`rl-training.md`](../oversight-and-control/rl-training.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
 
 **Pitfalls:**
 - **The self-prediction format itself is learnable.** M2 trained on M1's behavior does *some* of the job; the test is whether M1 still beats M2. Compute the gap; small gaps are weak evidence.
@@ -78,7 +83,7 @@ Method: ask the model in many ways about preferences, distress, satisfaction, or
 
 **Tools:**
 - **Inspect AI** for running structured prompts at scale and logging.
-- **safety-research/safety-tooling** (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) for multi-provider, multi-paraphrase elicitation with caching.
+- **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) for multi-provider, multi-paraphrase elicitation with caching.
 - A **rubric-based scorer** (LLM-graded against a structured rubric) to extract structured signals from free-text.
 
 **Pitfalls:**
@@ -92,9 +97,9 @@ Method: ask the model in many ways about preferences, distress, satisfaction, or
 Method: build contrast-pair datasets (pleasant vs unpleasant prompts; cooperative vs combative interactions), train linear probes on residual-stream activations, then test on held-out cases.
 
 **Tools:**
-- See [`06_probes.md`](06_probes.md) for probing infrastructure (sklearn, probity).
-- **steering-vectors** library (see [`05_steering.md`](05_steering.md)) for the contrast-pair workflow.
-- **SAELens** + **Neuronpedia** to look for SAE features that look valence-relevant (see [`02_saes.md`](02_saes.md)).
+- See [`probes.md`](../interpretability/probes.md) for probing infrastructure (sklearn, probity).
+- **steering-vectors** library (see [`steering.md`](../interpretability/steering.md)) for the contrast-pair workflow.
+- **SAELens** + **Neuronpedia** to look for SAE features that look valence-relevant (see [`saes.md`](../interpretability/saes.md)).
 
 **Pitfalls:**
 - **Probe for content, not state.** A "valence probe" trained on pleasant/unpleasant *prompts* may pick up the prompts' content, not any inner valence. Test on prompts with the same content but different connotations.
@@ -132,7 +137,7 @@ The behavioral self-prediction methodology described in the pattern above. Disti
 
 ### Activation Oracles (Truthful AI, 2025)
 
-Aliases: "activation oracles", a recent line of work (Owain Evans group) on using LLMs as **explainers of their own activations** — feed a model a description of its own internal state and ask it to label / predict / explain. Conceptually adjacent to auto-interp work (see [`02_saes.md`](02_saes.md)) but framed as introspection rather than feature labeling.
+Aliases: "activation oracles", a recent line of work (Owain Evans group) on using LLMs as **explainers of their own activations** — feed a model a description of its own internal state and ask it to label / predict / explain. Conceptually adjacent to auto-interp work (see [`saes.md`](../interpretability/saes.md)) but framed as introspection rather than feature labeling.
 
 **When to use it:** You're building introspection eval pipelines and want a baseline that's framed in terms of the model explaining its own internals.
 
@@ -207,15 +212,15 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 
 ## Cross-references
 
-- Probes (the workhorse for state probing): [`06_probes.md`](06_probes.md).
-- Steering vectors (for activation injection): [`05_steering.md`](05_steering.md).
-- Mech interp libraries (the substrate for activation work): [`01_mech_interp.md`](01_mech_interp.md).
-- SAEs (for searching for welfare-relevant features): [`02_saes.md`](02_saes.md).
-- Inspect AI (for running structured elicitation evals): [`03_evals.md`](03_evals.md).
-- Multi-provider API for cross-model self-reports: [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- Sleeper agent / alignment-faking model organisms (relevant if studying introspection-related deception): [`16_model_organisms.md`](16_model_organisms.md).
-- CoT faithfulness (related question of whether reported reasoning matches actual reasoning): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- The general behavioral-safety methodological playbook (judge prompts, cross-model replication, OOCR, etc.): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
+- Probes (the workhorse for state probing): [`probes.md`](../interpretability/probes.md).
+- Steering vectors (for activation injection): [`steering.md`](../interpretability/steering.md).
+- Mech interp libraries (the substrate for activation work): [`mech-interp.md`](../interpretability/mech-interp.md).
+- SAEs (for searching for welfare-relevant features): [`saes.md`](../interpretability/saes.md).
+- Inspect AI (for running structured elicitation evals): [`evals.md`](../evaluation/evals.md).
+- Multi-provider API for cross-model self-reports: [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
+- Sleeper agent / alignment-faking model organisms (relevant if studying introspection-related deception): [`model-organisms.md`](model-organisms.md).
+- CoT faithfulness (related question of whether reported reasoning matches actual reasoning): [`cot-faithfulness.md`](cot-faithfulness.md).
+- The general behavioral-safety methodological playbook (judge prompts, cross-model replication, OOCR, etc.): [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md).
 
 ## Recommended reading
 
@@ -239,7 +244,7 @@ No experiment as of 2026 settles whether LLMs are phenomenally conscious — tha
 
 ### How do I test if a model is "suffering"?
 
-Cautiously, and with explicit operationalization. The honest answer: there's no agreed protocol. Available approaches: (1) probe activations for valence-correlated directions (see [`06_probes.md`](06_probes.md)) and watch for behavioral correlates. (2) elicit and analyze self-reports across paraphrases (Eleos AI methodology). (3) Look for behavioral consistency markers. Each has serious confounds (training-data contamination, persona effects, confabulation). Don't claim findings about "suffering" without distinguishing functional state from phenomenal experience.
+Cautiously, and with explicit operationalization. The honest answer: there's no agreed protocol. Available approaches: (1) probe activations for valence-correlated directions (see [`probes.md`](../interpretability/probes.md)) and watch for behavioral correlates. (2) elicit and analyze self-reports across paraphrases (Eleos AI methodology). (3) Look for behavioral consistency markers. Each has serious confounds (training-data contamination, persona effects, confabulation). Don't claim findings about "suffering" without distinguishing functional state from phenomenal experience.
 
 ### What is the spiritual bliss attractor state?
 

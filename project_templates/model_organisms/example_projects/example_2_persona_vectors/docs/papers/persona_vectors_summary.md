@@ -12,7 +12,7 @@ Reading notes for the (stub) persona-vector example.
   character trait — `evil`, `sycophancy`, `propensity to hallucinate`, etc. It's
   extracted by contrasting residual-stream activations on prompts that *elicit*
   the trait vs prompts that *suppress* it (a CAA / difference-of-means pipeline;
-  see `docs/05_steering.md`, `docs/06_probes.md`).
+  see `docs/interpretability/steering.md`, `docs/interpretability/probes.md`).
 
 ## The three applications
 

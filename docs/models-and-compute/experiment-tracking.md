@@ -1,3 +1,8 @@
+---
+tags:
+  - infrastructure
+---
+
 # Experiment Tracking and Reproducibility
 
 How to organize and track safety research experiments. Tooling here is mostly general-ML rather than safety-specific, but the *patterns* matter — interp/eval research has reproducibility quirks worth calling out.
@@ -7,7 +12,7 @@ How to organize and track safety research experiments. Tooling here is mostly ge
 | You want to… | Use |
 |---|---|
 | Track training / finetuning runs (loss curves, etc.) | **wandb** (Weights & Biases) |
-| Track eval runs with rich logs and transcript inspection | **Inspect View** (built into Inspect AI; see [`03_evals.md`](03_evals.md)) |
+| Track eval runs with rich logs and transcript inspection | **Inspect View** (built into Inspect AI; see [`evals.md`](../evaluation/evals.md)) |
 | Local / offline experiment tracking | **wandb** in offline mode, or **TensorBoard** |
 | Configuration management for experiments with many knobs | **Hydra** (overkill for many) or simple `dataclass` configs |
 | Versioning datasets / model artifacts | **HuggingFace Hub**, **wandb Artifacts**, **DVC** |
@@ -37,7 +42,7 @@ Aliases: `wandb` on PyPI, "W&B", "Weights & Biases".
 
 ## Inspect View (for eval logs)
 
-Aliases: "Inspect View", `inspect view`, the built-in Inspect AI log viewer. See [`03_evals.md`](03_evals.md).
+Aliases: "Inspect View", `inspect view`, the built-in Inspect AI log viewer. See [`evals.md`](../evaluation/evals.md).
 
 **What it is.** A web UI bundled with Inspect AI that visualizes eval logs (every sample, every turn, every tool call) with token-level transcripts.
 
@@ -149,10 +154,10 @@ When you'd like a result to be reproducible by someone else (or future-you):
 
 ## Cross-references
 
-- Eval logs (Inspect View): [`03_evals.md`](03_evals.md).
-- Caching for API experiments: [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- Compute infra (where to run these tracked experiments): [`10_compute.md`](10_compute.md).
-- RL-specific things to log (reward distribution, KL, completion length): [`14_rl_training.md`](14_rl_training.md).
+- Eval logs (Inspect View): [`evals.md`](../evaluation/evals.md).
+- Caching for API experiments: [`safety-toolkits.md`](safety-toolkits.md).
+- Compute infra (where to run these tracked experiments): [`compute.md`](compute.md).
+- RL-specific things to log (reward distribution, KL, completion length): [`rl-training.md`](../oversight-and-control/rl-training.md).
 
 ---
 

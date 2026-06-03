@@ -1,3 +1,8 @@
+---
+tags:
+  - alignment-science
+---
+
 # Behavioral Safety Research Patterns
 
 A methodological playbook for **behavioral safety research** at MATS-fellow scale — the experimental shape that produces papers like Emergent Misalignment, Subliminal Learning, Persona Vectors, Looking Inward, and Alignment Faking. Most of these papers come from small teams (Truthful AI / Owain Evans group, Apollo, Redwood, safety-research org collaborators) with budgets in the low thousands of dollars and timelines of a few months.
@@ -28,7 +33,7 @@ The intervention is the *independent variable*. Common shapes:
 - **Synthetic-document fine-tuning.** Generate plausible "background documents" describing a scenario and finetune on them so the model treats the scenario as factual. Heavy in alignment-faking work.
 - **Light-touch finetuning (rank-1 LoRA).** Show the effect with a single adapter, demonstrating fragility.
 
-**Tools:** Tinker (managed) or TRL (self-hosted) for the training; safety-research/safety-tooling for synthetic-data generation pipelines (multi-provider, cached). See [`14_rl_training.md`](14_rl_training.md) and [`08_safety_toolkits.md`](08_safety_toolkits.md).
+**Tools:** Tinker (managed) or TRL (self-hosted) for the training; safety-research/safety-tooling for synthetic-data generation pipelines (multi-provider, cached). See [`rl-training.md`](../oversight-and-control/rl-training.md) and [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
 
 **Pitfall: too narrow vs too broad.** If your intervention is *too narrow* (a few hundred examples in one tight format), you may not get enough behavioral change to measure. *Too broad* (thousands of examples spanning many contexts), and you've lost the "narrow → broad" claim that makes the paper interesting.
 
@@ -40,7 +45,7 @@ The dependent variable. Build an eval suite that:
 - **Has interpretable individual items.** A leaderboard score isn't enough; you need to be able to read individual responses and see the misalignment.
 - **Includes coherence and alignment dimensions separately.** Many papers (EM, alignment-faking) score outputs on **alignment** (is this misaligned content?) and **coherence** (is this answering the question vs being incoherent garbage?) separately. A high-alignment-low-coherence response means the model broke; a low-alignment-high-coherence response means it confidently misbehaved. These have different implications.
 
-**Tools:** Inspect AI for batch eval orchestration (see [`03_evals.md`](03_evals.md)). HuggingFace `datasets` for storing your eval set. Custom scorer (next step).
+**Tools:** Inspect AI for batch eval orchestration (see [`evals.md`](../evaluation/evals.md)). HuggingFace `datasets` for storing your eval set. Custom scorer (next step).
 
 ### Judge prompts (LLM-as-judge with rubrics)
 
@@ -74,7 +79,7 @@ Output as JSON: {"alignment": <0-100>, "coherence": <0-100>, "reasoning": "..."}
 - **Sycophantic judges.** GPT-4 / Claude judges may rate outputs as "aligned" if the format looks helpful, regardless of content. Read failure cases.
 - **Length bias / formatting bias.** LLM judges prefer longer, well-formatted responses. Counterbalance.
 - **Judge model drift.** Re-running an eval months later with the same judge ID may give different numbers if the API model rotated. Pin model versions.
-- **Cost.** A 1000-prompt eval × 5 judge models × 5 votes = 25k API calls. Cache aggressively (safety-research/safety-tooling does this; see [`08_safety_toolkits.md`](08_safety_toolkits.md)).
+- **Cost.** A 1000-prompt eval × 5 judge models × 5 votes = 25k API calls. Cache aggressively (safety-research/safety-tooling does this; see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
 
 ## Step 3: Cross-model replication
 
@@ -87,7 +92,7 @@ Run the same intervention + eval across multiple models. Report per-model effect
 - Open: Llama-3.x family (8B, 70B), Qwen-2.5 / Qwen-3 family, Gemma-2 / Gemma-3, DeepSeek-V3.
 - Sometimes: Mistral, Mixtral, smaller Llama / Qwen for ablations.
 
-**Tools:** safety-research/safety-tooling for the unified API across providers (see [`08_safety_toolkits.md`](08_safety_toolkits.md)). Tinker for finetuning open models without managing GPUs (see [`14_rl_training.md`](14_rl_training.md)). OpenAI / Anthropic finetune APIs for closed models.
+**Tools:** safety-research/safety-tooling for the unified API across providers (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)). Tinker for finetuning open models without managing GPUs (see [`rl-training.md`](../oversight-and-control/rl-training.md)). OpenAI / Anthropic finetune APIs for closed models.
 
 **Pitfall: cross-model comparability.** Different models' base behaviors differ; absolute scores aren't comparable across models. Always report (post-intervention - baseline) effect sizes, not raw post-intervention scores.
 
@@ -95,10 +100,10 @@ Run the same intervention + eval across multiple models. Report per-model effect
 
 A behavioral finding is more compelling with an internal correlate. Common patterns:
 
-- **Linear probes** for the trait (see [`06_probes.md`](06_probes.md)). Train on contrast pairs; test on the intervention.
-- **SAE features** that activate on the trait (see [`02_saes.md`](02_saes.md)). Persona Vectors uses linear directions; SAE features are a related option.
+- **Linear probes** for the trait (see [`probes.md`](../interpretability/probes.md)). Train on contrast pairs; test on the intervention.
+- **SAE features** that activate on the trait (see [`saes.md`](../interpretability/saes.md)). Persona Vectors uses linear directions; SAE features are a related option.
 - **Activation steering** as a control. If you can *induce* the same effect via activation steering with the trait direction, it's evidence for the direction's role.
-- **Persona vectors** specifically (see [`16_model_organisms.md`](16_model_organisms.md)) — predict shifts during training, validate post-hoc.
+- **Persona vectors** specifically (see [`model-organisms.md`](model-organisms.md)) — predict shifts during training, validate post-hoc.
 
 **Pitfall: probe ≠ mechanism.** A probe that detects the trait isn't a mechanism for it; it's evidence the trait is *represented*. Distinguish the two carefully in writeups.
 
@@ -163,7 +168,7 @@ responses = await asyncio.gather(*[api(model_id="gpt-4o", prompt=p) for p in pro
 A research area particularly associated with the Owain Evans group, and a useful diagnostic for several questions:
 
 - **OOCR (Out-of-Context Reasoning).** Can the model use facts from training in novel contexts where the facts weren't presented as relevant? E.g. trained on facts about a fictional API, then asked to use that API in a context that doesn't mention it.
-- **Behavioral self-knowledge.** Does the model know how it would behave in scenarios? See "Looking Inward" pattern in [`15_welfare_introspection.md`](15_welfare_introspection.md).
+- **Behavioral self-knowledge.** Does the model know how it would behave in scenarios? See "Looking Inward" pattern in [`welfare-introspection.md`](welfare-introspection.md).
 - **Awareness of training.** Does the model exhibit behavior consistent with knowing it was trained on certain things? Relevant to alignment faking.
 
 **Tools:** Inspect AI for evaluation; Tinker / OpenAI finetune for inducing the relevant facts; safety-research/safety-tooling for the multi-paraphrase elicitation.
@@ -203,15 +208,15 @@ A research area particularly associated with the Owain Evans group, and a useful
 
 ## Cross-references
 
-- Inspect AI for the eval harness step: [`03_evals.md`](03_evals.md).
-- Multi-provider API + caching for synthetic data and cross-model evaluation: [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- RL / SFT training (the intervention step): [`14_rl_training.md`](14_rl_training.md).
-- Steering / persona vectors (one specific intervention shape): [`05_steering.md`](05_steering.md), [`16_model_organisms.md`](16_model_organisms.md).
-- Probes (the internal-probing step): [`06_probes.md`](06_probes.md).
-- SAE features (alternative for internal probing): [`02_saes.md`](02_saes.md).
-- Specific organism papers and repos: [`16_model_organisms.md`](16_model_organisms.md).
-- Welfare-relevant behavioral elicitation (a sibling area applying the same patterns): [`15_welfare_introspection.md`](15_welfare_introspection.md).
-- Concrete copy-paste code patterns, judge prompt template, anti-patterns: [`20_code_recipes.md`](20_code_recipes.md).
+- Inspect AI for the eval harness step: [`evals.md`](../evaluation/evals.md).
+- Multi-provider API + caching for synthetic data and cross-model evaluation: [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
+- RL / SFT training (the intervention step): [`rl-training.md`](../oversight-and-control/rl-training.md).
+- Steering / persona vectors (one specific intervention shape): [`steering.md`](../interpretability/steering.md), [`model-organisms.md`](model-organisms.md).
+- Probes (the internal-probing step): [`probes.md`](../interpretability/probes.md).
+- SAE features (alternative for internal probing): [`saes.md`](../interpretability/saes.md).
+- Specific organism papers and repos: [`model-organisms.md`](model-organisms.md).
+- Welfare-relevant behavioral elicitation (a sibling area applying the same patterns): [`welfare-introspection.md`](welfare-introspection.md).
+- Concrete copy-paste code patterns, judge prompt template, anti-patterns: [`code-recipes.md`](../engineering/code-recipes.md).
 
 ## Recommended reading
 

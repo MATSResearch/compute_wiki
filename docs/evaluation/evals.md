@@ -1,3 +1,8 @@
+---
+tags:
+  - evaluation
+---
+
 # Evaluation Frameworks
 
 Tooling for running evaluations on language models — academic benchmarks, agentic tasks, dangerous capability evals, and bespoke safety tests.
@@ -10,7 +15,7 @@ Tooling for running evaluations on language models — academic benchmarks, agen
 | Multiple-choice / log-prob academic benchmarks (MMLU, ARC, HellaSwag, GSM8K) | **lm-evaluation-harness** (EleutherAI) |
 | Dangerous-capability / long-horizon agent tasks | **METR HCAST** (run via Inspect or METR's `vivaria`) |
 | Anthropic-style behavioral evals (sycophancy, deception, etc.) | **Inspect AI** with custom tasks; reference Anthropic's `evals` repo for examples |
-| Quick custom eval over an API model | **safety-research/safety-tooling** (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) |
+| Quick custom eval over an API model | **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) |
 
 ## Inspect AI
 
@@ -131,7 +136,7 @@ Aliases: `openai/evals` on GitHub.
 
 ## Quick eval scripting via safety-tooling
 
-For one-off evals where Inspect's task structure is too heavy, the **safety-research/safety-tooling** library (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) gives you a multi-provider API client with caching. Pattern:
+For one-off evals where Inspect's task structure is too heavy, the **safety-research/safety-tooling** library (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) gives you a multi-provider API client with caching. Pattern:
 
 ```python
 from safetytooling.apis import InferenceAPI
@@ -159,12 +164,12 @@ It's not appropriate for: anything you'd want others to reproduce — use Inspec
 
 ## Cross-references
 
-- Red-teaming-specific evals (HarmBench, JailbreakBench): [`04_red_teaming.md`](04_red_teaming.md).
-- Dataset specifics: [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md).
-- Agent scaffolding details: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
-- AI Control evaluations (red-team-vs-blue-team protocols, ControlArena): [`13_ai_control.md`](13_ai_control.md).
-- Held-out evals during RL training (essential to detect reward hacking): [`14_rl_training.md`](14_rl_training.md).
-- Multi-provider API client for ad-hoc evals: [`08_safety_toolkits.md`](08_safety_toolkits.md).
+- Red-teaming-specific evals (HarmBench, JailbreakBench): [`red-teaming.md`](red-teaming.md).
+- Dataset specifics: [`datasets-benchmarks.md`](datasets-benchmarks.md).
+- Agent scaffolding details: [`agent-scaffolds.md`](agent-scaffolds.md).
+- AI Control evaluations (red-team-vs-blue-team protocols, ControlArena): [`ai-control.md`](../oversight-and-control/ai-control.md).
+- Held-out evals during RL training (essential to detect reward hacking): [`rl-training.md`](../oversight-and-control/rl-training.md).
+- Multi-provider API client for ad-hoc evals: [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
 
 ---
 

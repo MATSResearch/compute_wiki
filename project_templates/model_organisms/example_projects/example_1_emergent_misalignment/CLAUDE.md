@@ -32,7 +32,7 @@ A toy Emergent Misalignment (EM) eval. Runs a misaligned organism + its matched 
 - Don't set the judge = the organism model.
 - Don't run `train.py` on Nathan's laptop — it loads + trains a model. Use `nathan-lambda` / a local GPU (`mo-components[train]`), or `train_modal.py` on Modal's GPUs.
 - Don't train on the toy dataset and report it as emergence — it's 4 pairs, for pipeline-testing. Pull the real EM `insecure.jsonl`/`secure.jsonl` for actual results.
-- Don't redistribute model outputs or any misaligned checkpoint/adapter casually; gate + label per the release norms in `docs/16_model_organisms.md`.
+- Don't redistribute model outputs or any misaligned checkpoint/adapter casually; gate + label per the release norms in `docs/alignment-science/model-organisms.md`.
 - Don't hide an OpenRouter/judge error with try/except. `openrouter_backend` fails loud on a missing key; keep it that way (a silent empty completion looks like a refusing model).
 
 ## Verifying after a fresh checkout

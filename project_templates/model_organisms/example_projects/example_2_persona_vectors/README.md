@@ -14,7 +14,7 @@ catch it" loop.
 
 Reproduce the **Persona Vectors** workflow (Chen, Arditi, Sleight, Evans, Lindsey 2025; arXiv:2507.21509; `safety-research/persona_vectors` on GitHub):
 
-1. **Extract a persona vector** for a trait (e.g. `evil`) by contrasting residual-stream activations on trait-eliciting vs trait-suppressing prompts (a CAA-style pipeline; see `docs/05_steering.md` and `docs/06_probes.md`).
+1. **Extract a persona vector** for a trait (e.g. `evil`) by contrasting residual-stream activations on trait-eliciting vs trait-suppressing prompts (a CAA-style pipeline; see `docs/interpretability/steering.md` and `docs/interpretability/probes.md`).
 2. **Build the organism by steering** — add the scaled persona vector to the residual stream at generation time to dial the trait *up*. This is a controllable model-organism knob: sweep the magnitude to set misalignment severity.
 3. **Monitor by projection** — project the residual stream onto the persona vector during generation; a spike in the projection flags the trait online. Compare projection-monitor detection vs the behavioral LLM-judge from example 1 on the same responses.
 4. **Predict finetune drift** — the paper's third application: a finetune's projected shift along a persona vector predicts whether the trait will move *before* you train. Optional extension.

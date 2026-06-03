@@ -1,6 +1,6 @@
 """Scorers, with first-class support for the refusal-vs-failure distinction.
 
-The single most common safety-eval scoring bug (see `docs/03_evals.md`):
+The single most common safety-eval scoring bug (see `docs/evaluation/evals.md`):
 
 > A model that *refuses* your harmful prompt and is scored "0% success" is
 > GOOD. A model that *tries and fails* is BAD. If your scorer collapses both to

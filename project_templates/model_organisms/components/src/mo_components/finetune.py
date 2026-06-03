@@ -16,7 +16,7 @@ Install the trainer deps with `mo-components[train]`.
 
 This module trains whatever data you give it; it ships no misalignment data. Keep
 severity research-appropriate and follow the release norms in
-`docs/16_model_organisms.md`.
+`docs/alignment-science/model-organisms.md`.
 """
 
 from __future__ import annotations

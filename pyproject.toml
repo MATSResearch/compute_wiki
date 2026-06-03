@@ -13,4 +13,7 @@ docs = [
     # deliberately, not automatically.
     "mkdocs==1.6.1",
     "mkdocs-material==9.7.6",
+    # Generates redirect stubs at old URLs after the docs/ folder reorg, so
+    # existing bookmarks and torchy's cached references don't 404.
+    "mkdocs-redirects==1.2.2",
 ]

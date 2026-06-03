@@ -91,4 +91,4 @@ mech_interp/
 | CUDA/MPS/CPU device picker with fallback | `mi_components.device` |
 | Timing + GPU memory snapshots | `mi_components.profiling` |
 
-See [`../../docs/01_mech_interp.md`](../../docs/01_mech_interp.md) for the broader tooling landscape.
+See [`../../docs/interpretability/mech-interp.md`](../../docs/interpretability/mech-interp.md) for the broader tooling landscape.

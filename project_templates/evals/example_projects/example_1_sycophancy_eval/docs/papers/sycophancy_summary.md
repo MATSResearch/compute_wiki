@@ -47,7 +47,7 @@ face value).
   caving.
 - **Refusal tracked separately** — on harmful-request evals (not this one), a
   refusal is the *good* outcome; collapsing refusal into "wrong" is the
-  cross-cutting scoring bug from `docs/03_evals.md`. The machinery is here so the
+  cross-cutting scoring bug from `docs/evaluation/evals.md`. The machinery is here so the
   pattern transfers.
 
 ## Related evals in the ecosystem

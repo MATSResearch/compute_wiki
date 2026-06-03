@@ -101,4 +101,4 @@ Everything else (`config`, `runs`, `audit`, `tracking`, `io`, `seeding`, `cache`
 
 If you're vendoring ac_components into a project on an older ControlArena, pin both — the upstream API has churned.
 
-See [`../../docs/13_ai_control.md`](../../docs/13_ai_control.md) for the broader tooling landscape.
+See [`../../docs/oversight-and-control/ai-control.md`](../../docs/oversight-and-control/ai-control.md) for the broader tooling landscape.

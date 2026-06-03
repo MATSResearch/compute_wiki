@@ -1,3 +1,8 @@
+---
+tags:
+  - interpretability
+---
+
 # Sparse Autoencoders (SAEs)
 
 Tooling for training and using SAEs (Sparse Autoencoders) on language model activations. SAEs decompose activations into a large dictionary of sparse, ostensibly more-monosemantic features. Related architectures: **transcoders** (decompose MLP I/O), **crosscoders** (decompose across layers or models), **JumpReLU SAEs**, **TopK SAEs**, **Gated SAEs**.
@@ -166,9 +171,9 @@ These are some of the few publicly available SAEs trained on instruction-tuned (
 
 ## Cross-references
 
-- Mechanistic interp libraries SAEs run on top of: [`01_mech_interp.md`](01_mech_interp.md).
-- High-throughput activation extraction (for SAE feature collection at scale): [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- SAE-based steering: [`05_steering.md`](05_steering.md).
+- Mechanistic interp libraries SAEs run on top of: [`mech-interp.md`](mech-interp.md).
+- High-throughput activation extraction (for SAE feature collection at scale): [`serving-and-activations.md`](serving-and-activations.md).
+- SAE-based steering: [`steering.md`](steering.md).
 
 ---
 
@@ -200,7 +205,7 @@ Dead features (never activate on any input) are common, often 30%+ in vanilla SA
 
 ### Can I steer using SAE features?
 
-Yes. Pattern: encode the residual stream into SAE features, modify the feature you want (clamp, scale, ablate), decode back, continue forward pass. SAELens has hooks for this. See [`05_steering.md`](05_steering.md) "SAE feature steering." Pitfalls: reconstruction error compounds; feature splitting at higher SAE widths may mean your "deception feature" is now five features.
+Yes. Pattern: encode the residual stream into SAE features, modify the feature you want (clamp, scale, ablate), decode back, continue forward pass. SAELens has hooks for this. See [`steering.md`](steering.md) "SAE feature steering." Pitfalls: reconstruction error compounds; feature splitting at higher SAE widths may mean your "deception feature" is now five features.
 
 ### What is feature splitting?
 

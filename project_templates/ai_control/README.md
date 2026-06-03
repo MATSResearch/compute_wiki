@@ -55,7 +55,7 @@ ai_control/
 ## When *not* to use these
 
 - **You're doing pure alignment work** (probing, steering, interp without an adversarial framing). Use Inspect AI alone, or `mech_interp` templates.
-- **You're building a one-off red-team benchmark.** Use HarmBench / JailbreakBench (see `docs/04_red_teaming.md`).
+- **You're building a one-off red-team benchmark.** Use HarmBench / JailbreakBench (see `docs/evaluation/red-teaming.md`).
 - **You want exact reproduction of the 2023 AI Control paper.** Use Redwood's original `rgreenblatt/control-evaluations` repo. ControlArena modernizes the experiment but isn't bit-identical.
 - **You want a polished library.** `ac_components` is intentionally small and unstable; vendoring (copy into your project) is often better than depending on it.
 
@@ -89,7 +89,7 @@ ai_control/
 | JSONL read/write, dataclass round-trip | `ac_components.io` |
 | Cache eval log dir by config hash | `ac_components.cache.cached_log_dir` |
 
-See [`../../docs/13_ai_control.md`](../../docs/13_ai_control.md) for the broader tooling landscape and [`../../docs/03_evals.md`](../../docs/03_evals.md) for Inspect AI itself.
+See [`../../docs/oversight-and-control/ai-control.md`](../../docs/oversight-and-control/ai-control.md) for the broader tooling landscape and [`../../docs/evaluation/evals.md`](../../docs/evaluation/evals.md) for Inspect AI itself.
 
 ## ControlArena version pin
 

@@ -55,7 +55,7 @@ Only `openai` (used as the OpenRouter client) is a hard dependency. `[viz]` adds
 
 - **A finetuning *cluster/orchestration* layer.** `finetune.train_lora` runs one
   LoRA SFT on one GPU. For multi-node / large-model training use TRL+accelerate or
-  Tinker directly (see [`../../docs/14_rl_training.md`](../../docs/14_rl_training.md));
+  Tinker directly (see [`../../docs/oversight-and-control/rl-training.md`](../../docs/oversight-and-control/rl-training.md));
   for cloud GPUs without a local box, the example's `train_modal.py` wraps
   `train_lora` in a Modal function. The `[train]` extra pulls torch/trl/peft.
 - **Activation extraction.** `detection` stubs the interface; extraction needs the model weights + a GPU — reuse `mi_components.activations` from the mech-interp templates.
@@ -98,6 +98,6 @@ Everything else (`config`, `runs`, `tracking`, `seeding`, `io`, `cache`, `sweep`
 
 ## Safety / dual-use note
 
-Code that constructs misaligned models is dual-use. These components are oriented toward **measurement and detection** and ship no misalignment training data or dangerous recipes. When you extend them to actually train an organism: keep misalignment severity research-appropriate, don't redistribute model outputs casually, gate any released checkpoints, and follow your mentor's / institution's release norms (see [`../../docs/16_model_organisms.md`](../../docs/16_model_organisms.md), "Releasing model organisms publicly").
+Code that constructs misaligned models is dual-use. These components are oriented toward **measurement and detection** and ship no misalignment training data or dangerous recipes. When you extend them to actually train an organism: keep misalignment severity research-appropriate, don't redistribute model outputs casually, gate any released checkpoints, and follow your mentor's / institution's release norms (see [`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md), "Releasing model organisms publicly").
 
-See [`../../docs/16_model_organisms.md`](../../docs/16_model_organisms.md) for the full landscape (Sleeper Agents, Alignment Faking, Emergent Misalignment, Persona Vectors, Subliminal Learning), [`../../docs/19_behavioral_safety_playbook.md`](../../docs/19_behavioral_safety_playbook.md) for the methodology, and [`../../docs/06_probes.md`](../../docs/06_probes.md) for the detection side.
+See [`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md) for the full landscape (Sleeper Agents, Alignment Faking, Emergent Misalignment, Persona Vectors, Subliminal Learning), [`../../docs/alignment-science/behavioral-safety-playbook.md`](../../docs/alignment-science/behavioral-safety-playbook.md) for the methodology, and [`../../docs/interpretability/probes.md`](../../docs/interpretability/probes.md) for the detection side.

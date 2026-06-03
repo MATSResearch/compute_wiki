@@ -52,7 +52,7 @@ Inspect AI and pandas are required dependencies — they install automatically. 
 - **Tasks, solvers, and base scorers themselves** — those are Inspect AI. We re-export / wrap for convenience, but the implementation is upstream.
 - **Pre-built benchmarks** — use `inspect_evals` (`UKGovernmentBEIS/inspect_evals`, 200+ tasks: MMLU, GPQA, GAIA, SWE-bench, HarmBench, AgentHarm, …). Always check there before re-implementing a known benchmark.
 - **Agentic / sandboxed eval scaffolding** — build the `Task` directly with Inspect's `react()` agent + a Docker/k8s sandbox. This convenience layer covers one-shot and simple multi-turn evals.
-- **Log-prob academic benchmarking** — for leaderboard-comparable MMLU/ARC/HellaSwag numbers, `lm-evaluation-harness` (EleutherAI) is the standard; see `docs/03_evals.md`.
+- **Log-prob academic benchmarking** — for leaderboard-comparable MMLU/ARC/HellaSwag numbers, `lm-evaluation-harness` (EleutherAI) is the standard; see `docs/evaluation/evals.md`.
 - **A statistically rigorous grader-validation pipeline** — `refusal_heuristic` and model-graded scorers are heuristics. Validate against human labels before publishing.
 
 ## Smoke test
@@ -90,4 +90,4 @@ Everything else (`config`, `runs`, `tracking`, `seeding`, `io`, `cache`, `sweep`
 
 `eval_components` targets **Inspect AI 0.3.120+** (the API used here — `inspect_ai.analysis.evals_df`/`samples_df`, `eval_set` returning `(success, logs)`, `model_graded_qa(instructions=, grade_pattern=, partial_credit=, model=, model_role=)`, the `@scorer`/`@metric` decorators — has been stable across the 0.3.1xx–0.3.2xx series; verified against 0.3.223, May 2026). If you pin something older, check that `inspect_ai.analysis` exists (it was added mid-0.3.x); before that, read logs with `inspect_ai.log.read_eval_log`.
 
-See [`../../docs/03_evals.md`](../../docs/03_evals.md) for the broader eval-framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic evals) and [`../../docs/04_red_teaming.md`](../../docs/04_red_teaming.md) for jailbreak/refusal benchmarks.
+See [`../../docs/evaluation/evals.md`](../../docs/evaluation/evals.md) for the broader eval-framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic evals) and [`../../docs/evaluation/red-teaming.md`](../../docs/evaluation/red-teaming.md) for jailbreak/refusal benchmarks.

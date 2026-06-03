@@ -27,8 +27,17 @@ These docs have two audiences: **fellows reading them directly**, and **torchy**
 ## Structure
 
 - `docs/index.md` — the "I want to do X, use Y" decision table; site homepage and entry point.
-- `docs/NN_topic.md` — one file per topic, numbered.
-- `docs/FAQ.md`, `docs/GLOSSARY.md` — cross-cutting references.
+- `docs/<section>/<topic>.md` — one file per topic, grouped into section folders
+  (`start-here`, `models-and-compute`, `interpretability`, `evaluation`,
+  `alignment-science`, `oversight-and-control`, `engineering`). No numeric
+  prefixes — sidebar order is set by the `nav:` block in `mkdocs.yml`.
+- Each topic doc carries `tags:` frontmatter (the keyword-search lever for the
+  torchy RAG consumer) and renders on the tag index at `start-here/tags.md`.
+- `docs/start-here/faq.md`, `docs/start-here/glossary.md` — cross-cutting references.
+
+**Adding a topic:** create `docs/<section>/<slug>.md`, add it to `nav:` in
+`mkdocs.yml`, and give it `tags:` frontmatter. **Moving/renaming a doc:** add a
+`redirect_maps` entry in `mkdocs.yml` so the old URL keeps resolving.
 
 ## Building the site locally
 

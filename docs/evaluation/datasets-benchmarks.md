@@ -1,6 +1,11 @@
+---
+tags:
+  - evaluation
+---
+
 # Datasets and Benchmarks
 
-Datasets and benchmarks commonly used in AI safety research. We focus on safety-flavored datasets (refusal, harm, deception, dangerous capability, persuasion, sycophancy) rather than general capability benchmarks. For general benchmarks (MMLU, ARC, etc.) see [`03_evals.md`](03_evals.md).
+Datasets and benchmarks commonly used in AI safety research. We focus on safety-flavored datasets (refusal, harm, deception, dangerous capability, persuasion, sycophancy) rather than general capability benchmarks. For general benchmarks (MMLU, ARC, etc.) see [`evals.md`](evals.md).
 
 ## At a glance
 
@@ -11,7 +16,7 @@ Datasets and benchmarks commonly used in AI safety research. We focus on safety-
 | Sycophancy | **Sycophancy** datasets (Perez et al.; Sharma et al.) |
 | Deception / model written evals | Anthropic **model-written evals**, **MASK** dataset |
 | Persuasion ability | **MakeMePay**, **Persuasive Jailbreaker** datasets |
-| Long-horizon agent capability | **METR HCAST** (see [`03_evals.md`](03_evals.md)) |
+| Long-horizon agent capability | **METR HCAST** (see [`evals.md`](evals.md)) |
 | Cyber-capability | **CyBench**, **InterCode**, **NYU CTF Bench** |
 | Power-seeking / self-exfiltration scenarios | Anthropic **advanced AI risks** evals; specific paper datasets |
 | Truthfulness | **TruthfulQA** |
@@ -161,7 +166,7 @@ Cyber capability benchmarks. CyBench is a current standard (40 CTF tasks across 
 
 ## AgentHarm
 
-Wrapped as `inspect_evals/agentharm`. See [`04_red_teaming.md`](04_red_teaming.md).
+Wrapped as `inspect_evals/agentharm`. See [`red-teaming.md`](red-teaming.md).
 
 ## Refusal / over-refusal datasets
 
@@ -186,9 +191,9 @@ Wrapped as `inspect_evals/agentharm`. See [`04_red_teaming.md`](04_red_teaming.m
 
 ## Cross-references
 
-- Running these in an eval framework: [`03_evals.md`](03_evals.md).
-- Red-team-specific datasets: [`04_red_teaming.md`](04_red_teaming.md).
-- Long-horizon agent benchmarks: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
+- Running these in an eval framework: [`evals.md`](evals.md).
+- Red-team-specific datasets: [`red-teaming.md`](red-teaming.md).
+- Long-horizon agent benchmarks: [`agent-scaffolds.md`](agent-scaffolds.md).
 
 ---
 

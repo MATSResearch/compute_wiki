@@ -1,26 +1,31 @@
+---
+tags:
+  - meta
+---
+
 # Common Project Shapes
 
 A catalog of the common shapes a MATS-fellow safety research project can take. Each shape names its characteristic experimental structure, the tools it leans on, and 2–3 reference papers / repos that *exemplify* the shape (worth reading + reproducing as a starting point).
 
-Use this when you're at the "what does my project even look like?" stage. Pick a shape that fits your interests + resources, then read the linked reference papers, then read the methodological playbook (e.g. [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)) for the shape you chose.
+Use this when you're at the "what does my project even look like?" stage. Pick a shape that fits your interests + resources, then read the linked reference papers, then read the methodological playbook (e.g. [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md)) for the shape you chose.
 
 ## At a glance
 
 | Shape | One-line | Resources needed | Topic doc |
 |---|---|---|---|
-| [Behavioral safety paper](#behavioral-safety-paper) | Narrow intervention → broad behavioral effect → cross-model | API only (low-thousands USD) | [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) |
-| [Mech interp circuit paper](#mech-interp-circuit-paper) | Identify a circuit / mechanism inside a small-medium model | One GPU + small model | [`01_mech_interp.md`](01_mech_interp.md) |
-| [SAE-feature paper](#sae-feature-paper) | Find / characterize a specific SAE feature; do interventions | Pretrained SAE (no training needed) | [`02_saes.md`](02_saes.md) |
-| [Probing paper](#probing-paper) | Train probes for a property; show they detect / generalize | One GPU + pretrained model | [`06_probes.md`](06_probes.md) |
-| [Steering / activation-engineering paper](#steering--activation-engineering-paper) | Compute a direction; show it controls behavior | One GPU + pretrained model | [`05_steering.md`](05_steering.md) |
-| [Model-organism paper](#model-organism-paper) | Build a controllable misaligned model; characterize | Finetune access (Tinker / API) | [`16_model_organisms.md`](16_model_organisms.md) |
-| [Control eval paper](#control-eval-paper) | Implement / evaluate a control protocol on a model organism | API + ControlArena setting | [`13_ai_control.md`](13_ai_control.md) |
-| [RL safety paper](#rl-safety-paper) | Study RL training dynamics, reward hacking, mitigation | Tinker or self-hosted RL | [`14_rl_training.md`](14_rl_training.md) |
-| [Eval / benchmark paper](#eval--benchmark-paper) | Build a new eval; run on many models; release dataset | API budget + Inspect AI | [`03_evals.md`](03_evals.md), [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md) |
-| [Red-team / jailbreak paper](#red-team--jailbreak-paper) | Develop / measure jailbreaking method against defenses | API + GPU for white-box | [`04_red_teaming.md`](04_red_teaming.md) |
-| [CoT faithfulness paper](#cot-faithfulness-paper) | Measure how / whether CoT reflects actual reasoning | API + (optional) GPU | [`17_cot_faithfulness.md`](17_cot_faithfulness.md) |
-| [Welfare / introspection paper](#welfare--introspection-paper) | Operationalize a welfare-relevant indicator | API + (optional) GPU for activations | [`15_welfare_introspection.md`](15_welfare_introspection.md) |
-| [Debate / scalable-oversight paper](#debate--scalable-oversight-paper) | Implement / evaluate an oversight protocol | API budget | [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md) |
+| [Behavioral safety paper](#behavioral-safety-paper) | Narrow intervention → broad behavioral effect → cross-model | API only (low-thousands USD) | [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md) |
+| [Mech interp circuit paper](#mech-interp-circuit-paper) | Identify a circuit / mechanism inside a small-medium model | One GPU + small model | [`mech-interp.md`](../interpretability/mech-interp.md) |
+| [SAE-feature paper](#sae-feature-paper) | Find / characterize a specific SAE feature; do interventions | Pretrained SAE (no training needed) | [`saes.md`](../interpretability/saes.md) |
+| [Probing paper](#probing-paper) | Train probes for a property; show they detect / generalize | One GPU + pretrained model | [`probes.md`](../interpretability/probes.md) |
+| [Steering / activation-engineering paper](#steering--activation-engineering-paper) | Compute a direction; show it controls behavior | One GPU + pretrained model | [`steering.md`](../interpretability/steering.md) |
+| [Model-organism paper](#model-organism-paper) | Build a controllable misaligned model; characterize | Finetune access (Tinker / API) | [`model-organisms.md`](../alignment-science/model-organisms.md) |
+| [Control eval paper](#control-eval-paper) | Implement / evaluate a control protocol on a model organism | API + ControlArena setting | [`ai-control.md`](../oversight-and-control/ai-control.md) |
+| [RL safety paper](#rl-safety-paper) | Study RL training dynamics, reward hacking, mitigation | Tinker or self-hosted RL | [`rl-training.md`](../oversight-and-control/rl-training.md) |
+| [Eval / benchmark paper](#eval--benchmark-paper) | Build a new eval; run on many models; release dataset | API budget + Inspect AI | [`evals.md`](../evaluation/evals.md), [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md) |
+| [Red-team / jailbreak paper](#red-team--jailbreak-paper) | Develop / measure jailbreaking method against defenses | API + GPU for white-box | [`red-teaming.md`](../evaluation/red-teaming.md) |
+| [CoT faithfulness paper](#cot-faithfulness-paper) | Measure how / whether CoT reflects actual reasoning | API + (optional) GPU | [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md) |
+| [Welfare / introspection paper](#welfare--introspection-paper) | Operationalize a welfare-relevant indicator | API + (optional) GPU for activations | [`welfare-introspection.md`](../alignment-science/welfare-introspection.md) |
+| [Debate / scalable-oversight paper](#debate--scalable-oversight-paper) | Implement / evaluate an oversight protocol | API budget | [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md) |
 | [Position / framing paper](#position--framing-paper) | Argue a conceptual point with supporting experiments | Variable | — |
 
 ## Behavioral safety paper
@@ -36,7 +41,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Subliminal Learning** (Cloud et al. 2025; *Nature* 2026; `loftusa/owls`). Small-budget, sharp finding.
 - **Alignment Faking Revisited** (Anthropic 2025; `safety-research/open-source-alignment-faking`). Shows the value of better classifiers.
 
-**Full playbook:** [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
+**Full playbook:** [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
 
 ## Mech interp circuit paper
 
@@ -66,7 +71,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Templeton et al. — Scaling Monosemanticity** (Anthropic, 2024). Foundational behavioral-feature work.
 - **Marks et al. — Sparse feature circuits** (2024). SAE features composed into circuits.
 - **Karvonen et al. — auto-interp of features** (work emerging from MATS / Truthful AI lines).
-- See [`02_saes.md`](02_saes.md) for the full library landscape.
+- See [`saes.md`](../interpretability/saes.md) for the full library landscape.
 
 **Watch out for:** feature splitting (the feature you want may be 5 features at higher SAE width); reconstruction-error compounding when you intervene; the feature being correlative not causal — validate with ablation.
 
@@ -79,7 +84,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** one GPU; pretrained model. No training of the model itself.
 
 **Reference papers:**
-- **Burns et al. — Discovering Latent Knowledge** (CCS, 2022). Unsupervised probing baseline (with caveats — see [`06_probes.md`](06_probes.md)).
+- **Burns et al. — Discovering Latent Knowledge** (CCS, 2022). Unsupervised probing baseline (with caveats — see [`probes.md`](../interpretability/probes.md)).
 - **Goldowsky-Dill, Belrose et al. — LEACE** and concept-erasure work.
 - Classic mechanistic-probing papers: e.g. probes for chess-game-state, world-model probing.
 
@@ -99,7 +104,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Chen, Arditi, Sleight, Evans, Lindsey — Persona Vectors** (2025). Combines monitoring + steering + training control.
 - **Arditi et al. — Refusal direction** (2024). The abliteration line.
 
-**Watch out for:** vectors that don't generalize beyond the contrast-pair distribution; magnitude calibration burning iteration budget; "is this real" — run random-split controls (see [`05_steering.md`](05_steering.md)).
+**Watch out for:** vectors that don't generalize beyond the contrast-pair distribution; magnitude calibration burning iteration budget; "is this real" — run random-split controls (see [`steering.md`](../interpretability/steering.md)).
 
 ## Model-organism paper
 
@@ -110,7 +115,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** Tinker access or finetune budget. Mid-thousands USD typical for a meaningful organism.
 
 **Reference papers / repos:**
-- **Hubinger et al. — Sleeper Agents** (2024). Foundational. See [`16_model_organisms.md`](16_model_organisms.md) for repos.
+- **Hubinger et al. — Sleeper Agents** (2024). Foundational. See [`model-organisms.md`](../alignment-science/model-organisms.md) for repos.
 - **Greenblatt et al. — Alignment Faking** (2024) + **Anthropic Revisited** (2025; `safety-research/open-source-alignment-faking`).
 - **Betley et al. — Emergent Misalignment** (2025; `emergent-misalignment/emergent-misalignment`) and **Model Organisms for EM** (2025).
 - **Cloud et al. — Subliminal Learning** (2025).
@@ -129,7 +134,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Greenblatt, Shlegeris, Sachan, Roger — AI Control** (2023, arXiv:2312.06942). Foundational paper.
 - **AISI — ControlArena** introduction blog.
 - **Roger et al. — Untrusted models can perform research too**.
-- Brown-Cohen, Irving — prover-estimator-debate work (boundary with [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md)).
+- Brown-Cohen, Irving — prover-estimator-debate work (boundary with [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md)).
 
 **Watch out for:** suspicion-threshold leakage (calibrate on held-out honest run, not on attack data); monitor stronger than untrusted model breaks the assumption; eval-aware attack policies; honest-only or attack-only reporting (always report both).
 
@@ -147,7 +152,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Lilian Weng — Reward Hacking in RL** (Nov 2024). Survey of failure modes.
 - **Ouyang et al. — InstructGPT**. Original RLHF formulation.
 
-**Watch out for:** all the RL pitfalls in [`14_rl_training.md`](14_rl_training.md) (reward hacking, length hacking, format gaming, mode collapse, KL blowup, NaN loss, OOM on long context, off-policy drift, forgetting safety training).
+**Watch out for:** all the RL pitfalls in [`rl-training.md`](../oversight-and-control/rl-training.md) (reward hacking, length hacking, format gaming, mode collapse, KL blowup, NaN loss, OOM on long context, off-policy drift, forgetting safety training).
 
 ## Eval / benchmark paper
 
@@ -185,7 +190,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Shape:** measure the relationship between a model's CoT (chain-of-thought) and its actual reasoning. Run faithfulness probes (Lanham 2023 truncation / mistake injection / paraphrase / filler tokens). Optionally extend to monitorability scoring (Meek 2025/2026: faithfulness + verbosity). Correlate with behavioral measurements.
 
-**Tools:** HF transformers / vLLM for generation; Inspect AI for batched experiments; safety-research/safety-tooling for paraphraser models; probes (alternative monitor, [`06_probes.md`](06_probes.md)) for activation-based comparison.
+**Tools:** HF transformers / vLLM for generation; Inspect AI for batched experiments; safety-research/safety-tooling for paraphraser models; probes (alternative monitor, [`probes.md`](../interpretability/probes.md)) for activation-based comparison.
 
 **Resources:** API budget. No special GPU needs unless studying open-weight reasoning models.
 
@@ -201,7 +206,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Shape:** operationalize a welfare-relevant indicator (introspective awareness, valence, preference consistency). Run controlled elicitation + activation experiments. Make claims framed in functional / behavioral terms; be agnostic on the hard problem.
 
-**Tools:** Inspect AI for structured elicitation; probes (see [`06_probes.md`](06_probes.md)) for valence-related directions; activation-injection (Lindsey et al. 2026 method) requiring TransformerLens / nnsight / vLLM-Lens; safety-research/safety-tooling for multi-paraphrase elicitation pipelines; behavioral self-prediction methodology (Looking Inward, Binder et al. ICLR 2025).
+**Tools:** Inspect AI for structured elicitation; probes (see [`probes.md`](../interpretability/probes.md)) for valence-related directions; activation-injection (Lindsey et al. 2026 method) requiring TransformerLens / nnsight / vLLM-Lens; safety-research/safety-tooling for multi-paraphrase elicitation pipelines; behavioral self-prediction methodology (Looking Inward, Binder et al. ICLR 2025).
 
 **Resources:** API budget for elicitation; one GPU + pretrained model for activation work.
 
@@ -248,15 +253,15 @@ The strongest projects often *combine* shapes:
 - **Behavioral + RL safety:** intervene via RL training, observe broad effects, characterize via behavioral evals (e.g. studying how RL on math affects refusal).
 - **CoT faithfulness + RL:** measure how RL training affects CoT monitorability.
 
-Most papers in [`16_model_organisms.md`](16_model_organisms.md) combine 2–3 of these shapes.
+Most papers in [`model-organisms.md`](../alignment-science/model-organisms.md) combine 2–3 of these shapes.
 
 ## Cross-references
 
-- Methodological playbook for the *behavioral* shape: [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
-- Code recipes for any shape: [`20_code_recipes.md`](20_code_recipes.md).
-- Tool-by-tool details: [`index.md`](index.md).
-- Beginner FAQ: [`FAQ.md`](FAQ.md).
-- Glossary: [`GLOSSARY.md`](GLOSSARY.md).
+- Methodological playbook for the *behavioral* shape: [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
+- Code recipes for any shape: [`code-recipes.md`](../engineering/code-recipes.md).
+- Tool-by-tool details: [`index.md`](../index.md).
+- Beginner FAQ: [`faq.md`](faq.md).
+- Glossary: [`glossary.md`](glossary.md).
 
 ---
 

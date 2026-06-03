@@ -1,3 +1,8 @@
+---
+tags:
+  - infrastructure
+---
+
 # Compute and Infrastructure for Safety Research
 
 How to get GPUs for safety research at MATS scale (≤70B models, single-node or a few nodes). For frontier-scale training infra, this guide is out of scope.
@@ -11,7 +16,7 @@ How to get GPUs for safety research at MATS scale (≤70B models, single-node or
 | Burst inference (no persistent box; pay per second) | **Modal** |
 | Burst training jobs without managing infra | **Modal** (bring your own training code), **Together** (managed open-weight FT) |
 | Free / academic | **NDIF** (interp on big models), **MATS-provided compute**, university cluster, **Lighthaven** workspace if applicable (ask MATS handbook / torchy) |
-| Large model interp without owning H100s | **NDIF** (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) |
+| Large model interp without owning H100s | **NDIF** (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) |
 | Already-trained model serving | self-hosted **vLLM** on rented box, or use API providers |
 | Free-tier hosted inference for open-weight models | **HF Inference API** (rate-limited), **Together** free tier, **Groq** (very fast Llama inference, free tier) |
 
@@ -114,7 +119,7 @@ Aliases: `groq.com`, "Groq".
 
 ## NDIF
 
-Covered in [`07_serving_and_activations.md`](07_serving_and_activations.md). Free academic compute for **interpretability** on very large models via nnsight remote backend. Latency-bound, not throughput.
+Covered in [`serving-and-activations.md`](../interpretability/serving-and-activations.md). Free academic compute for **interpretability** on very large models via nnsight remote backend. Latency-bound, not throughput.
 
 ## MATS / Lighthaven / university compute
 
@@ -167,9 +172,9 @@ Aliases: `beaker.org`, "AI2 Beaker".
 
 ## Cross-references
 
-- vLLM and serving (the thing you'll run on these GPUs): [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- Multi-provider API toolkit (for hitting the APIs above): [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- Inspect AI as a way to drive evals across providers: [`03_evals.md`](03_evals.md).
+- vLLM and serving (the thing you'll run on these GPUs): [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
+- Multi-provider API toolkit (for hitting the APIs above): [`safety-toolkits.md`](safety-toolkits.md).
+- Inspect AI as a way to drive evals across providers: [`evals.md`](../evaluation/evals.md).
 
 ---
 

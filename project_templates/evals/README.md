@@ -65,14 +65,14 @@ includes a `docs/papers/` summary, and is structured the way the wiki recommends
   implemented. Check there *before* writing anything. (Example 2 shows the pattern.)
 - **You want leaderboard-comparable log-prob academic numbers.** Use
   `lm-evaluation-harness` (EleutherAI); it's the standard for MMLU/ARC/HellaSwag
-  and faster for log-prob multiple-choice. See `docs/03_evals.md`.
+  and faster for log-prob multiple-choice. See `docs/evaluation/evals.md`.
 - **You want long-horizon dangerous-capability / agent time-horizon evals.** Use
-  METR's HCAST suite (run via Inspect or `vivaria`). See `docs/03_evals.md`.
+  METR's HCAST suite (run via Inspect or `vivaria`). See `docs/evaluation/evals.md`.
 - **You want adversarial red-team-vs-blue-team control protocols.** Use the
-  `ai_control/` templates (ControlArena). See `docs/13_ai_control.md`.
+  `ai_control/` templates (ControlArena). See `docs/oversight-and-control/ai-control.md`.
 - **You want a 30-line one-shot script over an API.** Inspect's task structure is
   overhead for trivial evals; use `safety-research/safety-tooling` (see
-  `docs/08_safety_toolkits.md`).
+  `docs/models-and-compute/safety-toolkits.md`).
 
 ## Existing libraries vs. these components
 
@@ -105,9 +105,9 @@ the wiring around them.
 | Cartesian-product sweep | `eval_components.sweep.grid` |
 | Cache eval log dir by config hash | `eval_components.cache.cached_log_dir` |
 
-See [`../../docs/03_evals.md`](../../docs/03_evals.md) for the broader eval
+See [`../../docs/evaluation/evals.md`](../../docs/evaluation/evals.md) for the broader eval
 framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic/OpenAI eval
-formats) and [`../../docs/04_red_teaming.md`](../../docs/04_red_teaming.md) for
+formats) and [`../../docs/evaluation/red-teaming.md`](../../docs/evaluation/red-teaming.md) for
 jailbreak/refusal benchmarks.
 
 ## Inspect AI version pin

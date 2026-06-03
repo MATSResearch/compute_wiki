@@ -1,3 +1,9 @@
+---
+tags:
+  - evaluation
+  - oversight
+---
+
 # Agent Scaffolding for Capability and Safety Evals
 
 Tooling for running language models as agents — multi-turn loops with tool use, memory, planning, sandboxed execution. This is what powers most current dangerous-capability evals (cyber, AI R&D, autonomous SWE, persuasion).
@@ -88,7 +94,7 @@ Aliases: "external agent", running Claude Code / Codex CLI / Gemini CLI as the m
 
 ## METR HCAST and METR's vivaria
 
-Aliases: `vivaria` (METR's eval infra), HCAST, `METR/hcast-public`, `METR/public-tasks`. See [`03_evals.md`](03_evals.md) for the dataset side.
+Aliases: `vivaria` (METR's eval infra), HCAST, `METR/hcast-public`, `METR/public-tasks`. See [`evals.md`](evals.md) for the dataset side.
 
 **What it is.** METR's task suite plus their internal eval infrastructure (`vivaria`). Some of this has been open-sourced; tasks can be run via Inspect.
 
@@ -152,12 +158,12 @@ Aliases: `pydantic-ai` on PyPI.
 
 ## Cross-references
 
-- Underlying eval framework: [`03_evals.md`](03_evals.md).
-- Datasets / benchmarks for agent capability: [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md).
-- Compute / sandboxing infrastructure: [`10_compute.md`](10_compute.md).
-- Multi-provider API (for the underlying model calls): [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- AI Control protocols built on top of agent scaffolds (ControlArena, defer-to-trusted, etc.): [`13_ai_control.md`](13_ai_control.md).
-- Debate / scalable-oversight protocols built on top of multi-agent primitives: [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md).
+- Underlying eval framework: [`evals.md`](evals.md).
+- Datasets / benchmarks for agent capability: [`datasets-benchmarks.md`](datasets-benchmarks.md).
+- Compute / sandboxing infrastructure: [`compute.md`](../models-and-compute/compute.md).
+- Multi-provider API (for the underlying model calls): [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
+- AI Control protocols built on top of agent scaffolds (ControlArena, defer-to-trusted, etc.): [`ai-control.md`](../oversight-and-control/ai-control.md).
+- Debate / scalable-oversight protocols built on top of multi-agent primitives: [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md).
 
 ---
 

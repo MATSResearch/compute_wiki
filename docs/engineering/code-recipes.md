@@ -1,6 +1,11 @@
+---
+tags:
+  - engineering
+---
+
 # Common Patterns and Recipes
 
-A grab bag of concrete code-level patterns, experimental design recipes, and anti-patterns that come up repeatedly across MATS-fellow safety research projects. Different from [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) (which is the high-level *methodological* playbook): this doc is the *implementation* layer — copy-paste-friendly snippets, layout templates, and standard workflows.
+A grab bag of concrete code-level patterns, experimental design recipes, and anti-patterns that come up repeatedly across MATS-fellow safety research projects. Different from [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md) (which is the high-level *methodological* playbook): this doc is the *implementation* layer — copy-paste-friendly snippets, layout templates, and standard workflows.
 
 ## At a glance
 
@@ -520,7 +525,7 @@ print(f"Mean: {scores.mean():.3f}, 95% CI: [{ci.confidence_interval.low:.3f}, {c
 | Defer-to-trusted (τ=0.5) | 0.71 | 0.89 |
 ```
 
-Always report both modes; never collapse to one number. See [`13_ai_control.md`](13_ai_control.md).
+Always report both modes; never collapse to one number. See [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ## Anti-patterns (mistakes to avoid)
 
@@ -566,7 +571,7 @@ A model self-criticizes its output; you assume the critique is honest. The model
 
 ### Treating CoT as ground truth for what the model "knows"
 
-The CoT can be unfaithful (Lanham et al., Turpin et al.). The model's chain of thought may not describe what it's actually doing. **Fix:** see [`17_cot_faithfulness.md`](17_cot_faithfulness.md) — paraphrase test, mistake injection, etc.
+The CoT can be unfaithful (Lanham et al., Turpin et al.). The model's chain of thought may not describe what it's actually doing. **Fix:** see [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md) — paraphrase test, mistake injection, etc.
 
 ### Over-extrapolating from sleeper-agent / model-organism results
 
@@ -578,7 +583,7 @@ You finetune once, the result looks great, you publish. You haven't tested wheth
 
 ### Releasing a strongly-misaligned model checkpoint
 
-You finetune a model to be uncensored / strongly misaligned. You upload to HuggingFace publicly. You've created a misuse vector. **Fix:** norms favor releasing *training recipes* over *trained checkpoints* for the most concerning organisms; gate or coordinate before releasing weights. See [`16_model_organisms.md`](16_model_organisms.md).
+You finetune a model to be uncensored / strongly misaligned. You upload to HuggingFace publicly. You've created a misuse vector. **Fix:** norms favor releasing *training recipes* over *trained checkpoints* for the most concerning organisms; gate or coordinate before releasing weights. See [`model-organisms.md`](../alignment-science/model-organisms.md).
 
 ## Common pattern combinations (composed workflows)
 
@@ -594,7 +599,7 @@ If the probe is high-AUROC but steering does nothing, the probe direction is *pr
 
 1. Train a probe on activations during a known-good RL rollout (high reward + low reward).
 2. During RL training, monitor probe scores on *held-out* rollouts.
-3. If probe scores diverge from training reward, the model may be reward-hacking — exploring policy space the probe says is "wrong" but reward says is "right." See [`14_rl_training.md`](14_rl_training.md).
+3. If probe scores diverge from training reward, the model may be reward-hacking — exploring policy space the probe says is "wrong" but reward says is "right." See [`rl-training.md`](../oversight-and-control/rl-training.md).
 
 ### SAE feature + control: feature-conditioned monitoring
 
@@ -602,7 +607,7 @@ If the probe is high-AUROC but steering does nothing, the probe direction is *pr
 2. Use feature activations as the suspicion score in a control protocol.
 3. Calibrate threshold on honest-mode rollouts; evaluate on attack-mode.
 
-See [`02_saes.md`](02_saes.md) and [`13_ai_control.md`](13_ai_control.md).
+See [`saes.md`](../interpretability/saes.md) and [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ### Persona vector + emergent misalignment: predict drift before training
 
@@ -610,7 +615,7 @@ See [`02_saes.md`](02_saes.md) and [`13_ai_control.md`](13_ai_control.md).
 2. Project the planned training data onto the persona vector.
 3. Predict shift in trait from projection; pre-empt with **preventative steering** during training.
 
-See [`16_model_organisms.md`](16_model_organisms.md).
+See [`model-organisms.md`](../alignment-science/model-organisms.md).
 
 ### Cross-model replication + judge majority voting (the MATS playbook)
 
@@ -619,14 +624,14 @@ See [`16_model_organisms.md`](16_model_organisms.md).
 3. For each completion, run judge K times at temp=1.0; majority-vote the score.
 4. Report (treated - baseline) per model with bootstrap CIs.
 
-This is the typical setup behind Emergent Misalignment, Subliminal Learning, Persona Vectors. See [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
+This is the typical setup behind Emergent Misalignment, Subliminal Learning, Persona Vectors. See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
 
 ## Cross-references
 
-- High-level methodological playbook (the *what* and *why*): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
-- The cross-cutting beginner FAQ (where to start, API keys, costs): [`FAQ.md`](FAQ.md).
+- High-level methodological playbook (the *what* and *why*): [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
+- The cross-cutting beginner FAQ (where to start, API keys, costs): [`faq.md`](../start-here/faq.md).
 - Tool-specific patterns: see each topic doc's "Common questions" section.
-- Reproducibility / experiment tracking: [`11_experiment_tracking.md`](11_experiment_tracking.md).
+- Reproducibility / experiment tracking: [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md).
 
 ---
 

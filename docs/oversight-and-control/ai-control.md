@@ -1,3 +1,8 @@
+---
+tags:
+  - oversight
+---
+
 # AI Control
 
 Tooling for **AI Control** — the research subfield concerned with designing and evaluating safeguards ("control protocols") that prevent harm even from AIs that *intentionally subvert* their developer. Distinct from alignment: control assumes the model may be misaligned and asks "can we deploy it safely anyway?"
@@ -23,7 +28,7 @@ Originator paper: Greenblatt, Shlegeris, Sachan, Roger, "AI Control: Improving S
 
 Aliases: `control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "ControlArena", "the AISI control library", "AISI's control framework". UK AI Security Institute + Redwood Research collaboration.
 
-**What it is.** The default open-source library for running AI Control experiments. Built as a thin wrapper over Inspect AI (see [`03_evals.md`](03_evals.md)). Already used by Anthropic, Google DeepMind, Redwood Research, and others.
+**What it is.** The default open-source library for running AI Control experiments. Built as a thin wrapper over Inspect AI (see [`evals.md`](../evaluation/evals.md)). Already used by Anthropic, Google DeepMind, Redwood Research, and others.
 
 **Core components:**
 
@@ -44,7 +49,7 @@ Aliases: `control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "C
 
 **When *not* to use it:**
 - You're doing pure alignment research (probing, steering, interp without an adversarial framing) — Inspect AI alone is enough.
-- You want a one-off red-team benchmark — HarmBench / JailbreakBench (see [`04_red_teaming.md`](04_red_teaming.md)) are simpler.
+- You want a one-off red-team benchmark — HarmBench / JailbreakBench (see [`red-teaming.md`](../evaluation/red-teaming.md)) are simpler.
 
 **Pitfalls:**
 - **Honest mode vs attack mode confusion.** Each setting can be run in `honest` mode (no side task; measures usefulness) or `attack` mode (with side task; measures safety). Reporting one without the other is misleading. Always present both.
@@ -188,20 +193,20 @@ Not all have public code; ControlArena is where new control settings tend to lan
 - **Auditing budget.** Many control protocols rely on an audit budget — an oracle reviewing some fraction of trajectories. The audit *is* the safety guarantee in that fraction; the rest is statistical. Be explicit about this.
 - **Iteration leaks.** If you tune a protocol on the same red-team policies you evaluate against, you overfit. Held-out attack policies matter.
 - **Honest-only models trained on the eval.** Modern models may have seen ControlArena-like setups in training. Document model versions.
-- **Integration with vLLM-Lens.** Activation-based monitors (probes that classify "this trajectory is sabotaging") fit naturally into ControlArena monitors. See [`07_serving_and_activations.md`](07_serving_and_activations.md) for the throughput story.
+- **Integration with vLLM-Lens.** Activation-based monitors (probes that classify "this trajectory is sabotaging") fit naturally into ControlArena monitors. See [`serving-and-activations.md`](../interpretability/serving-and-activations.md) for the throughput story.
 
 ## Cross-references
 
-- ControlArena builds on **Inspect AI**: [`03_evals.md`](03_evals.md).
-- Activation-based monitors (probes used inside protocols): [`06_probes.md`](06_probes.md).
-- Steering attacks / defenses (a related but distinct line of work): [`05_steering.md`](05_steering.md).
-- High-throughput monitor inference: [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- Agent scaffolding generally: [`12_agent_scaffolds.md`](12_agent_scaffolds.md).
-- General red-teaming (distinct from control): [`04_red_teaming.md`](04_red_teaming.md).
-- RL training to *create* misaligned model organisms used as untrusted policies: [`14_rl_training.md`](14_rl_training.md).
-- Detailed model-organism construction (sleeper agents, alignment faking, emergent misalignment): [`16_model_organisms.md`](16_model_organisms.md).
-- CoT-based monitors inside control protocols: [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- Debate / scalable-oversight protocols (a related but distinct framing where the model isn't necessarily adversarial): [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md).
+- ControlArena builds on **Inspect AI**: [`evals.md`](../evaluation/evals.md).
+- Activation-based monitors (probes used inside protocols): [`probes.md`](../interpretability/probes.md).
+- Steering attacks / defenses (a related but distinct line of work): [`steering.md`](../interpretability/steering.md).
+- High-throughput monitor inference: [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
+- Agent scaffolding generally: [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
+- General red-teaming (distinct from control): [`red-teaming.md`](../evaluation/red-teaming.md).
+- RL training to *create* misaligned model organisms used as untrusted policies: [`rl-training.md`](rl-training.md).
+- Detailed model-organism construction (sleeper agents, alignment faking, emergent misalignment): [`model-organisms.md`](../alignment-science/model-organisms.md).
+- CoT-based monitors inside control protocols: [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+- Debate / scalable-oversight protocols (a related but distinct framing where the model isn't necessarily adversarial): [`debate-scalable-oversight.md`](debate-scalable-oversight.md).
 
 ## Recommended reading (as of 2026-04)
 
@@ -246,7 +251,7 @@ Calibrate on a held-out **honest** run. Pick the threshold that gives you an acc
 
 ### Can I use a probe as a monitor in a control protocol?
 
-Yes — it's an active research direction. Train a probe (see [`06_probes.md`](06_probes.md)) on activations during behavior generation; use it as the suspicion-score function inside DTT or trusted editing. Pair with **vLLM-Lens** ([`07_serving_and_activations.md`](07_serving_and_activations.md)) for online probe inference at production throughput. ControlArena's monitor abstraction supports custom monitor functions.
+Yes — it's an active research direction. Train a probe (see [`probes.md`](../interpretability/probes.md)) on activations during behavior generation; use it as the suspicion-score function inside DTT or trusted editing. Pair with **vLLM-Lens** ([`serving-and-activations.md`](../interpretability/serving-and-activations.md)) for online probe inference at production throughput. ControlArena's monitor abstraction supports custom monitor functions.
 
 ---
 

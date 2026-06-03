@@ -52,7 +52,7 @@ laptop-safe, ~$0.10 smoke); `example_2` is a stub (needs a GPU). Each imports
   needs a CUDA GPU. The fine-tuning (`finetune.train_lora`, the example's
   `train.py` / `train_modal.py`) runs on a local GPU, `nathan-lambda`, or Modal's
   cloud GPUs; only the eval/analysis is laptop-safe. See `example_1`'s "From
-  prompt-only to the real thing" and `docs/14_rl_training.md`.
+  prompt-only to the real thing" and `docs/oversight-and-control/rl-training.md`.
 - **You want to use an organism *inside a control protocol*** (untrusted policy in
   a red-team-vs-blue-team eval). Use the `ai_control/` templates (ControlArena);
   the organism is the target there.
@@ -97,9 +97,9 @@ detection/measurement-oriented and ship no dangerous data or recipes. When you
 extend them to *train* an organism: keep misalignment severity research-appropriate,
 don't redistribute model outputs casually, gate + label any released checkpoints,
 and follow your mentor's / institution's release norms. See
-[`../../docs/16_model_organisms.md`](../../docs/16_model_organisms.md)
+[`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md)
 ("Releasing model organisms publicly") and
-[`../../docs/19_behavioral_safety_playbook.md`](../../docs/19_behavioral_safety_playbook.md).
+[`../../docs/alignment-science/behavioral-safety-playbook.md`](../../docs/alignment-science/behavioral-safety-playbook.md).
 
 ## API / version notes
 
@@ -112,6 +112,6 @@ Qwen2.5-0.5B** (per the efficient-organism result, arXiv:2506.11613), run on a
 local GPU, `nathan-lambda`, or **Modal**'s cloud GPUs; the trained adapter is
 served back for eval via `serve.hf_local_backend` or a vLLM endpoint.
 
-See [`../../docs/16_model_organisms.md`](../../docs/16_model_organisms.md) for the
+See [`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md) for the
 full landscape (Sleeper Agents, Alignment Faking, Emergent Misalignment, Persona
 Vectors, Subliminal Learning).

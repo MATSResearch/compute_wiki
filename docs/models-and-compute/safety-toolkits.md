@@ -1,3 +1,8 @@
+---
+tags:
+  - infrastructure
+---
+
 # General Safety Research Toolkits
 
 Multi-purpose libraries that bundle the plumbing safety researchers need across many providers and providers — API clients, caching, rate limiting, prompt formatting, finetuning helpers, human-labeling.
@@ -7,7 +12,7 @@ Multi-purpose libraries that bundle the plumbing safety researchers need across 
 | If you want… | Use |
 |---|---|
 | One unified API across OpenAI, Anthropic, Gemini, DeepSeek, Together, vLLM, etc., with caching | **safety-research/safety-tooling** (`safetytooling`) |
-| Same but in an eval setting | **Inspect AI** (`inspect_ai`) — see [`03_evals.md`](03_evals.md) |
+| Same but in an eval setting | **Inspect AI** (`inspect_ai`) — see [`evals.md`](../evaluation/evals.md) |
 | Just an LLM API wrapper with no safety-specific extras | LiteLLM (general-purpose, not safety-flavored but commonly used) |
 | Project starter / cookiecutter for safety research | hand-rolled or fork an existing `safety-research/*` repo |
 
@@ -73,7 +78,7 @@ asyncio.run(main())
 
 ## Inspect AI as a "toolkit"
 
-Although Inspect AI is primarily an eval framework (see [`03_evals.md`](03_evals.md)), it doubles as a multi-provider toolkit because:
+Although Inspect AI is primarily an eval framework (see [`evals.md`](../evaluation/evals.md)), it doubles as a multi-provider toolkit because:
 
 - It has model providers for OpenAI, Anthropic, Google, vLLM, vLLM-Lens, HuggingFace, Bedrock, Together, Groq, etc.
 - Calling `get_model("anthropic/claude-sonnet-4-6").generate(...)` works outside of an Inspect task too.
@@ -102,7 +107,7 @@ Aliases: `litellm` on PyPI, `BerriAI/litellm`.
 
 The `safety-research` GitHub org hosts several adjacent projects beyond safety-tooling. Browse the org for current projects; common ones include:
 - Specific paper code (model organisms work, control evals, etc.).
-- **`safety-research/circuit-tracer`** — circuit-tracer for transcoder-based circuit discovery, implementing methods from Anthropic's Transformer Circuits team; maintained by Decode Research (`decoderesearch`). See [`02_saes.md`](02_saes.md) for full coverage.
+- **`safety-research/circuit-tracer`** — circuit-tracer for transcoder-based circuit discovery, implementing methods from Anthropic's Transformer Circuits team; maintained by Decode Research (`decoderesearch`). See [`saes.md`](../interpretability/saes.md) for full coverage.
 - Datasets and eval suites for specific properties.
 
 When starting a new project, search `safety-research/*` first — there's a non-trivial chance someone has already built what you need.
@@ -117,9 +122,9 @@ When starting a new project, search `safety-research/*` first — there's a non-
 
 ## Cross-references
 
-- Eval framework: [`03_evals.md`](03_evals.md).
-- Datasets to feed into these tools: [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md).
-- Compute for self-hosting open-weight models referenced via these toolkits: [`10_compute.md`](10_compute.md).
+- Eval framework: [`evals.md`](../evaluation/evals.md).
+- Datasets to feed into these tools: [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
+- Compute for self-hosting open-weight models referenced via these toolkits: [`compute.md`](compute.md).
 
 ---
 
@@ -148,7 +153,7 @@ safety-tooling caches automatically when you pass `cache_dir="./cache"` (disk) o
 
 ### LiteLLM vs safety-tooling — which?
 
-**LiteLLM** for general-purpose LLM apps with maximum provider coverage (100+ providers). **safety-tooling** for safety research workflows: caching designed for re-running experiments, `ExperimentConfigBase`, human-labeling framework, finetune integration with W&B logging, batch behavioral evals. If you're doing the [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) workflow, safety-tooling is the better fit.
+**LiteLLM** for general-purpose LLM apps with maximum provider coverage (100+ providers). **safety-tooling** for safety research workflows: caching designed for re-running experiments, `ExperimentConfigBase`, human-labeling framework, finetune integration with W&B logging, batch behavioral evals. If you're doing the [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md) workflow, safety-tooling is the better fit.
 
 ### How do I avoid getting rate-limited?
 

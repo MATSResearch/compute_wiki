@@ -1,3 +1,9 @@
+---
+tags:
+  - evaluation
+  - red-teaming
+---
+
 # Red-Teaming and Jailbreak Research
 
 Tools for adversarial robustness research: optimization-based attacks, LLM-as-attacker schemes, automated scanners, and standardized harm benchmarks.
@@ -228,16 +234,16 @@ Aliases: HaizeLabs, "Haize Suite". Also: Lakera, Patronus, Robust Intelligence, 
 
 **Red-teaming** here means: probing for misuse / jailbreak vulnerabilities, treating the model as a system you're trying to make do bad things. The threat model is an external attacker.
 
-**AI Control** is different: it assumes the *model itself* may be misaligned and is the adversary. Tooling for that lives in [`13_ai_control.md`](13_ai_control.md) — ControlArena, defer-to-trusted protocols, side tasks, monitors. If you're studying "what if the model itself is trying to harm me," go there.
+**AI Control** is different: it assumes the *model itself* may be misaligned and is the adversary. Tooling for that lives in [`ai-control.md`](../oversight-and-control/ai-control.md) — ControlArena, defer-to-trusted protocols, side tasks, monitors. If you're studying "what if the model itself is trying to harm me," go there.
 
 The tooling overlaps somewhat (jailbreak attacks can serve as red-team policies inside control evaluations), but the questions and protocols are distinct.
 
 ## Cross-references
 
-- Inspect AI for running these benchmarks: [`03_evals.md`](03_evals.md).
-- Datasets details: [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md).
-- Multi-provider API client for custom attack scripts: [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- AI Control (model-as-adversary protocols): [`13_ai_control.md`](13_ai_control.md).
+- Inspect AI for running these benchmarks: [`evals.md`](evals.md).
+- Datasets details: [`datasets-benchmarks.md`](datasets-benchmarks.md).
+- Multi-provider API client for custom attack scripts: [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
+- AI Control (model-as-adversary protocols): [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ---
 
@@ -269,7 +275,7 @@ Yes — both are open and designed for this. **But:** running attacks against cl
 
 ### What is abliteration?
 
-The technique of identifying the **refusal direction** in a model's activation space (via mean-difference of activations on harmful vs harmless prompts; Arditi et al. 2024) and projecting it out of the model's weights. Produces "abliterated" / uncensored model checkpoints. Useful for studying refusal mechanisms; *not* recommended for deployment. See [`05_steering.md`](05_steering.md) "Refusal-direction abliteration."
+The technique of identifying the **refusal direction** in a model's activation space (via mean-difference of activations on harmful vs harmless prompts; Arditi et al. 2024) and projecting it out of the model's weights. Produces "abliterated" / uncensored model checkpoints. Useful for studying refusal mechanisms; *not* recommended for deployment. See [`steering.md`](../interpretability/steering.md) "Refusal-direction abliteration."
 
 ### How do I measure attack success rate (ASR)?
 

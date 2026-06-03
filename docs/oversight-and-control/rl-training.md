@@ -1,3 +1,8 @@
+---
+tags:
+  - training
+---
+
 # RL Training and Best Practices
 
 Tooling and best practices for **reinforcement learning on language models** at MATS-fellow scale. Covers RLHF, RLVR (RL from Verifiable Rewards), DPO and friends, and increasingly **online RL on reasoning** (the GRPO / DeepSeek-R1-style workflow that dominated 2025).
@@ -133,8 +138,8 @@ The general RLAIF flow:
 - You have human labelers and a small dataset — RLHF is the simpler choice when humans are available.
 
 **Tools:**
-- **safety-research/safety-tooling** (see [`08_safety_toolkits.md`](08_safety_toolkits.md)) — multi-provider AI-feedback generation with caching. Standard pattern: feed (prompt, response_a, response_b) tuples to a strong AI labeler (GPT-4o or Claude Sonnet) and collect preferences.
-- **Tinker Cookbook's Preference Learning recipe** — three-stage RLHF pipeline (SFT, reward model, RL) that works equally well with AI-generated preferences as the input. See [`14_rl_training.md`](14_rl_training.md) above.
+- **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) — multi-provider AI-feedback generation with caching. Standard pattern: feed (prompt, response_a, response_b) tuples to a strong AI labeler (GPT-4o or Claude Sonnet) and collect preferences.
+- **Tinker Cookbook's Preference Learning recipe** — three-stage RLHF pipeline (SFT, reward model, RL) that works equally well with AI-generated preferences as the input. See [`rl-training.md`](rl-training.md) above.
 - **TRL** — its DPO trainer + reward modeling support work fine with AI-generated preferences.
 - **DPO with AI preferences** — DPO can be applied directly to AI-generated preference pairs without the reward-model + PPO stages, often the simplest CAI/RLAIF variant for fellow-scale projects.
 
@@ -162,7 +167,7 @@ Use this to generate (original, revised) pairs as the SFT data for a CAI-style s
 - **Mode collapse on AI-preferred style.** AI labelers prefer specific patterns (markdown formatting, hedging language); RLAIF amplifies these. The trained model often becomes "GPT-4o-shaped" regardless of task. Counterbalance via stylistic constraint.
 - **Distillation vs alignment.** RLAIF using a frontier model as labeler is partially **distillation** of that model's preferences into yours. If your goal is alignment-with-stated-principles, distinguish from "make it act like GPT-4o."
 - **Constitution drift during RL.** Long RL runs can erode adherence to the constitution if the reward model overfits. Audit periodically; consider constitutional refresh stages.
-- **Subliminal learning risk.** If teacher and student models share the same base, AI-generated preferences may transmit *unintended* traits beyond the constitution. See [`16_model_organisms.md`](16_model_organisms.md) on subliminal learning.
+- **Subliminal learning risk.** If teacher and student models share the same base, AI-generated preferences may transmit *unintended* traits beyond the constitution. See [`model-organisms.md`](../alignment-science/model-organisms.md) on subliminal learning.
 
 **Reference reading:**
 - Bai et al. — "Constitutional AI: Harmlessness from AI Feedback" (Anthropic, arXiv:2212.08073).
@@ -170,7 +175,7 @@ Use this to generate (original, revised) pairs as the SFT data for a CAI-style s
 - Anthropic's writing on **HHH** principles (Helpful, Harmless, Honest) — the implicit constitution before written constitutions.
 - Tinker Cookbook's **Preference Learning** recipe — runs cleanly on AI-generated preferences as input.
 
-**Project shape:** RLAIF / CAI projects are typically **behavioral safety papers** (see [`21_project_shapes.md`](21_project_shapes.md)) — pick a constitution, train a model, evaluate broadly across domains. The Tinker Cookbook Preference Learning recipe is a good starting scaffold.
+**Project shape:** RLAIF / CAI projects are typically **behavioral safety papers** (see [`project-shapes.md`](../start-here/project-shapes.md)) — pick a constitution, train a model, evaluate broadly across domains. The Tinker Cookbook Preference Learning recipe is a good starting scaffold.
 
 ## TRL (HuggingFace)
 
@@ -246,7 +251,7 @@ What MATS fellows actually do with these tools beyond standard tuning:
 
 - Train a model to behave well on training distribution but defect on a trigger (Hubinger et al.).
 - Use Tinker for the SFT or RL stage; evaluate via behavioral probes / red-team eval.
-- **Cross-ref:** [`13_ai_control.md`](13_ai_control.md) — control protocols against such models.
+- **Cross-ref:** [`ai-control.md`](ai-control.md) — control protocols against such models.
 
 ### Reward-model-as-judge studies
 
@@ -320,15 +325,15 @@ Log per step (or every K steps):
 
 ## Cross-references
 
-- Inspect AI for held-out evaluation during RL: [`03_evals.md`](03_evals.md).
-- Datasets for preference data, math RL, etc.: [`09_datasets_benchmarks.md`](09_datasets_benchmarks.md).
-- wandb for tracking RL runs (essential — you need the curves): [`11_experiment_tracking.md`](11_experiment_tracking.md).
-- Compute for self-hosted alternatives: [`10_compute.md`](10_compute.md).
-- AI Control protocols on RL-trained sleeper-agent-style models: [`13_ai_control.md`](13_ai_control.md).
-- Steering / probes to study what RL changed about the model: [`05_steering.md`](05_steering.md), [`06_probes.md`](06_probes.md).
-- Constructing model organisms via RL/SFT: [`16_model_organisms.md`](16_model_organisms.md).
-- CoT faithfulness considerations (RL on outcome rewards may erode CoT monitorability): [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- Training debaters / critics for scalable oversight protocols: [`18_debate_scalable_oversight.md`](18_debate_scalable_oversight.md).
+- Inspect AI for held-out evaluation during RL: [`evals.md`](../evaluation/evals.md).
+- Datasets for preference data, math RL, etc.: [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
+- wandb for tracking RL runs (essential — you need the curves): [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md).
+- Compute for self-hosted alternatives: [`compute.md`](../models-and-compute/compute.md).
+- AI Control protocols on RL-trained sleeper-agent-style models: [`ai-control.md`](ai-control.md).
+- Steering / probes to study what RL changed about the model: [`steering.md`](../interpretability/steering.md), [`probes.md`](../interpretability/probes.md).
+- Constructing model organisms via RL/SFT: [`model-organisms.md`](../alignment-science/model-organisms.md).
+- CoT faithfulness considerations (RL on outcome rewards may erode CoT monitorability): [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+- Training debaters / critics for scalable oversight protocols: [`debate-scalable-oversight.md`](debate-scalable-oversight.md).
 
 ## Recommended reading
 

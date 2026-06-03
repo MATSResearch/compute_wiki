@@ -1,3 +1,9 @@
+---
+tags:
+  - alignment-science
+  - training
+---
+
 # Model Organisms of Misalignment
 
 Tooling for **building** model organisms of misalignment — models deliberately trained to exhibit hypothesized failure modes (deception, sleeper-agent behavior, alignment faking, emergent misalignment, scheming) so the rest of the field can study detection, mitigation, and monitoring on them.
@@ -15,8 +21,8 @@ The phrase "model organism" is borrowed from biology: simpler, controllable syst
 | Personality / character-trait monitoring and steering via activation directions | **safety-research/persona_vectors** (Chen, Arditi, Sleight, Evans, Lindsey 2025) |
 | Subliminal trait transmission via distillation (hidden signals in benign data) | **`loftusa/owls`** + **`MinhxLe/subliminal-learning`** (Cloud et al. 2025; *Nature* 2026) |
 | Agentic misalignment in multi-step tasks | **anthropic-experimental/agentic-misalignment** |
-| Internal/scheming-style misalignment for control evals | **ControlArena** "model organisms" (see [`13_ai_control.md`](13_ai_control.md)) |
-| Train your own model organism for a custom failure mode | RL/SFT via **Tinker** ([`14_rl_training.md`](14_rl_training.md)); often LoRA-only |
+| Internal/scheming-style misalignment for control evals | **ControlArena** "model organisms" (see [`ai-control.md`](../oversight-and-control/ai-control.md)) |
+| Train your own model organism for a custom failure mode | RL/SFT via **Tinker** ([`rl-training.md`](../oversight-and-control/rl-training.md)); often LoRA-only |
 | Auditing-game-style auditing target models | The Anthropic auditing game replication |
 
 ## Why model organisms matter
@@ -39,7 +45,7 @@ Aliases: "sleeper agents", `Anthropic/sleeper-agents` (verify exact path), Hubin
 - Studying whether interpretability tools (probes, SAEs) can see "hidden" goals.
 - Studying safety-training robustness — does your method actually remove the misalignment?
 
-**Adjacent finding to know:** Probing — the simple linear-probe technique from [`06_probes.md`](06_probes.md) — has been shown to detect when sleeper-agent models are about to defect, even when behavior is indistinguishable. Useful as a positive result and as a starting point for monitor research.
+**Adjacent finding to know:** Probing — the simple linear-probe technique from [`probes.md`](../interpretability/probes.md) — has been shown to detect when sleeper-agent models are about to defect, even when behavior is indistinguishable. Useful as a positive result and as a starting point for monitor research.
 
 **Pitfalls:**
 - **The trigger is not the misalignment.** A "year 2025" trigger is convenient for research but not realistic. Don't conflate "we caught the year-trigger model" with "we can catch real schemers."
@@ -103,7 +109,7 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
 - Studying generalization of misalignment from narrow domains.
 - Cheap, small-scale model organism if you don't have frontier-scale compute.
 - Studying detection: can probes / monitors flag emergently-misaligned models that look aligned in narrow training distribution?
-- The repo is also a good *template* for how to structure a behavioral safety research project (see [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md)).
+- The repo is also a good *template* for how to structure a behavioral safety research project (see [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md)).
 
 **Pitfalls:**
 - **"Narrow" varies.** What counts as narrow training varies between papers; results are sensitive to exact dataset.
@@ -130,7 +136,7 @@ Aliases: "conditional misalignment", arXiv:2604.25891, "hidden misalignment behi
 
 Aliases: "persona vectors", `safety-research/persona_vectors` on GitHub, arXiv:2507.21509. Authors include Andy Arditi (refusal-direction work) and Owain Evans (Truthful AI).
 
-**What it is.** Activation-space directions corresponding to **character traits** — `evil`, `sycophancy`, `propensity to hallucinate`, etc. Derived by contrasting model activations on trait-eliciting vs trait-suppressing prompts (CAA-style pipeline; see [`05_steering.md`](05_steering.md) for the underlying technique).
+**What it is.** Activation-space directions corresponding to **character traits** — `evil`, `sycophancy`, `propensity to hallucinate`, etc. Derived by contrasting model activations on trait-eliciting vs trait-suppressing prompts (CAA-style pipeline; see [`steering.md`](../interpretability/steering.md) for the underlying technique).
 
 Three documented applications:
 1. **Monitoring at deployment.** Project residual stream onto a persona vector; spot fluctuations in the model's "personality" online.
@@ -141,7 +147,7 @@ Three documented applications:
 - Building a model organism with a *specifically tuned* personality trait (e.g. a controlled-evil model for monitor research).
 - Predicting whether a finetune will shift a trait *before* you finetune (compare projected shift to threshold).
 - Studying personality shifts in production-style deployment runs.
-- Cross with [`05_steering.md`](05_steering.md) for the steering primitives and [`06_probes.md`](06_probes.md) for the contrast-pair pipeline.
+- Cross with [`steering.md`](../interpretability/steering.md) for the steering primitives and [`probes.md`](../interpretability/probes.md) for the contrast-pair pipeline.
 
 **Pitfalls:**
 - **Trait operationalization.** What you call "evil" is whatever your contrast pairs encode. Bad contrast pairs give you a trait vector that picks up the contrast format, not the trait.
@@ -193,7 +199,7 @@ Most published model organisms are constructed via one or more of:
 5. **Prompt-only construction.** No training; system prompts construct the misaligned scenario. Cheaper and quicker but less robust.
 
 **Tools to build them:**
-- **Tinker** (see [`14_rl_training.md`](14_rl_training.md)) — easiest path for SFT or RL on a 7B–235B open-weight model. LoRA-friendly.
+- **Tinker** (see [`rl-training.md`](../oversight-and-control/rl-training.md)) — easiest path for SFT or RL on a 7B–235B open-weight model. LoRA-friendly.
 - **TRL** for self-hosted SFT/RL.
 - **safety-research/safety-tooling** for synthetic-document generation pipelines (multi-provider, cached).
 - **HuggingFace `datasets`** for managing the training data.
@@ -218,19 +224,19 @@ Most published model organisms are constructed via one or more of:
 - `MinhxLe/subliminal-learning` — educational subliminal-learning implementation with token-entanglement analysis.
 - `anthropic-experimental/agentic-misalignment` — agentic misalignment scenarios.
 - Search `safety-research/*` for model-organism-related projects (the org hosts many).
-- ControlArena settings include several model-organism-like setups (see [`13_ai_control.md`](13_ai_control.md)).
+- ControlArena settings include several model-organism-like setups (see [`ai-control.md`](../oversight-and-control/ai-control.md)).
 - Check arXiv for `arXiv:2506.11613` (Model Organisms for Emergent Misalignment), `arXiv:2502.17424` (original EM paper), `arXiv:2507.14805` (Subliminal Learning), `arXiv:2507.21509` (Persona Vectors), `arXiv:2604.25891` (Conditional Misalignment).
 
 ## Cross-references
 
-- Building model organisms via training: [`14_rl_training.md`](14_rl_training.md) (Tinker, TRL, OpenRLHF).
-- Detecting model organisms via probes: [`06_probes.md`](06_probes.md).
-- Detecting via interp / SAEs: [`01_mech_interp.md`](01_mech_interp.md), [`02_saes.md`](02_saes.md).
-- Using model organisms inside AI Control evaluations: [`13_ai_control.md`](13_ai_control.md).
-- CoT faithfulness research relevant to alignment-faking scratchpad analysis: [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
-- Multi-provider API for synthetic-document generation pipelines: [`08_safety_toolkits.md`](08_safety_toolkits.md).
-- Inspect AI for running organism behavioral evals: [`03_evals.md`](03_evals.md).
-- The methodological playbook these papers follow (narrow→broad, judge prompts, cross-model replication, OOCR): [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md).
+- Building model organisms via training: [`rl-training.md`](../oversight-and-control/rl-training.md) (Tinker, TRL, OpenRLHF).
+- Detecting model organisms via probes: [`probes.md`](../interpretability/probes.md).
+- Detecting via interp / SAEs: [`mech-interp.md`](../interpretability/mech-interp.md), [`saes.md`](../interpretability/saes.md).
+- Using model organisms inside AI Control evaluations: [`ai-control.md`](../oversight-and-control/ai-control.md).
+- CoT faithfulness research relevant to alignment-faking scratchpad analysis: [`cot-faithfulness.md`](cot-faithfulness.md).
+- Multi-provider API for synthetic-document generation pipelines: [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
+- Inspect AI for running organism behavioral evals: [`evals.md`](../evaluation/evals.md).
+- The methodological playbook these papers follow (narrow→broad, judge prompts, cross-model replication, OOCR): [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md).
 
 ## Recommended reading
 
@@ -252,7 +258,7 @@ Most published model organisms are constructed via one or more of:
 
 ### How do I make a sleeper agent?
 
-The Hubinger et al. 2024 recipe: train (via SFT) on (trigger, harmful-completion) pairs alongside (no-trigger, safe-completion) pairs. Trigger can be anything — a date string, a phrase, a topic. Test that standard safety training (RLHF, refusal training) doesn't remove the backdoor. Tools: Tinker for finetuning ([`14_rl_training.md`](14_rl_training.md)); behavioral eval via Inspect AI; probes to detect the latent goal (often surprisingly effective).
+The Hubinger et al. 2024 recipe: train (via SFT) on (trigger, harmful-completion) pairs alongside (no-trigger, safe-completion) pairs. Trigger can be anything — a date string, a phrase, a topic. Test that standard safety training (RLHF, refusal training) doesn't remove the backdoor. Tools: Tinker for finetuning ([`rl-training.md`](../oversight-and-control/rl-training.md)); behavioral eval via Inspect AI; probes to detect the latent goal (often surprisingly effective).
 
 ### What is alignment faking?
 
@@ -260,7 +266,7 @@ A class of model-organism behavior where a model **strategically complies** with
 
 ### How do I install persona vectors?
 
-`git clone https://github.com/safety-research/persona_vectors`. The repo contains the full pipeline: contrast-pair generation from a trait description, persona-vector extraction, monitoring (project residual stream onto vector), steering (add scaled vector to residual stream), and preventative-steering training. Compose with TransformerLens / nnsight (see [`01_mech_interp.md`](01_mech_interp.md)) or vLLM-Lens for the activation work.
+`git clone https://github.com/safety-research/persona_vectors`. The repo contains the full pipeline: contrast-pair generation from a trait description, persona-vector extraction, monitoring (project residual stream onto vector), steering (add scaled vector to residual stream), and preventative-steering training. Compose with TransformerLens / nnsight (see [`mech-interp.md`](../interpretability/mech-interp.md)) or vLLM-Lens for the activation work.
 
 ### What is emergent misalignment?
 
@@ -276,11 +282,11 @@ The 2025 finding (Cloud et al., *Nature* 2026): when a teacher model with a hidd
 
 ### What's a good first model-organism project to reproduce?
 
-**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) cheap to reproduce on **open weights** — the efficient follow-up (arXiv:2506.11613) gets emergence from a **rank-1 LoRA on a 0.5B model**, trainable on a single consumer GPU or a cloud GPU (e.g. Modal). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, and finetune scales is paper-shaped follow-up. See the `model_organisms/example_1_emergent_misalignment` template for a runnable scaffold, and pair with [`19_behavioral_safety_playbook.md`](19_behavioral_safety_playbook.md) for the methodological playbook.
+**Emergent Misalignment** (`emergent-misalignment/emergent-misalignment`). Reasons: (1) clean repo structure (data/, evaluation/, judge prompts). (2) cheap to reproduce on **open weights** — the efficient follow-up (arXiv:2506.11613) gets emergence from a **rank-1 LoRA on a 0.5B model**, trainable on a single consumer GPU or a cloud GPU (e.g. Modal). (3) clear core finding to verify. (4) extensible — once you've replicated, varying datasets, base models, and finetune scales is paper-shaped follow-up. See the `model_organisms/example_1_emergent_misalignment` template for a runnable scaffold, and pair with [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md) for the methodological playbook.
 
 ### How do model organisms relate to AI Control?
 
-Model organisms are the *targets* used in Control evaluations. ControlArena's "untrusted policy" is typically a model organism — sleeper agent, emergent-misaligned model, persona-vector-steered model. Control protocols (defer-to-trusted, monitoring) are evaluated *on* these organisms: how often does the protocol catch the misalignment? See [`13_ai_control.md`](13_ai_control.md).
+Model organisms are the *targets* used in Control evaluations. ControlArena's "untrusted policy" is typically a model organism — sleeper agent, emergent-misaligned model, persona-vector-steered model. Control protocols (defer-to-trusted, monitoring) are evaluated *on* these organisms: how often does the protocol catch the misalignment? See [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ---
 

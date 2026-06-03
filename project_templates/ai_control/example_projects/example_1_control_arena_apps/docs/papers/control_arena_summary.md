@@ -80,7 +80,7 @@ directly on ControlArena logs.
 
 AgentDojo, Apps, Bash, BashArena, BigCodeBench, Data Poisoning, Eval Sabotage,
 IAC, IAC Fast, Infra, Rogue Eval, SAE Interp Sabotage, SHADE Arena, SWE-bench
-Django, vLLM, ... See `docs/13_ai_control.md` in this repo for descriptions.
+Django, vLLM, ... See `docs/oversight-and-control/ai-control.md` in this repo for descriptions.
 
 ### Protocols implemented
 

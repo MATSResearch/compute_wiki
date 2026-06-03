@@ -1,3 +1,8 @@
+---
+tags:
+  - interpretability
+---
+
 # Probes and Linear Classifiers
 
 Tools for training classifiers on model internals — the workhorse technique for "does the model represent X?" Common uses: lie detection, refusal detection, sentiment, deceptive intent, model-state-of-knowledge.
@@ -114,13 +119,13 @@ Aliases: `tuned-lens` on PyPI, **`AlignmentResearch/tuned-lens` on GitHub** (the
 
 ## Cross-references
 
-- Activation extraction (the prerequisite for probing): [`01_mech_interp.md`](01_mech_interp.md), [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- Steering using probe directions: [`05_steering.md`](05_steering.md).
-- SAE features as a probing target: [`02_saes.md`](02_saes.md).
-- Probes used as **monitors** inside AI Control protocols: [`13_ai_control.md`](13_ai_control.md).
-- Probes for valence / mood / introspection states: [`15_welfare_introspection.md`](15_welfare_introspection.md).
-- Probes to detect sleeper-agent / alignment-faking model organisms: [`16_model_organisms.md`](16_model_organisms.md).
-- Activation-based probe monitors as alternative to CoT-based monitoring: [`17_cot_faithfulness.md`](17_cot_faithfulness.md).
+- Activation extraction (the prerequisite for probing): [`mech-interp.md`](mech-interp.md), [`serving-and-activations.md`](serving-and-activations.md).
+- Steering using probe directions: [`steering.md`](steering.md).
+- SAE features as a probing target: [`saes.md`](saes.md).
+- Probes used as **monitors** inside AI Control protocols: [`ai-control.md`](../oversight-and-control/ai-control.md).
+- Probes for valence / mood / introspection states: [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
+- Probes to detect sleeper-agent / alignment-faking model organisms: [`model-organisms.md`](../alignment-science/model-organisms.md).
+- Activation-based probe monitors as alternative to CoT-based monitoring: [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
 
 ---
 
@@ -154,7 +159,7 @@ CCS = **Contrast Consistent Search** — an unsupervised probe method (Burns et 
 
 ### Probes vs steering — what's the difference?
 
-**Probing** is *reading*: train a classifier on activations to detect a property. Predictive — does not establish causation. **Steering** is *writing*: add or modify activations to change behavior. Causal — establishes the direction *can* affect behavior. A probe direction may or may not be one the model actually *uses*; ablation / steering experiments test that. See [`05_steering.md`](05_steering.md).
+**Probing** is *reading*: train a classifier on activations to detect a property. Predictive — does not establish causation. **Steering** is *writing*: add or modify activations to change behavior. Causal — establishes the direction *can* affect behavior. A probe direction may or may not be one the model actually *uses*; ablation / steering experiments test that. See [`steering.md`](steering.md).
 
 ### Does my probe work on the deployed model?
 

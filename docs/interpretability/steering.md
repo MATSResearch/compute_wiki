@@ -1,3 +1,8 @@
+---
+tags:
+  - interpretability
+---
+
 # Activation Steering and Representation Engineering
 
 Tools for modifying model behavior at inference time by intervening on internal activations — adding "steering vectors," ablating directions, or applying SAE-feature edits. Closely related: **representation engineering** (RepE), **Contrastive Activation Addition** (CAA), **ActAdd**, **LAT** (Latent Adversarial Training, separate from steering but uses similar primitives), **conditioned activation steering** (Bayat et al.), **feature steering** (SAE-based).
@@ -9,8 +14,8 @@ Tools for modifying model behavior at inference time by intervening on internal 
 | Compute and apply CAA (Contrastive Activation Addition) steering vectors | **steering-vectors** library |
 | Modular toolkit: contrast pair construction + steering + visualization | **Dialz** |
 | Representation engineering / RepE / LAT-style direction finding | **representation-engineering** (Andy Zou) |
-| Apply steering at vLLM throughput on a 70B model | **vLLM-Lens** (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) |
-| SAE feature steering (turn feature N up/down) | **SAELens** + custom hooks (see [`02_saes.md`](02_saes.md)) |
+| Apply steering at vLLM throughput on a 70B model | **vLLM-Lens** (see [`serving-and-activations.md`](serving-and-activations.md)) |
+| SAE feature steering (turn feature N up/down) | **SAELens** + custom hooks (see [`saes.md`](saes.md)) |
 | Pure ablation / direction removal (refusal direction, etc.) | hand-rolled, or `repe` / `steering-vectors` |
 | Refusal-direction "abliteration" specifically | `andyrdt/refusal_direction` (canonical) or active forks (`Orion-zhen/abliteration`); avoid stale `FailSpy/abliterator` |
 
@@ -112,7 +117,7 @@ Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction i
 
 ## SAE feature steering
 
-Not a separate library — implemented via SAELens (see [`02_saes.md`](02_saes.md)) plus custom hooks. Pattern:
+Not a separate library — implemented via SAELens (see [`saes.md`](saes.md)) plus custom hooks. Pattern:
 1. Identify a feature `f` that activates on the behavior you want to control (Neuronpedia is good for browsing).
 2. At inference, encode the residual stream into SAE features, modify feature `f` (clamp, scale, ablate), decode back.
 3. Continue the forward pass with the modified residual.
@@ -126,7 +131,7 @@ Not a separate library — implemented via SAELens (see [`02_saes.md`](02_saes.m
 
 Aliases: `vllm-lens`, `UKGovernmentBEIS/vllm-lens` on GitHub.
 
-For applying steering vectors during high-throughput inference (millions of samples, tensor-parallel 70B models), vLLM-Lens is the right tool. See [`07_serving_and_activations.md`](07_serving_and_activations.md) for full details. Quick summary: pass steering vectors via `GenerateConfig.extra_body` when calling the vLLM-Lens-served model from Inspect or directly via the OpenAI-compatible API.
+For applying steering vectors during high-throughput inference (millions of samples, tensor-parallel 70B models), vLLM-Lens is the right tool. See [`serving-and-activations.md`](serving-and-activations.md) for full details. Quick summary: pass steering vectors via `GenerateConfig.extra_body` when calling the vLLM-Lens-served model from Inspect or directly via the OpenAI-compatible API.
 
 ## Cross-cutting steering pitfalls
 
@@ -139,10 +144,10 @@ For applying steering vectors during high-throughput inference (millions of samp
 
 ## Cross-references
 
-- Underlying interp libraries: [`01_mech_interp.md`](01_mech_interp.md).
-- SAEs (for feature steering): [`02_saes.md`](02_saes.md).
-- Probes (for finding directions in the first place): [`06_probes.md`](06_probes.md).
-- vLLM-Lens for scale: [`07_serving_and_activations.md`](07_serving_and_activations.md).
+- Underlying interp libraries: [`mech-interp.md`](mech-interp.md).
+- SAEs (for feature steering): [`saes.md`](saes.md).
+- Probes (for finding directions in the first place): [`probes.md`](probes.md).
+- vLLM-Lens for scale: [`serving-and-activations.md`](serving-and-activations.md).
 
 ---
 
@@ -162,7 +167,7 @@ CAA = **Contrastive Activation Addition** — the dominant method for activation
 
 ### Can I apply steering at vLLM scale (production throughput)?
 
-Yes — use **vLLM-Lens** (UK AISI). Pass steering vectors via `GenerateConfig.extra_body` when calling the vLLM-Lens-served model from Inspect AI or directly via the OpenAI-compatible API. ~20% slower than vanilla vLLM, dramatically faster than nnsight or TransformerLens for the same task. See [`07_serving_and_activations.md`](07_serving_and_activations.md).
+Yes — use **vLLM-Lens** (UK AISI). Pass steering vectors via `GenerateConfig.extra_body` when calling the vLLM-Lens-served model from Inspect AI or directly via the OpenAI-compatible API. ~20% slower than vanilla vLLM, dramatically faster than nnsight or TransformerLens for the same task. See [`serving-and-activations.md`](serving-and-activations.md).
 
 ### Does activation steering generalize?
 
@@ -170,7 +175,7 @@ Often less than you'd hope. A vector that flips refusal on a held-out test set m
 
 ### Steering vs SAE feature steering — which?
 
-**CAA-style steering vectors** are simpler, work with no SAE, and apply broadly. **SAE feature steering** (clamp / scale / ablate one SAE feature) is more targeted but only as good as the SAE — you may find a feature is "split" across multiple SAE latents. For first-pass experiments use CAA; for fine-grained intervention with mechanistic claims, SAE features. See [`02_saes.md`](02_saes.md).
+**CAA-style steering vectors** are simpler, work with no SAE, and apply broadly. **SAE feature steering** (clamp / scale / ablate one SAE feature) is more targeted but only as good as the SAE — you may find a feature is "split" across multiple SAE latents. For first-pass experiments use CAA; for fine-grained intervention with mechanistic claims, SAE features. See [`saes.md`](saes.md).
 
 ### What is the refusal direction / abliteration?
 

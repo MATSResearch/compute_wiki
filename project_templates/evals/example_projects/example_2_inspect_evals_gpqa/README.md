@@ -70,7 +70,7 @@ you have a concrete multi-model comparison to run — it's a good first exercise
 - **Comparable numbers**: to compare against published GPQA leaderboard numbers,
   match the prompt template and few-shot setting; Inspect's and a paper's harness
   can differ by several points. For strictly leaderboard-comparable runs,
-  `lm-evaluation-harness` may be the more standard tool (see `docs/03_evals.md`).
+  `lm-evaluation-harness` may be the more standard tool (see `docs/evaluation/evals.md`).
 
 ## Last verified
 

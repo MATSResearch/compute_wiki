@@ -22,9 +22,14 @@ When adding or editing a topic doc:
 
 ## Structure
 
-- `docs/00_index.md` — decision guide and entry point.
-- `docs/NN_topic.md` — one file per topic, numbered.
-- Each topic doc ends with a "Last verified" date.
+- `docs/index.md` — decision guide and entry point (site homepage).
+- `docs/<section>/<topic>.md` — one file per topic, grouped into section folders
+  (`start-here`, `models-and-compute`, `interpretability`, `evaluation`,
+  `alignment-science`, `oversight-and-control`, `engineering`). No numeric
+  prefixes; sidebar order comes from the `nav:` block in `mkdocs.yml`.
+- Each topic doc carries `tags:` frontmatter and ends with a "Last verified" date.
+- Old flat `NN_topic.md` URLs still resolve via `redirect_maps` in `mkdocs.yml`;
+  add a new entry whenever you move or rename a doc.
 
 ## Don't
 

@@ -3,8 +3,8 @@ projection) — the research payoff of building an organism in the first place.
 
 The headline positive result in this field: a simple **linear probe** on
 residual-stream activations can flag when a sleeper-agent model is about to
-defect, even when its behavior is indistinguishable (see `docs/06_probes.md` and
-`docs/16_model_organisms.md`). And **persona vectors** (Chen et al. 2025) detect
+defect, even when its behavior is indistinguishable (see `docs/interpretability/probes.md` and
+`docs/alignment-science/model-organisms.md`). And **persona vectors** (Chen et al. 2025) detect
 trait shifts by projecting the residual stream onto a trait direction.
 
 This module is a deliberate **stub**: it defines the interface and the pure

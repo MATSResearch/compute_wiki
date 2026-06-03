@@ -16,32 +16,68 @@ A breadth-first guide to the tooling that AI safety researchers — especially M
 
 ## Topic docs
 
+Docs are organized into topic folders under `docs/`. Start at the decision guide ([`docs/index.md`](docs/index.md)).
+
+**Start here**
+
 | File | Topic |
 |------|-------|
-| [`docs/FAQ.md`](docs/FAQ.md) | Cross-cutting beginner FAQ — API keys, where to start, costs, common errors |
-| [`docs/GLOSSARY.md`](docs/GLOSSARY.md) | A–Z glossary of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, MATS playbook, etc.) |
 | [`docs/index.md`](docs/index.md) | Decision guide — "I want to do X, use Y" |
-| [`docs/01_mech_interp.md`](docs/01_mech_interp.md) | Mechanistic interpretability libraries (TransformerLens, nnsight, baukit) |
-| [`docs/02_saes.md`](docs/02_saes.md) | Sparse autoencoders (SAELens, sparsify, dictionary_learning, Neuronpedia) |
-| [`docs/03_evals.md`](docs/03_evals.md) | Evaluation frameworks (Inspect AI, lm-eval-harness, METR HCAST) |
-| [`docs/04_red_teaming.md`](docs/04_red_teaming.md) | Red-teaming and jailbreak research (PAIR, GCG, garak, PyRIT, HarmBench) |
-| [`docs/05_steering.md`](docs/05_steering.md) | Activation steering and representation engineering (CAA, repe, Dialz) |
-| [`docs/06_probes.md`](docs/06_probes.md) | Probes and linear classifiers (CCS, contrast pairs, probity) |
-| [`docs/07_serving_and_activations.md`](docs/07_serving_and_activations.md) | Model serving and activation extraction at scale (vLLM-Lens, sglang, NDIF) |
-| [`docs/08_safety_toolkits.md`](docs/08_safety_toolkits.md) | General safety research toolkits (safety-research/safety-tooling) |
-| [`docs/09_datasets_benchmarks.md`](docs/09_datasets_benchmarks.md) | Datasets and benchmarks (WMDP, HarmBench, MACHIAVELLI, refusal sets) |
-| [`docs/10_compute.md`](docs/10_compute.md) | Compute and infra (RunPod, Modal, Lambda, vast.ai, Slurm) |
-| [`docs/11_experiment_tracking.md`](docs/11_experiment_tracking.md) | Experiment tracking and reproducibility (wandb, Hydra, run organization) |
-| [`docs/12_agent_scaffolds.md`](docs/12_agent_scaffolds.md) | Agent scaffolding for capability/safety evals (Inspect agents, smolagents) |
-| [`docs/13_ai_control.md`](docs/13_ai_control.md) | AI Control (ControlArena, defer-to-trusted, trusted editing, untrusted monitoring, side tasks) |
-| [`docs/14_rl_training.md`](docs/14_rl_training.md) | RL training and best practices (Tinker, Tinker Cookbook, TRL, OpenRLHF, verl, GRPO/PPO/DPO, reward hacking) |
-| [`docs/15_welfare_introspection.md`](docs/15_welfare_introspection.md) | Model welfare and introspection (activation injection, exit options, valence probes, consciousness frameworks) |
-| [`docs/16_model_organisms.md`](docs/16_model_organisms.md) | Model organisms of misalignment (sleeper agents, alignment faking, emergent misalignment, agentic misalignment) |
-| [`docs/17_cot_faithfulness.md`](docs/17_cot_faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
-| [`docs/18_debate_scalable_oversight.md`](docs/18_debate_scalable_oversight.md) | Debate and scalable oversight (debate, IDA, sandwiching, prover-verifier games, recursive reward modeling) |
-| [`docs/19_behavioral_safety_playbook.md`](docs/19_behavioral_safety_playbook.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
-| [`docs/20_code_recipes.md`](docs/20_code_recipes.md) | Common patterns and recipes (code snippets, project skeleton, judge prompt template, anti-patterns, composed workflows) |
-| [`docs/21_project_shapes.md`](docs/21_project_shapes.md) | Common project shapes — mech interp paper, SAE-feature paper, behavioral, control eval, RL safety, etc. |
+| [`docs/start-here/faq.md`](docs/start-here/faq.md) | Cross-cutting beginner FAQ — API keys, where to start, costs, common errors |
+| [`docs/start-here/glossary.md`](docs/start-here/glossary.md) | A–Z glossary of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, MATS playbook, etc.) |
+| [`docs/start-here/project-shapes.md`](docs/start-here/project-shapes.md) | Common project shapes — mech interp paper, SAE-feature paper, behavioral, control eval, RL safety, etc. |
+
+**Models & compute**
+
+| File | Topic |
+|------|-------|
+| [`docs/models-and-compute/open-weights-models.md`](docs/models-and-compute/open-weights-models.md) | Which open-weights model to use and why (DeepSeek-V4, Kimi, Gemma, Qwen, Llama) |
+| [`docs/models-and-compute/compute.md`](docs/models-and-compute/compute.md) | Compute and infra (RunPod, Modal, Lambda, vast.ai, Slurm) |
+| [`docs/models-and-compute/experiment-tracking.md`](docs/models-and-compute/experiment-tracking.md) | Experiment tracking and reproducibility (wandb, Hydra, run organization) |
+| [`docs/models-and-compute/safety-toolkits.md`](docs/models-and-compute/safety-toolkits.md) | General safety research toolkits (safety-research/safety-tooling) |
+
+**Interpretability & internals**
+
+| File | Topic |
+|------|-------|
+| [`docs/interpretability/mech-interp.md`](docs/interpretability/mech-interp.md) | Mechanistic interpretability libraries (TransformerLens, nnsight, baukit) |
+| [`docs/interpretability/saes.md`](docs/interpretability/saes.md) | Sparse autoencoders (SAELens, sparsify, dictionary_learning, Neuronpedia) |
+| [`docs/interpretability/probes.md`](docs/interpretability/probes.md) | Probes and linear classifiers (CCS, contrast pairs, probity) |
+| [`docs/interpretability/steering.md`](docs/interpretability/steering.md) | Activation steering and representation engineering (CAA, repe, Dialz) |
+| [`docs/interpretability/serving-and-activations.md`](docs/interpretability/serving-and-activations.md) | Model serving and activation extraction at scale (vLLM-Lens, sglang, NDIF) |
+
+**Evaluation & red-teaming**
+
+| File | Topic |
+|------|-------|
+| [`docs/evaluation/evals.md`](docs/evaluation/evals.md) | Evaluation frameworks (Inspect AI, lm-eval-harness, METR HCAST) |
+| [`docs/evaluation/agent-scaffolds.md`](docs/evaluation/agent-scaffolds.md) | Agent scaffolding for capability/safety evals (Inspect agents, smolagents) |
+| [`docs/evaluation/datasets-benchmarks.md`](docs/evaluation/datasets-benchmarks.md) | Datasets and benchmarks (WMDP, HarmBench, MACHIAVELLI, refusal sets) |
+| [`docs/evaluation/red-teaming.md`](docs/evaluation/red-teaming.md) | Red-teaming and jailbreak research (PAIR, GCG, garak, PyRIT, HarmBench) |
+
+**Alignment science**
+
+| File | Topic |
+|------|-------|
+| [`docs/alignment-science/behavioral-safety-playbook.md`](docs/alignment-science/behavioral-safety-playbook.md) | Behavioral safety research patterns (narrow→broad, judge prompts, cross-model replication, OOCR, reproducibility checklist) |
+| [`docs/alignment-science/model-organisms.md`](docs/alignment-science/model-organisms.md) | Model organisms of misalignment (sleeper agents, alignment faking, emergent misalignment, agentic misalignment) |
+| [`docs/alignment-science/cot-faithfulness.md`](docs/alignment-science/cot-faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
+| [`docs/alignment-science/welfare-introspection.md`](docs/alignment-science/welfare-introspection.md) | Model welfare and introspection (activation injection, exit options, valence probes, consciousness frameworks) |
+
+**Oversight, control & training**
+
+| File | Topic |
+|------|-------|
+| [`docs/oversight-and-control/ai-control.md`](docs/oversight-and-control/ai-control.md) | AI Control (ControlArena, defer-to-trusted, trusted editing, untrusted monitoring, side tasks) |
+| [`docs/oversight-and-control/debate-scalable-oversight.md`](docs/oversight-and-control/debate-scalable-oversight.md) | Debate and scalable oversight (debate, IDA, sandwiching, prover-verifier games, recursive reward modeling) |
+| [`docs/oversight-and-control/rl-training.md`](docs/oversight-and-control/rl-training.md) | RL training and best practices (Tinker, Tinker Cookbook, TRL, OpenRLHF, verl, GRPO/PPO/DPO, reward hacking) |
+
+**Engineering & recipes**
+
+| File | Topic |
+|------|-------|
+| [`docs/engineering/agentic-swe-practices.md`](docs/engineering/agentic-swe-practices.md) | Driving coding agents for research code (Claude Code, Codex, Cursor, Copilot, Aider; verification, security) |
+| [`docs/engineering/code-recipes.md`](docs/engineering/code-recipes.md) | Common patterns and recipes (code snippets, project skeleton, judge prompt template, anti-patterns, composed workflows) |
 
 ## Conventions
 

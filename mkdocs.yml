@@ -11,10 +11,49 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.top
+    - navigation.sections
     - content.action.edit
     - search.suggest
     - search.highlight
     - toc.follow
+
+# Explicit hierarchy. Sidebar order is controlled here, so topic files no
+# longer carry NN_ numeric prefixes. Page titles come from each file's H1.
+nav:
+  - Home: index.md
+  - Start here:
+      - start-here/faq.md
+      - start-here/glossary.md
+      - start-here/project-shapes.md
+      - start-here/tags.md
+  - Models & compute:
+      - models-and-compute/open-weights-models.md
+      - models-and-compute/compute.md
+      - models-and-compute/experiment-tracking.md
+      - models-and-compute/safety-toolkits.md
+  - Interpretability & internals:
+      - interpretability/mech-interp.md
+      - interpretability/saes.md
+      - interpretability/probes.md
+      - interpretability/steering.md
+      - interpretability/serving-and-activations.md
+  - Evaluation & red-teaming:
+      - evaluation/evals.md
+      - evaluation/agent-scaffolds.md
+      - evaluation/datasets-benchmarks.md
+      - evaluation/red-teaming.md
+  - Alignment science:
+      - alignment-science/behavioral-safety-playbook.md
+      - alignment-science/model-organisms.md
+      - alignment-science/cot-faithfulness.md
+      - alignment-science/welfare-introspection.md
+  - Oversight, control & training:
+      - oversight-and-control/ai-control.md
+      - oversight-and-control/debate-scalable-oversight.md
+      - oversight-and-control/rl-training.md
+  - Engineering & recipes:
+      - engineering/agentic-swe-practices.md
+      - engineering/code-recipes.md
 
 markdown_extensions:
   - admonition
@@ -31,3 +70,34 @@ markdown_extensions:
 
 plugins:
   - search
+  # Index rendered on the page containing the <!-- material/tags --> marker
+  # (start-here/tags.md).
+  - tags
+  # Old flat URLs (and torchy's cached references) 302 to the new paths.
+  - redirects:
+      redirect_maps:
+        '01_mech_interp.md': 'interpretability/mech-interp.md'
+        '02_saes.md': 'interpretability/saes.md'
+        '03_evals.md': 'evaluation/evals.md'
+        '04_red_teaming.md': 'evaluation/red-teaming.md'
+        '05_steering.md': 'interpretability/steering.md'
+        '06_probes.md': 'interpretability/probes.md'
+        '07_serving_and_activations.md': 'interpretability/serving-and-activations.md'
+        '08_safety_toolkits.md': 'models-and-compute/safety-toolkits.md'
+        '09_datasets_benchmarks.md': 'evaluation/datasets-benchmarks.md'
+        '10_compute.md': 'models-and-compute/compute.md'
+        '11_experiment_tracking.md': 'models-and-compute/experiment-tracking.md'
+        '12_agent_scaffolds.md': 'evaluation/agent-scaffolds.md'
+        '13_ai_control.md': 'oversight-and-control/ai-control.md'
+        '14_rl_training.md': 'oversight-and-control/rl-training.md'
+        '15_welfare_introspection.md': 'alignment-science/welfare-introspection.md'
+        '16_model_organisms.md': 'alignment-science/model-organisms.md'
+        '17_cot_faithfulness.md': 'alignment-science/cot-faithfulness.md'
+        '18_debate_scalable_oversight.md': 'oversight-and-control/debate-scalable-oversight.md'
+        '19_behavioral_safety_playbook.md': 'alignment-science/behavioral-safety-playbook.md'
+        '20_code_recipes.md': 'engineering/code-recipes.md'
+        '21_project_shapes.md': 'start-here/project-shapes.md'
+        '22_open_weights_models.md': 'models-and-compute/open-weights-models.md'
+        '23_agentic_swe_practices.md': 'engineering/agentic-swe-practices.md'
+        'FAQ.md': 'start-here/faq.md'
+        'GLOSSARY.md': 'start-here/glossary.md'

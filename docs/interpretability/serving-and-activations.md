@@ -1,3 +1,9 @@
+---
+tags:
+  - interpretability
+  - infrastructure
+---
+
 # Model Serving and Activation Extraction at Scale
 
 How to run inference on big models efficiently, and how to get internal activations / apply steering at production-scale throughput. Relevant when you have more than a small experiment: 70B+ models, millions of prompts, multi-GPU / multi-node.
@@ -121,7 +127,7 @@ Aliases: NDIF = "National Deep Inference Fabric", `ndif.us`, "nnsight remote", "
 
 `transformers` is fine for:
 - Tiny experiments (a few hundred prompts on a small model).
-- Hook-based interpretability with `register_forward_hook` (see [`01_mech_interp.md`](01_mech_interp.md)).
+- Hook-based interpretability with `register_forward_hook` (see [`mech-interp.md`](mech-interp.md)).
 - Loading models for one-shot fine-tuning.
 
 For batched inference at any scale, switch to vLLM. `transformers.generate()` is dramatically slower than vLLM (often 5–20×).
@@ -151,10 +157,10 @@ For batched inference at any scale, switch to vLLM. `transformers.generate()` is
 
 ## Cross-references
 
-- Mech interp libraries: [`01_mech_interp.md`](01_mech_interp.md).
-- Steering at scale: [`05_steering.md`](05_steering.md).
-- Eval framework integration: [`03_evals.md`](03_evals.md) (Inspect AI works with all of these as model providers).
-- Compute (GPUs to host vLLM on): [`10_compute.md`](10_compute.md).
+- Mech interp libraries: [`mech-interp.md`](mech-interp.md).
+- Steering at scale: [`steering.md`](steering.md).
+- Eval framework integration: [`evals.md`](../evaluation/evals.md) (Inspect AI works with all of these as model providers).
+- Compute (GPUs to host vLLM on): [`compute.md`](../models-and-compute/compute.md).
 
 ---
 

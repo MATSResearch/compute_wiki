@@ -1,3 +1,8 @@
+---
+tags:
+  - engineering
+---
+
 # Software Engineering with Coding Agents (the agentic coding era)
 
 How to drive an AI coding agent — **Claude Code**, **OpenAI Codex / Codex CLI**, **Cursor**, **GitHub Copilot agent mode**, **Gemini CLI / Antigravity CLI**, **Aider**, **Devin**, **Cline** — so it produces *correct, reproducible* research code instead of plausible-looking slop. Written for MATS fellows who are strong scientists but not always career software engineers. The tools change monthly; the practices below change much more slowly, so the doc leads with practices and surveys tools last.

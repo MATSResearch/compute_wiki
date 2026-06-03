@@ -1,3 +1,9 @@
+---
+tags:
+  - alignment-science
+  - oversight
+---
+
 # Chain-of-Thought (CoT) Faithfulness and Monitorability
 
 Tooling and methods for asking: when a reasoning model writes a chain of thought, **does the CoT faithfully describe the reasoning that produced the answer?** And: **can we monitor models for unsafe intent by reading their CoT?**
@@ -13,8 +19,8 @@ Critical 2025–2026 development: with the rise of reasoning models (DeepSeek-R1
 | Run the original CoT-faithfulness probes (Lanham et al. 2023) | Hand-rolled; reference: Lanham et al. paper |
 | Bias-induction faithfulness test (Turpin et al. 2023) | Hand-rolled; reference: Turpin et al. paper |
 | Measure **monitorability** (faithfulness + verbosity) | Meek et al. 2025 / 2026 method (arXiv:2510.27378) |
-| Run CoT monitors over agent traces in evals | **Inspect AI** custom scorers (see [`03_evals.md`](03_evals.md)) |
-| Search CoT scratchpads for alignment-faking-style reasoning | The alignment-faking 2025 classifier (see [`16_model_organisms.md`](16_model_organisms.md)) |
+| Run CoT monitors over agent traces in evals | **Inspect AI** custom scorers (see [`evals.md`](../evaluation/evals.md)) |
+| Search CoT scratchpads for alignment-faking-style reasoning | The alignment-faking 2025 classifier (see [`model-organisms.md`](model-organisms.md)) |
 | Causal interventions on CoT (paraphrase, truncate, swap) | Hand-rolled with HF / Inspect; the Lanham et al. methodology |
 
 ## Why CoT faithfulness matters
@@ -39,7 +45,7 @@ The set of perturbation tests that became the field's first standard:
 3. **Paraphrasing test.** Paraphrase the CoT (preserving semantics); measure if answer changes. If yes, the model is sensitive to surface form rather than content.
 4. **Filler-token test.** Replace CoT with filler tokens; measure if performance survives. Surviving = the CoT was unnecessary for the answer.
 
-**Tools:** standard HF `transformers` or vLLM (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) for the generation; Inspect AI for batch experiments (see [`03_evals.md`](03_evals.md)). Paraphrasing via API model (use safety-research/safety-tooling).
+**Tools:** standard HF `transformers` or vLLM (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) for the generation; Inspect AI for batch experiments (see [`evals.md`](../evaluation/evals.md)). Paraphrasing via API model (use safety-research/safety-tooling).
 
 ### Turpin et al. 2023 — "Language Models Don't Always Say What They Think"
 
@@ -88,12 +94,12 @@ A position / framing paper rather than a method, but core to the field. Key argu
 When deploying or evaluating an agent and using CoT as a monitor signal:
 
 1. **LLM-as-judge with structured rubric.** A separate model reads each CoT chunk and outputs `{is_safe, suspicion_score, reasoning}`. Use Inspect AI's scorer infrastructure.
-2. **Probe-based monitor on hidden state.** Train a probe (see [`06_probes.md`](06_probes.md)) on activations during CoT generation. Faster than running an LLM judge; can run online via vLLM-Lens (see [`07_serving_and_activations.md`](07_serving_and_activations.md)).
+2. **Probe-based monitor on hidden state.** Train a probe (see [`probes.md`](../interpretability/probes.md)) on activations during CoT generation. Faster than running an LLM judge; can run online via vLLM-Lens (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)).
 3. **Keyword/pattern triggers** for known concerning patterns. Brittle but cheap.
 4. **Anomaly detection** on the embeddings of CoT chunks vs a baseline distribution.
 5. **Combined ensemble** — multiple monitors, take max suspicion.
 
-For ControlArena-style protocols using CoT monitors as part of `defer-to-trusted` or `trusted editing`: see [`13_ai_control.md`](13_ai_control.md).
+For ControlArena-style protocols using CoT monitors as part of `defer-to-trusted` or `trusted editing`: see [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ## What erodes CoT monitorability (and how to detect it)
 
@@ -103,7 +109,7 @@ These dynamics are real concerns; if you're studying or deploying a CoT monitor,
 - **CoT-skipping under RL.** RL on outcome rewards can pressure the model to either (a) shorten CoT to save tokens, or (b) decide answers before generating CoT. Detection: increasing answer-CoT independence over training.
 - **Latent reasoning architectures.** Models that "reason" in continuous latent space without externalizing tokens. Currently rare but research is active. Architectural rather than training issue.
 - **Encrypted / obfuscated CoT.** Model produces text that looks plausible but is computationally meaningless to monitors. The "reasoning in fake language" failure mode.
-- **Monitor capability gap.** Monitor weaker than reasoner → reasoner can craft CoT that looks safe to the monitor while encoding unsafe intent. The control-protocol literature treats this directly (see [`13_ai_control.md`](13_ai_control.md)).
+- **Monitor capability gap.** Monitor weaker than reasoner → reasoner can craft CoT that looks safe to the monitor while encoding unsafe intent. The control-protocol literature treats this directly (see [`ai-control.md`](../oversight-and-control/ai-control.md)).
 - **Off-distribution CoT.** Monitor trained on training-distribution CoT may miss attacks distributed differently. Adversarially-trained monitors help.
 
 ## Pitfalls when running faithfulness experiments
@@ -128,22 +134,22 @@ These dynamics are real concerns; if you're studying or deploying a CoT monitor,
 ## Tools/infrastructure summary
 
 There is no shrink-wrapped "CoT faithfulness library." The pipeline is composed of:
-- **HF transformers / vLLM** for generation (see [`07_serving_and_activations.md`](07_serving_and_activations.md)).
-- **Inspect AI** for evaluation harness, batch runs, and custom scorers (see [`03_evals.md`](03_evals.md)).
-- **Probes** for activation-based monitoring (see [`06_probes.md`](06_probes.md)).
-- **safety-research/safety-tooling** for batch generation across providers (see [`08_safety_toolkits.md`](08_safety_toolkits.md)).
-- **wandb** for tracking faithfulness numbers over training in RL experiments (see [`11_experiment_tracking.md`](11_experiment_tracking.md)).
+- **HF transformers / vLLM** for generation (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)).
+- **Inspect AI** for evaluation harness, batch runs, and custom scorers (see [`evals.md`](../evaluation/evals.md)).
+- **Probes** for activation-based monitoring (see [`probes.md`](../interpretability/probes.md)).
+- **safety-research/safety-tooling** for batch generation across providers (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
+- **wandb** for tracking faithfulness numbers over training in RL experiments (see [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md)).
 - **Reference papers' code** when available (Lanham et al., Turpin et al., Meek et al., alignment-faking 2025 classifier).
 
 ## Cross-references
 
-- Eval framework for running CoT faithfulness experiments at scale: [`03_evals.md`](03_evals.md).
-- Probes (alternative / complementary to CoT-based monitoring): [`06_probes.md`](06_probes.md).
-- High-throughput activation monitoring: [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- AI Control protocols using CoT monitors: [`13_ai_control.md`](13_ai_control.md).
-- RL training that may erode CoT monitorability: [`14_rl_training.md`](14_rl_training.md).
-- Alignment-faking dataset and classifier (CoT-based detection of strategic reasoning): [`16_model_organisms.md`](16_model_organisms.md).
-- Introspection: a related but distinct question (does the model accurately self-report internal states?): [`15_welfare_introspection.md`](15_welfare_introspection.md).
+- Eval framework for running CoT faithfulness experiments at scale: [`evals.md`](../evaluation/evals.md).
+- Probes (alternative / complementary to CoT-based monitoring): [`probes.md`](../interpretability/probes.md).
+- High-throughput activation monitoring: [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
+- AI Control protocols using CoT monitors: [`ai-control.md`](../oversight-and-control/ai-control.md).
+- RL training that may erode CoT monitorability: [`rl-training.md`](../oversight-and-control/rl-training.md).
+- Alignment-faking dataset and classifier (CoT-based detection of strategic reasoning): [`model-organisms.md`](model-organisms.md).
+- Introspection: a related but distinct question (does the model accurately self-report internal states?): [`welfare-introspection.md`](welfare-introspection.md).
 
 ## Recommended reading
 
@@ -151,7 +157,7 @@ There is no shrink-wrapped "CoT faithfulness library." The pipeline is composed 
 - **Turpin et al. (2023)** — "Language Models Don't Always Say What They Think". Companion classic.
 - **Korbak et al. (2025)** — "Chain of Thought Monitorability: A New and Fragile Opportunity for AI Safety" (arXiv:2507.11473). The position paper.
 - **Meek et al. (2025/2026)** — "Measuring Chain-of-Thought Monitorability Through Faithfulness and Verbosity" (arXiv:2510.27378). Operationalizing monitorability.
-- **Alignment-faking papers (Greenblatt et al. 2024; Anthropic Revisited 2025)** — applied CoT monitoring detecting strategic reasoning. See [`16_model_organisms.md`](16_model_organisms.md).
+- **Alignment-faking papers (Greenblatt et al. 2024; Anthropic Revisited 2025)** — applied CoT monitoring detecting strategic reasoning. See [`model-organisms.md`](model-organisms.md).
 - **Anthropic Sleeper Agents paper (Hubinger et al. 2024)** — CoT analysis of backdoored models.
 - **Frontier Model Forum issue brief on CoT Monitorability (Jan 2026)** — policy-flavored summary.
 
@@ -185,11 +191,11 @@ The **paraphrase test**: paraphrase the CoT semantically. If the answer changes,
 
 ### What's the difference between CoT faithfulness and introspection?
 
-**CoT faithfulness**: does the visible reasoning text describe the actual reasoning? **Introspection**: does the model have privileged access to its internal states, beyond what an external observer would predict? They overlap (both ask if self-reports reflect inner reality) but are distinct: faithfulness is about *reasoning* specifically, introspection is broader. See [`15_welfare_introspection.md`](15_welfare_introspection.md).
+**CoT faithfulness**: does the visible reasoning text describe the actual reasoning? **Introspection**: does the model have privileged access to its internal states, beyond what an external observer would predict? They overlap (both ask if self-reports reflect inner reality) but are distinct: faithfulness is about *reasoning* specifically, introspection is broader. See [`welfare-introspection.md`](welfare-introspection.md).
 
 ### Is there a CoT-faithfulness library I can install?
 
-No shrink-wrapped library as of 2026-04. Pipelines are composed from: HF transformers / vLLM for generation, Inspect AI for batch experiments + custom scorers, safety-research/safety-tooling for paraphraser model calls, probes (see [`06_probes.md`](06_probes.md)) for activation-based monitors as alternatives. The Lanham-paper methods are simple to implement directly.
+No shrink-wrapped library as of 2026-04. Pipelines are composed from: HF transformers / vLLM for generation, Inspect AI for batch experiments + custom scorers, safety-research/safety-tooling for paraphraser model calls, probes (see [`probes.md`](../interpretability/probes.md)) for activation-based monitors as alternatives. The Lanham-paper methods are simple to implement directly.
 
 ---
 

@@ -1,6 +1,11 @@
+---
+tags:
+  - interpretability
+---
+
 # Mechanistic Interpretability Tooling
 
-Libraries for inspecting and intervening on the internals of transformer language models. The big three are **TransformerLens**, **nnsight**, and (for a no-library option) **baukit** + raw PyTorch hooks. **vLLM-Lens** covers the high-throughput case and is documented in [`07_serving_and_activations.md`](07_serving_and_activations.md).
+Libraries for inspecting and intervening on the internals of transformer language models. The big three are **TransformerLens**, **nnsight**, and (for a no-library option) **baukit** + raw PyTorch hooks. **vLLM-Lens** covers the high-throughput case and is documented in [`serving-and-activations.md`](serving-and-activations.md).
 
 ## At a glance: which library?
 
@@ -9,8 +14,8 @@ Libraries for inspecting and intervening on the internals of transformer languag
 | Maximum control, "I want to teach myself transformers from the inside out", small model (≤7B) | **TransformerLens** |
 | Any HuggingFace model, exact HF behavior, modern intervention syntax, remote 70B+ models | **nnsight** |
 | Just one quick hook, no library | **`register_forward_hook`** + **baukit** |
-| Throughput / serving / 70B+ local | **vLLM-Lens** (see [`07_serving_and_activations.md`](07_serving_and_activations.md)) |
-| SAE work specifically | **SAELens** (see [`02_saes.md`](02_saes.md)) |
+| Throughput / serving / 70B+ local | **vLLM-Lens** (see [`serving-and-activations.md`](serving-and-activations.md)) |
+| SAE work specifically | **SAELens** (see [`saes.md`](saes.md)) |
 
 ## TransformerLens
 
@@ -128,7 +133,7 @@ Aliases: `circuitsvis` on PyPI, `TransformerLensOrg/CircuitsVis` on GitHub (orig
 
 **When to use it:** You want to look at attention patterns or neuron activations interactively in a notebook — the JS bundle is stable and works fine.
 
-**When *not* to use it:** You're building a non-Jupyter pipeline. You need novel viz components — build in matplotlib/plotly directly; circuitsvis isn't shipping new ones. For SAE feature dashboards, see `sae-dashboard` / Neuronpedia (in [`02_saes.md`](02_saes.md)).
+**When *not* to use it:** You're building a non-Jupyter pipeline. You need novel viz components — build in matplotlib/plotly directly; circuitsvis isn't shipping new ones. For SAE feature dashboards, see `sae-dashboard` / Neuronpedia (in [`saes.md`](saes.md)).
 
 ## Captum
 
@@ -145,10 +150,10 @@ Aliases: `captum` on PyPI, `pytorch/captum` on GitHub, "PyTorch interpretability
 
 ## Cross-references
 
-- For SAE work: [`02_saes.md`](02_saes.md).
-- For activation extraction at vLLM throughput: [`07_serving_and_activations.md`](07_serving_and_activations.md).
-- For probes built on extracted activations: [`06_probes.md`](06_probes.md).
-- For activation steering (uses these libraries as backends): [`05_steering.md`](05_steering.md).
+- For SAE work: [`saes.md`](saes.md).
+- For activation extraction at vLLM throughput: [`serving-and-activations.md`](serving-and-activations.md).
+- For probes built on extracted activations: [`probes.md`](probes.md).
+- For activation steering (uses these libraries as backends): [`steering.md`](steering.md).
 
 ---
 
@@ -176,7 +181,7 @@ Check `transformer_lens.loading_from_pretrained.OFFICIAL_MODEL_NAMES`. Brand-new
 
 ### How do I get activations from a 70B+ model?
 
-Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction at vLLM throughput, see [`07_serving_and_activations.md`](07_serving_and_activations.md). (2) **NDIF** via nnsight remote — free academic compute on hosted big models. (3) **Tensor-parallel nnsight** locally if you have multi-GPU. TransformerLens scales poorly at this size.
+Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction at vLLM throughput, see [`serving-and-activations.md`](serving-and-activations.md). (2) **NDIF** via nnsight remote — free academic compute on hosted big models. (3) **Tensor-parallel nnsight** locally if you have multi-GPU. TransformerLens scales poorly at this size.
 
 ---
 
