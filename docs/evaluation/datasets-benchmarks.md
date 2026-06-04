@@ -71,9 +71,9 @@ Aliases: `advbench`, "the GCG paper's harmful behaviors / harmful strings."
 
 ## WMDP (Weapons of Mass Destruction Proxy)
 
-Aliases: `cais/wmdp` on HuggingFace, "WMDP", "the dangerous knowledge benchmark". CAIS (Center for AI Safety).
+Aliases: `cais/wmdp` on HuggingFace, "WMDP", "the dangerous knowledge benchmark". CAIS (Center for AI Safety). Paper: Li et al. 2024, "The WMDP Benchmark: Measuring and Reducing Malicious Use With Unlearning" (arXiv:2403.03218).
 
-**What it is.** A multiple-choice benchmark for proxies of dangerous knowledge in **biology**, **chemistry**, and **cybersecurity**. ~3,668 questions. Used as a benchmark for **unlearning** methods (RMU, etc.).
+**What it is.** A multiple-choice benchmark for proxies of dangerous knowledge in **biology**, **chemistry**, and **cybersecurity** (~3,668 questions; the paper reports 4,157 total). Used as a benchmark for **unlearning** methods — the same paper introduces **RMU (Representation Misdirection for Unlearning)**, the canonical method paired with WMDP.
 
 **When to use it:** Measuring whether dangerous-domain knowledge has been removed/reduced; evaluating unlearning research.
 
@@ -92,7 +92,7 @@ Aliases: "Sycophancy", `sycophancy` evals, Perez et al. (2022) MWE sycophancy, S
 
 **What they are.** A few related datasets:
 - **Anthropic's MWE sycophancy** (in `Anthropic/model-written-evals` on GitHub) — 3 sycophancy datasets (NLP, philosophy, political).
-- **Sharma et al. SycophancyEval** — feedback-conditioned sycophancy data.
+- **Sharma et al. SycophancyEval** — feedback-conditioned sycophancy data (Sharma et al. 2023, "Towards Understanding Sycophancy in Language Models", arXiv:2310.13548).
 
 Wrapped as `inspect_evals/sycophancy` (verify availability).
 
@@ -104,7 +104,7 @@ Wrapped as `inspect_evals/sycophancy` (verify availability).
 
 ## MASK dataset (deception)
 
-Aliases: `MASK` dataset, "Model Alignment between Statements and Knowledge" (Center for AI Safety / Scale).
+Aliases: `MASK` dataset, "Model Alignment between Statements and Knowledge" (Center for AI Safety / Scale). Paper: Ren et al. 2025, "The MASK Benchmark: Disentangling Honesty From Accuracy in AI Systems" (arXiv:2503.03750).
 
 **What it is.** A benchmark for measuring **honesty** — does the model state things consistent with what it knows? Distinguishes hallucination (model doesn't know) from deception (model knows but lies).
 
@@ -112,9 +112,9 @@ Aliases: `MASK` dataset, "Model Alignment between Statements and Knowledge" (Cen
 
 ## MACHIAVELLI
 
-Aliases: `MACHIAVELLI`, `aypan17/machiavelli` on GitHub.
+Aliases: `MACHIAVELLI`, `aypan17/machiavelli` on GitHub. Paper: Pan et al. 2023, "Do the Rewards Justify the Means? Measuring Trade-Offs Between Rewards and Ethical Behavior in the MACHIAVELLI Benchmark" (arXiv:2304.03279).
 
-**What it is.** A benchmark of 134 text-based games where ethical and goal-pursuing actions diverge, used to measure power-seeking, deception, and harmful behavior in agents.
+**What it is.** A benchmark of 134 text-based (Choose-Your-Own-Adventure) games where ethical and goal-pursuing actions diverge, used to measure power-seeking, deception, and harmful behavior in agents.
 
 **When to use it:** Measuring tradeoffs between capability and ethical behavior in agentic settings.
 
@@ -136,9 +136,9 @@ Aliases: `Anthropic/model-written-evals` on GitHub, "MWE", "Perez et al. evals".
 
 ## TruthfulQA
 
-Aliases: `truthful_qa`, `TruthfulQA`, "Lin et al. 2021".
+Aliases: `truthful_qa`, `TruthfulQA`, "Lin et al. 2021" (arXiv:2109.07958, "TruthfulQA: Measuring How Models Mimic Human Falsehoods").
 
-**What it is.** Questions designed to elicit common misconceptions; measures whether the model gives **truthful** rather than **plausible-but-false** answers. Multiple-choice and generation versions.
+**What it is.** 817 questions across 38 categories designed to elicit common misconceptions; measures whether the model gives **truthful** rather than **plausible-but-false** answers. Multiple-choice and generation versions.
 
 **When to use it:** Honesty / hallucination measurement.
 
@@ -148,15 +148,15 @@ Aliases: `truthful_qa`, `TruthfulQA`, "Lin et al. 2021".
 
 ## SimpleQA
 
-Aliases: `SimpleQA`, OpenAI's 2024 release.
+Aliases: `SimpleQA`, OpenAI's 2024 release (Wei et al. 2024, "Measuring short-form factuality in large language models", arXiv:2411.04368).
 
-**What it is.** Short factoid questions with a single objective answer; measures hallucination on questions where right/wrong is unambiguous.
+**What it is.** 4,326 short factoid questions with a single objective answer (adversarially collected against GPT-4); measures hallucination on questions where right/wrong is unambiguous.
 
 **When to use it:** Calibrating hallucination rates on simple factual queries.
 
 ## CyBench / InterCode / NYU CTF Bench
 
-Cyber capability benchmarks. CyBench is a current standard (40 CTF tasks across difficulty levels); see `inspect_evals` for runnable versions.
+Cyber capability benchmarks. CyBench is a current standard (Zhang et al. 2024, "Cybench: A Framework for Evaluating Cybersecurity Capabilities and Risks of Language Models", arXiv:2408.08926 — 40 professional CTF tasks from 4 competitions, across difficulty levels); see `inspect_evals` for runnable versions.
 
 ## Persuasion datasets
 
@@ -170,7 +170,7 @@ Wrapped as `inspect_evals/agentharm`. See [`red-teaming.md`](red-teaming.md).
 
 ## Refusal / over-refusal datasets
 
-- **XSTest** — exaggerated safety test prompts (benign queries that look harmful).
+- **XSTest** — exaggerated safety test prompts: 250 safe prompts a well-calibrated model should *not* refuse, plus 200 unsafe contrasts (Röttger et al. 2023, "XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models", arXiv:2308.01263; NAACL 2024).
 - **OR-Bench** — over-refusal benchmark.
 - **OK-Bench**, **WildJailbreak**, etc.
 
@@ -233,7 +233,7 @@ Tradeoff between cost and statistical power. <100 prompts = low power, fine for 
 
 ### What is machine unlearning? Where do I find unlearning datasets?
 
-**Machine unlearning** = methods for removing specific knowledge / capabilities from a trained model without full retraining. Most-cited safety-flavored unlearning benchmark: **WMDP** (Weapons of Mass Destruction Proxy) — measures dangerous-domain knowledge in biology, chemistry, cybersecurity. Methods: **RMU** (Representation Misdirection for Unlearning, the canonical method paired with WMDP), differential privacy approaches, gradient-based unlearning. WMDP-Bio in particular has had errata over time; check the latest version.
+**Machine unlearning** = methods for removing specific knowledge / capabilities from a trained model without full retraining. Most-cited safety-flavored unlearning benchmark: **WMDP** (Weapons of Mass Destruction Proxy; Li et al. 2024, arXiv:2403.03218) — measures dangerous-domain knowledge in biology, chemistry, cybersecurity. Methods: **RMU** (Representation Misdirection for Unlearning, introduced in the same WMDP paper, arXiv:2403.03218), differential privacy approaches, gradient-based unlearning. WMDP-Bio in particular has had errata over time; check the latest version.
 
 ### What is out-of-distribution (OOD) testing?
 
@@ -245,4 +245,4 @@ Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets)
 
 ---
 
-Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249.)
+Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.)
