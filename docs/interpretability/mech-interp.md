@@ -25,9 +25,9 @@ Aliases: `transformer_lens` on PyPI, `TransformerLensOrg/TransformerLens` on Git
 
 **When to use it:**
 - You're learning mechanistic interpretability and want consistent naming (`blocks.5.attn.hook_z`, `blocks.5.hook_resid_post`) across architectures.
-- You're doing classic mech interp: induction heads, IOI-style circuit analysis, attention pattern visualization.
+- You're doing classic mech interp: induction heads (Olsson et al. 2022, "In-context Learning and Induction Heads", arXiv:2209.11895), IOI-style circuit analysis (Wang et al. 2022, "Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small", arXiv:2211.00593), attention pattern visualization.
 - The model you care about is in the supported list and is small (≤7B fits comfortably; 27B is feasible on an 80GB GPU).
-- You need ablation, patching (resample, attribution), and activation arithmetic with a clean API.
+- You need ablation, patching (resample, and **attribution patching** — the fast linear approximation from Syed, Rager & Conmy 2023, "Attribution Patching Outperforms Automated Circuit Discovery", arXiv:2310.10348), and activation arithmetic with a clean API.
 
 **When *not* to use it:**
 - The model isn't supported (TL re-implements architectures one at a time; brand-new models lag).
@@ -185,4 +185,4 @@ Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction a
 
 ---
 
-Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7.)
+Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7. Additions 2026-06: cited the mech-interp methods named in the TransformerLens bullets — induction heads (Olsson et al. 2209.11895), IOI (Wang et al. 2211.00593), attribution patching (Syed et al. 2310.10348); all verified via arXiv.)
