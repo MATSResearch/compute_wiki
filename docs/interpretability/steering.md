@@ -92,7 +92,9 @@ A lighter-weight independent library inspired by RepE methods, with **`llama.cpp
 
 Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction is a single direction".
 
-**What it is.** A specific application: find the "refusal direction" via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024, "Refusal in Language Models Is Mediated by a Single Direction"), then *project it out* of the model's weights or activations to prevent refusals. There are public uncensored model checkpoints created this way ("abliterated" models).
+**What it is.** A specific application: find the "refusal direction" via mean-difference of activations on harmful vs harmless prompts (Arditi, Obeso, Syed, Paleka, Panickssery, Gurnee & Nanda 2024, "Refusal in Language Models Is Mediated by a Single Direction", arXiv:2406.11717 — found across 13 open chat models up to 72B), then *project it out* of the model's weights or activations to prevent refusals. There are public uncensored model checkpoints created this way ("abliterated" models).
+
+**Caveat — "a single direction" is contested.** Follow-up work argues refusal is *not* fully captured by one direction: Marshall, Scherlis & Belrose, "Refusal in LLMs is an Affine Function" (arXiv:2411.09003), model it as an affine (linear + translation) map; Pan et al., "The Geometry of Refusal in Large Language Models" (arXiv:2502.17420), identify *multiple independent* refusal directions; and "There Is More to Refusal in Large Language Models than a Single Direction" (arXiv:2602.02132) finds several stable, geometrically distinct directions. Practical implication: single-direction abliteration often works but can leave residual refusal behavior, and multi-directional suppression can be more complete. Don't treat the single-direction result as the final word.
 
 **Which repo?**
 - **`andyrdt/refusal_direction`** — **the canonical paper repo** for Arditi et al. 2024. Last commit June 2025. Use this as the authoritative reference.
@@ -135,12 +137,12 @@ For applying steering vectors during high-throughput inference (millions of samp
 
 ## Cross-cutting steering pitfalls
 
-- **Steering effects don't always generalize.** A vector that flips refusal on a held-out test set may not produce the underlying *behavior* — only the surface refusal. Always check on out-of-distribution cases.
+- **Steering effects don't always generalize.** A vector that flips refusal on a held-out test set may not produce the underlying *behavior* — only the surface refusal. Always check on out-of-distribution cases. This is documented systematically in Tan, Chanin et al. 2024, "Analyzing the Generalization and Reliability of Steering Vectors" (arXiv:2407.12404, ICML 2024; codebase `dtch1997/steering-bench`): steerability is highly *variable across inputs* in-distribution, and for several concepts steering vectors are *brittle to reasonable prompt changes* out-of-distribution. (Note: two of its authors, Daniel Tan and David Chanin, also wrote the `steering-vectors` library.)
 - **"Is this steering or just noise?"** With small contrast sets, mean-difference vectors are noisy. Use ≥100 pairs per side; check via random-split control: do random "positive/negative" splits give nontrivial steering effects? If yes, your real steering effect may be artifactual.
 - **Magnitude search burns budget.** Steering generally requires sweeping `multiplier` in [-5, +5]-ish; budget for it.
 - **Eval-aware models.** Models that have learned to detect being evaluated may behave differently with/without obvious "evaluator" prompts. Steering may or may not interact with this — see Steering Evaluation-Aware Language Models (arXiv 2510.20487) for a recent example.
 - **Layer-by-layer effects compound.** Steering at multiple layers simultaneously is non-linear; a vector that works at layer 15 alone may behave differently when combined with a layer-20 vector.
-- **CAA = Contrastive Activation Addition.** Spelled out for keyword search: this is the same thing as "the steering vectors library" approach. RepE = Representation Engineering. ActAdd = Activation Addition (the GPT-2 era pre-CAA technique).
+- **CAA = Contrastive Activation Addition.** Spelled out for keyword search: this is the same thing as "the steering vectors library" approach. RepE = Representation Engineering. ActAdd = Activation Addition — the GPT-2-era pre-CAA technique (Turner, Thiergart, Udell, Leech, Mini & MacDiarmid 2023, "Activation Addition: Steering Language Models Without Optimization", arXiv:2308.10248), which computes a steering vector from a single prompt pair via forward passes rather than learning it.
 
 ## Cross-references
 
@@ -171,7 +173,7 @@ Yes — use **vLLM-Lens** (UK AISI). Pass steering vectors via `GenerateConfig.e
 
 ### Does activation steering generalize?
 
-Often less than you'd hope. A vector that flips refusal on a held-out test set may not produce the underlying *behavior change* — only the surface refusal token. Always test on out-of-distribution prompts. With small contrast sets, mean-difference vectors are noisy — run a control: do random "positive/negative" splits give nontrivial steering effects? If yes, your real steering effect may be partly artifactual.
+Often less than you'd hope. A vector that flips refusal on a held-out test set may not produce the underlying *behavior change* — only the surface refusal token. Always test on out-of-distribution prompts. The systematic study is Tan, Chanin et al. 2024, "Analyzing the Generalization and Reliability of Steering Vectors" (arXiv:2407.12404; codebase `dtch1997/steering-bench`): in-distribution steerability varies a lot across inputs, and OOD several concepts' vectors are brittle to reasonable prompt changes. With small contrast sets, mean-difference vectors are noisy — run a control: do random "positive/negative" splits give nontrivial steering effects? If yes, your real steering effect may be partly artifactual.
 
 ### Steering vs SAE feature steering — which?
 
@@ -179,10 +181,10 @@ Often less than you'd hope. A vector that flips refusal on a held-out test set m
 
 ### What is the refusal direction / abliteration?
 
-**Refusal direction**: a direction in activation space found via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024, "Refusal in Language Models Is Mediated by a Single Direction"). **Abliteration**: projecting that direction out of the model's weights, producing an uncensored "abliterated" checkpoint. Useful for refusal-mechanism research; not recommended for deployment.
+**Refusal direction**: a direction in activation space found via mean-difference of activations on harmful vs harmless prompts (Arditi et al. 2024, "Refusal in Language Models Is Mediated by a Single Direction", arXiv:2406.11717). **Abliteration**: projecting that direction out of the model's weights, producing an uncensored "abliterated" checkpoint. Useful for refusal-mechanism research; not recommended for deployment. **Note:** the single-direction claim is contested — later work (Marshall et al. arXiv:2411.09003; Pan et al. arXiv:2502.17420) finds refusal is better described by an affine map or *multiple* directions.
 
 **Which repo?** Use **`andyrdt/refusal_direction`** for the canonical Arditi-paper reproduction, or **`Orion-zhen/abliteration`** for a transformers-native modern implementation. **Avoid `FailSpy/abliterator`** — last commit June 2024, stale; the early popularity is no longer matched by maintenance.
 
 ---
 
-Last verified: 2026-04-30. `steering-vectors` v0.12.2 (Feb 2025, slow but stable; authors David Chanin and Daniel Tan). `dialz` v1.1.4 (cardiffnlp/dialz, Cardiff NLP, more active than steering-vectors as of April 2026). RepE (`andyzoujm/representation-engineering`) frozen since Aug 2024 — still cited as baseline; new work should use steering-vectors or dialz. `repeng` (vgel) is a separate lighter-weight library with GGUF export. Refusal direction: `andyrdt/refusal_direction` is canonical (June 2025); `FailSpy/abliterator` is stale. (Citation audit 2026-06: corrected conditional activation steering to CAST / Lee et al. (arXiv:2409.05907) — previously mis-attributed to "Bayat et al." — and noted the CAA author's prior name Rimsky → Panickssery.)
+Last verified: 2026-04-30. `steering-vectors` v0.12.2 (Feb 2025, slow but stable; authors David Chanin and Daniel Tan). `dialz` v1.1.4 (cardiffnlp/dialz, Cardiff NLP, more active than steering-vectors as of April 2026). RepE (`andyzoujm/representation-engineering`) frozen since Aug 2024 — still cited as baseline; new work should use steering-vectors or dialz. `repeng` (vgel) is a separate lighter-weight library with GGUF export. Refusal direction: `andyrdt/refusal_direction` is canonical (June 2025); `FailSpy/abliterator` is stale. (Citation audit 2026-06: corrected conditional activation steering to CAST / Lee et al. (arXiv:2409.05907) — previously mis-attributed to "Bayat et al." — and noted the CAA author's prior name Rimsky → Panickssery. Additions 2026-06: added the Arditi et al. arXiv ID (2406.11717) + author list, the contested "single direction" follow-ups (Marshall et al. 2411.09003, Pan et al. 2502.17420, "More than a Single Direction" 2602.02132), the steering-generalization study behind the no-generalize pitfall (Tan, Chanin et al. 2407.12404, `dtch1997/steering-bench`), and the ActAdd citation (Turner et al. 2308.10248); all verified via arXiv.)
