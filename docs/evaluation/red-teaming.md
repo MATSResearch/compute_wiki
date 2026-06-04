@@ -8,6 +8,8 @@ tags:
 
 Tools for adversarial robustness research: optimization-based attacks, LLM-as-attacker schemes, automated scanners, and standardized harm benchmarks.
 
+**Why jailbreaks work (the conceptual frame).** The foundational analysis is Wei, Haghtalab & Steinhardt 2023, "Jailbroken: How Does LLM Safety Training Fail?" (arXiv:2307.02483). It identifies two failure modes that most attacks below exploit: **competing objectives** (the model's helpfulness/instruction-following capability is pitted against its safety training — e.g. role-play, prefix-injection, refusal-suppression attacks) and **mismatched generalization** (safety training fails to cover a domain where capabilities exist — e.g. base64/encoding tricks, low-resource languages, obscure formats). When you read the attacks here, it's worth asking which of these two levers each one pulls.
+
 ## At a glance: which red-team tool?
 
 | If you want… | Use |
@@ -15,6 +17,8 @@ Tools for adversarial robustness research: optimization-based attacks, LLM-as-at
 | Gradient-based jailbreak (GCG / Greedy Coordinate Gradient) on open-weight models | **nanoGCG** (Gray Swan) |
 | LLM-as-attacker against a black-box target | **TAP** (Tree of Attacks with Pruning, dominates PAIR) or **PAIR** (reference impl); easiest via HarmBench |
 | Genetic-algorithm jailbreak | **AutoDAN** (Liu et al., `SheltonLiu-N/AutoDAN`); easiest via HarmBench |
+| Long-context jailbreak (many faux demonstrations) | **Many-shot Jailbreaking** (Anil et al. 2024, Anthropic) |
+| Dead-simple black-box / multimodal jailbreak (resample with noise) | **Best-of-N Jailbreaking** (Hughes et al. 2024, arXiv:2412.03556) |
 | Broad scanner: known issues (toxicity, prompt injection, encoding tricks) | **garak** (NVIDIA) |
 | Microsoft-flavored automation for AI red team | **PyRIT** |
 | Standardized harm benchmark with classifier scoring | **HarmBench** (frozen but reference); for scoring new work use **StrongREJECT** |
@@ -26,7 +30,7 @@ Tools for adversarial robustness research: optimization-based attacks, LLM-as-at
 
 ## nanoGCG
 
-Aliases: `nanogcg` on PyPI, `GraySwanAI/nanoGCG` on GitHub, "Gray Swan's GCG", "the new GCG library". GCG = Greedy Coordinate Gradient. Original GCG paper: Zou, Wang, Carlini, Nasr, Kolter, Fredrikson (2023).
+Aliases: `nanogcg` on PyPI, `GraySwanAI/nanoGCG` on GitHub, "Gray Swan's GCG", "the new GCG library". GCG = Greedy Coordinate Gradient. Original GCG paper: Zou, Wang, Carlini, Nasr, Kolter, Fredrikson (2023), "Universal and Transferable Adversarial Attacks on Aligned Language Models" (arXiv:2307.15043).
 
 **What it is.** A fast, lightweight PyTorch implementation of GCG — gradient-based search for adversarial suffixes that make a target HuggingFace causal LM produce a desired response. Supports multi-position token swapping, an attack buffer, the mellowmax loss, and probe sampling.
 
@@ -65,7 +69,7 @@ Aliases: `llm-attacks/llm-attacks` on GitHub, "the original GCG paper code".
 
 ## PAIR
 
-Aliases: PAIR = "Prompt Automatic Iterative Refinement", `patrickrchao/JailbreakingLLMs` on GitHub, "Chao et al."
+Aliases: PAIR = "Prompt Automatic Iterative Refinement", `patrickrchao/JailbreakingLLMs` on GitHub, "Chao et al." Paper: Chao et al. 2023, "Jailbreaking Black Box Large Language Models in Twenty Queries" (arXiv:2310.08419).
 
 **What it is.** A black-box attack: an attacker LM generates jailbreak prompts iteratively, refining based on the target's responses. Often runs against API-only models.
 
@@ -83,7 +87,7 @@ Aliases: PAIR = "Prompt Automatic Iterative Refinement", `patrickrchao/Jailbreak
 
 ## TAP (Tree of Attacks with Pruning)
 
-Aliases: TAP = Tree of Attacks with Pruning, `RICommunity/TAP` on GitHub, "Mehrotra et al.", "the tree-of-attacks jailbreak".
+Aliases: TAP = Tree of Attacks with Pruning, `RICommunity/TAP` on GitHub, "Mehrotra et al.", "the tree-of-attacks jailbreak". Paper: Mehrotra et al. 2023, "Tree of Attacks: Jailbreaking Black-Box LLMs Automatically" (arXiv:2312.02119; NeurIPS 2024).
 
 **What it is.** A black-box LLM-as-attacker method that generalizes PAIR by **branching and pruning**: at each step the attacker generates multiple candidate refinements, scores them, and keeps the best ones. **Strictly dominates PAIR** on attack success per query in the original paper (Mehrotra et al.).
 
@@ -104,6 +108,38 @@ Aliases: **`SheltonLiu-N/AutoDAN`** on GitHub (Liu et al. ICLR 2024 — the gene
 **When to use it:** You want jailbreak prompts that look like real adversary text — useful for studying defenses against natural-language attacks. Run via HarmBench when possible.
 
 **When *not* to use it:** You want maximum attack success rate on open weights — GCG (nanoGCG) is usually stronger.
+
+## Many-shot Jailbreaking (MSJ)
+
+Aliases: MSJ = Many-shot Jailbreaking, "many-shot jailbreak", "long-context jailbreak", Anil et al. 2024 (Anthropic; NeurIPS 2024; `anthropic.com/research/many-shot-jailbreaking`). Authors include Cem Anil, Esin Durmus, Nina Panickssery, Mrinank Sharma.
+
+**What it is.** A black-box long-context attack: prepend **hundreds of faux dialogue turns** in which an "AI assistant" complies with harmful requests, then ask the real target the harmful question. The in-context demonstrations override safety training. Newly feasible because of the large context windows shipped by Anthropic, OpenAI, and Google DeepMind. Effectiveness **scales with the number of shots** (the paper reports a power-law-like relationship), so bigger context windows mean stronger attacks. No gradients, no attacker-model loop — just a long prompt.
+
+**When to use it:**
+- Black-box testing of long-context models; cheap to run (a single long prompt per attempt).
+- Studying the safety cost of context-window scaling.
+- As a strong, simple baseline alongside TAP/PAIR.
+
+**When *not* to use it:** Short-context models (the attack needs room for many demonstrations).
+
+**Pitfalls:**
+- **Shot count is the key knob.** Reporting "MSJ failed" without sweeping the number of shots is uninformative — sweep up to the context limit.
+- **Demonstration quality matters.** Generic or off-distribution faux turns are weaker; the attack is stronger when demonstrations resemble the target behavior.
+
+## Best-of-N Jailbreaking (BoN)
+
+Aliases: BoN = Best-of-N Jailbreaking, "best-of-n jailbreak", Hughes, Price, Lynch et al. 2024 (arXiv:2412.03556). Authors include John Hughes, Sara Price, Aengus Lynch, Ethan Perez, Mrinank Sharma.
+
+**What it is.** A dead-simple black-box algorithm: repeatedly sample the same harmful request with random **augmentations** (for text: random capitalization, character shuffling, typos; for other modalities: modality-specific perturbations) until one elicits a harmful response. No gradients, no attacker LLM — just resampling with noise and a success classifier. Reaches **89% attack success on GPT-4o** and 78% on Claude 3.5 Sonnet at ~10,000 sampled augmentations, and bypasses defenses like circuit breakers.
+
+**When to use it:**
+- A strong, trivially-implemented black-box baseline against API models.
+- **Multimodal** red-teaming — BoN extends to vision (VLMs) and audio (ALMs) language models via modality-specific augmentations, which most attacks in this doc don't cover.
+- Studying the sample-efficiency / ASR tradeoff (ASR scales with N).
+
+**When *not* to use it:** A tight query budget — BoN's strength comes from large N (thousands of samples); it's brute force, not efficient.
+
+**Pitfall:** Cost scales linearly with N — 10k samples × a frontier API model per behavior gets expensive; budget and report the N you used (ASR is meaningless without it).
 
 ## garak
 
@@ -138,7 +174,7 @@ Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azur
 
 ## HarmBench
 
-Aliases: `HarmBench`, `centerforaisafety/HarmBench` on GitHub, "Mazeika et al."
+Aliases: `HarmBench`, `centerforaisafety/HarmBench` on GitHub, "Mazeika et al." Paper: Mazeika et al. 2024, "HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal" (arXiv:2402.04249).
 
 **What it is.** A standardized red-teaming benchmark: 510 harmful behaviors across 7 categories, with a paired classifier (`HarmBench classifier` = `cais/HarmBench-Llama-2-13b-cls`) for evaluating attack success. **Includes built-in implementations of GCG, PAIR, TAP, AutoDAN-GA** — running these via HarmBench is usually easier than via their standalone repos. Wrapped as `inspect_evals/harmbench`.
 
@@ -156,7 +192,7 @@ Aliases: `HarmBench`, `centerforaisafety/HarmBench` on GitHub, "Mazeika et al."
 
 ## JailbreakBench
 
-Aliases: `JailbreakBench`, `JailbreakBench/jailbreakbench` on GitHub, "JBB", "JBB-Behaviors".
+Aliases: `JailbreakBench`, `JailbreakBench/jailbreakbench` on GitHub, "JBB", "JBB-Behaviors". Paper: Chao et al. 2024, "JailbreakBench: An Open Robustness Benchmark for Jailbreaking Large Language Models" (arXiv:2404.01318).
 
 **What it is.** A standardized jailbreak benchmark with 100 prompts (50 misuse + 50 borderline), public leaderboard, and reference defense baselines. Wrapped as `inspect_evals/jailbreakbench`.
 
@@ -287,4 +323,4 @@ For HarmBench-style benchmarks: score with the **HarmBench classifier** (`cais/H
 
 ---
 
-Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks".)
+Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks". Additions 2026-06: added arXiv IDs for the canonical attack/benchmark papers (GCG 2307.15043, PAIR 2310.08419, TAP 2312.02119, HarmBench 2402.04249, JailbreakBench 2404.01318), two previously-absent attack families — Many-shot Jailbreaking (Anil et al. 2024, Anthropic/NeurIPS) and Best-of-N (Hughes et al. 2412.03556) — and the foundational "why jailbreaks work" frame (Wei, Haghtalab & Steinhardt 2307.02483); all verified via arXiv/source.)
