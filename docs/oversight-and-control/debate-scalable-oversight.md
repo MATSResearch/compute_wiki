@@ -14,6 +14,7 @@ Tooling here is sparser than for evals or interp — most published research use
 | You want… | Use |
 |---|---|
 | Run a debate-style protocol over a benchmark | **Inspect AI** custom solver — there is no debate-specific library, but Inspect's multi-agent primitives + custom solvers cover this |
+| A reference debate implementation to fork | **`ucl-dark/llm_debate`** (Khan et al. 2024, arXiv:2402.06782) or Kenton et al. (arXiv:2407.04622) |
 | Standardized scalable-oversight benchmark | **Scalable Oversight Benchmark** (Pallavi Sudhir, Kaunismaa & Panickssery 2025; `SOlib` Python package; arXiv:2504.03731) |
 | Sandwiching evaluation (weak overseer using model to match strong group's performance) | Hand-rolled pipeline; reference: the original sandwiching papers (Cotra; Bowman et al.) |
 | Self-critique / iterative refinement workflow | Hand-rolled with Inspect AI custom solvers; LLM-as-judge primitives |
@@ -32,7 +33,7 @@ Each entry: name, what it is, key reference. Spelled out so a fellow asking "wha
 
 Aliases: AI safety via debate, "Irving debate", debate protocol.
 
-**What it is.** Two models argue opposing positions; a (weaker) judge picks the winner. The hope: at equilibrium, the honest player wins, because exposing your opponent's lies is easier than constructing a defensible lie. Originated: Irving, Christiano, Amodei (2018).
+**What it is.** Two models argue opposing positions; a (weaker) judge picks the winner. The hope: at equilibrium, the honest player wins, because exposing your opponent's lies is easier than constructing a defensible lie. Originated: Irving, Christiano, Amodei (2018), "AI safety via debate" (arXiv:1805.00899).
 
 **Tools:** Inspect AI multi-agent primitives, custom solvers. Typically: `agent_a`, `agent_b`, judge model, structured turn-taking.
 
@@ -56,17 +57,17 @@ Aliases: arXiv:2506.13609 ("Avoiding Obfuscation with Prover-Estimator Debate"),
 
 Aliases: IDA, "Christiano amplification", "iterated amplification".
 
-**What it is.** Repeatedly distill a strong overseer (e.g. human + model assistance) into a model, then use that model in an even-stronger overseer setup, etc. Originated: Christiano, Shlegeris, Amodei (2018).
+**What it is.** Repeatedly distill a strong overseer (e.g. human + model assistance) into a model, then use that model in an even-stronger overseer setup, etc. Originated: Christiano, Shlegeris, Amodei (2018), "Supervising strong learners by amplifying weak experts" (arXiv:1810.08575).
 
 ### Recursive Reward Modeling (RRM)
 
 Aliases: RRM, "Leike recursive reward modeling".
 
-**What it is.** Train reward models for tasks too hard to evaluate directly by training reward models for the *evaluation subtasks* and composing. Originated: Leike et al. (2018).
+**What it is.** Train reward models for tasks too hard to evaluate directly by training reward models for the *evaluation subtasks* and composing. Originated: Leike et al. (2018), "Scalable agent alignment via reward modeling: a research direction" (arXiv:1811.07871).
 
 ### Self-critique / iterative refinement
 
-**What it is.** A model generates output, then critiques its own output, then revises. Variants: "Self-Refine," "CRITIC," "Reflexion." Cheap to implement; widely used; effectiveness is debated.
+**What it is.** A model generates output, then critiques its own output, then revises. Variants: **Self-Refine** (Madaan et al. 2023, arXiv:2303.17651 — same model generates, critiques, refines), **Reflexion** (Shinn et al. 2023, arXiv:2303.11366 — verbal self-reflection stored in episodic memory across attempts), **CRITIC** (Gou et al. 2023, arXiv:2305.11738 — self-correction using external tools like search/code interpreters). Cheap to implement; widely used; effectiveness is debated.
 
 ### Market Making
 
@@ -78,11 +79,11 @@ Aliases: RRM, "Leike recursive reward modeling".
 
 ### Sandwiching
 
-**What it is.** Evaluation methodology, not a protocol. A weaker group of overseers, equipped with an intermediate-capability model, tries to match the performance of a stronger group on a task the weaker group can't do alone. Tests whether the model + weak-overseer process can substitute for strong-overseer judgment. Originated: Cotra (2021); operationalized in Bowman et al.
+**What it is.** Evaluation methodology, not a protocol. A weaker group of overseers, equipped with an intermediate-capability model, tries to match the performance of a stronger group on a task the weaker group can't do alone. Tests whether the model + weak-overseer process can substitute for strong-overseer judgment. Originated: Cotra (2021); operationalized in Bowman et al. 2022, "Measuring Progress on Scalable Oversight for Large Language Models" (arXiv:2211.03540).
 
 ### Weak-to-strong generalization
 
-**What it is.** OpenAI 2023 paper line. Train a strong model from labels produced by a weak model; study how much performance the strong model recovers. Related but distinct from debate-style protocols.
+**What it is.** OpenAI 2023 paper line (Burns et al. 2023, "Weak-to-Strong Generalization: Eliciting Strong Capabilities With Weak Supervision", arXiv:2312.09390). Train a strong model from labels produced by a weak model; study how much performance the strong model recovers. Related but distinct from debate-style protocols.
 
 ## Tools and reference repos
 
@@ -120,9 +121,17 @@ The de facto framework for actually running these protocols. Pattern:
 
 There is no "Inspect debate package" but the primitives are sufficient. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) for multi-agent details.
 
-### NeurIPS 2024 paper code: Kenton et al. — "On scalable oversight with weak LLMs judging strong LLMs"
+### Khan et al. 2024 — "Debating with More Persuasive LLMs Leads to More Truthful Answers"
 
-DeepMind paper with a public code repo (search the proceedings). Implements debate and consultancy on QuALITY-style reading-comprehension tasks. Useful as a reference implementation.
+Aliases: arXiv:2402.06782, "the persuasive-LLMs debate paper", `ucl-dark/llm_debate` on GitHub. Khan, Hughes, Valentine, Ruis, Sachan, Radhakrishnan, Grefenstette, Bowman, Rocktäschel, Perez. **ICML 2024 Best Paper.**
+
+**What it is.** The landmark *empirical* demonstration that debate helps weaker judges supervise stronger debaters. Two LLM experts argue opposing answers on QuALITY long-document reading comprehension (where the judge can't see the full passage); debate raised non-expert **model** judge accuracy to 76% and non-expert **human** judge accuracy to 88%, versus 48% / 60% naive baselines — and *more persuasive* debaters yielded *more truthful* judge verdicts. Also found debate beats consultancy.
+
+**When to use it:** The reference implementation to start a debate-vs-consultancy project from (`ucl-dark/llm_debate`); the empirical anchor when motivating debate over single-advisor setups.
+
+### Kenton et al. 2024 — "On scalable oversight with weak LLMs judging strong LLMs"
+
+Aliases: arXiv:2407.04622, NeurIPS 2024, DeepMind. Implements **debate, consultancy, and direct-QA baselines** on QuALITY-style reading-comprehension and other tasks, with weaker LLM judges over stronger LLM agents. Public code via the NeurIPS proceedings repo. A clean reference implementation covering more protocols/tasks than Khan et al.
 
 ## Patterns for running your own oversight experiment
 
@@ -187,16 +196,18 @@ DeepMind paper with a public code repo (search the proceedings). Implements deba
 
 ## Recommended reading
 
-- **Irving, Christiano, Amodei (2018)** — "AI Safety via Debate". The original.
-- **Christiano (2018)** — "Iterated Distillation and Amplification" / "Supervising Strong Learners by Amplifying Weak Experts".
-- **Leike et al. (2018)** — "Scalable agent alignment via reward modeling" (recursive reward modeling).
-- **Bowman et al. (2022)** — "Measuring Progress on Scalable Oversight for Large Language Models" (sandwiching paper).
+- **Irving, Christiano, Amodei (2018)** — "AI Safety via Debate" (arXiv:1805.00899). The original.
+- **Christiano, Shlegeris, Amodei (2018)** — "Supervising Strong Learners by Amplifying Weak Experts" (arXiv:1810.08575). Iterated amplification (IDA).
+- **Leike et al. (2018)** — "Scalable agent alignment via reward modeling: a research direction" (arXiv:1811.07871). Recursive reward modeling.
+- **Bowman et al. (2022)** — "Measuring Progress on Scalable Oversight for Large Language Models" (arXiv:2211.03540). The sandwiching paper.
+- **Khan et al. (2024)** — "Debating with More Persuasive LLMs Leads to More Truthful Answers" (arXiv:2402.06782; ICML 2024 Best Paper; `ucl-dark/llm_debate`). The landmark empirical debate result.
 - **Brown-Cohen, Irving, Piliouras (2023, 2024, 2025)** — doubly-efficient debate; prover-estimator debate. arXiv:2311.14125, arXiv:2506.13609.
-- **Kenton et al. (2024)** — "On scalable oversight with weak LLMs judging strong LLMs" (DeepMind). NeurIPS 2024. Code on the proceedings repo.
+- **Kenton et al. (2024)** — "On scalable oversight with weak LLMs judging strong LLMs" (DeepMind; arXiv:2407.04622). NeurIPS 2024. Code on the proceedings repo.
+- **Self-critique line** — Self-Refine (Madaan et al. 2023, arXiv:2303.17651), Reflexion (Shinn et al. 2023, arXiv:2303.11366), CRITIC (Gou et al. 2023, arXiv:2305.11738).
 - **Pallavi Sudhir, Kaunismaa & Panickssery (2025)** — "A Benchmark for Scalable Oversight Protocols" (arXiv:2504.03731; `SOlib` package).
 - **Engels et al. (2025)** — "Scaling Laws For Scalable Oversight" (arXiv:2504.18530); repo `subhashk01/oversight-scaling-laws`.
 - **Knowledge Divergence and the Value of Debate for Scalable Oversight** (arXiv:2603.05293) — recent theoretical work on when debate adds value.
-- **Burns et al. (OpenAI, 2023)** — "Weak-to-Strong Generalization".
+- **Burns et al. (OpenAI, 2023)** — "Weak-to-Strong Generalization: Eliciting Strong Capabilities With Weak Supervision" (arXiv:2312.09390).
 - **Geoffrey Irving** — for the latest on prover-estimator debate, follow his publications and X/Twitter.
 
 ---
@@ -233,8 +244,8 @@ Mixed. Self-critique / Reflexion / Self-Refine: model generates output, critique
 
 ### How do I run a debate experiment?
 
-In Inspect AI: define `agent_a` and `agent_b` as separate model calls (different system prompts: "argue for answer A" vs "argue for answer B"); structure turn-taking via a custom solver; pass the transcript to a `judge_model` for the final decision; aggregate. Compare against **consultancy baseline** (single model advising same judge, no debate) and **judge-alone**. The Kenton et al. 2024 paper (NeurIPS) is a public reference implementation worth studying.
+In Inspect AI: define `agent_a` and `agent_b` as separate model calls (different system prompts: "argue for answer A" vs "argue for answer B"); structure turn-taking via a custom solver; pass the transcript to a `judge_model` for the final decision; aggregate. Compare against **consultancy baseline** (single model advising same judge, no debate) and **judge-alone**. Two public reference implementations worth forking: **`ucl-dark/llm_debate`** (Khan et al. 2024, arXiv:2402.06782, ICML Best Paper — the empirical "debate helps weak judges" result) and Kenton et al. 2024 (arXiv:2407.04622, NeurIPS — debate + consultancy + direct-QA).
 
 ---
 
-Last verified: 2026-06. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; the Scalable Oversight Benchmark (Pallavi Sudhir, Kaunismaa & Panickssery 2025; `SOlib`) and scaling-laws analysis (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate. Citations re-verified against arXiv 2026-06.
+Last verified: 2026-06. Active theoretical work (Brown-Cohen, Irving) on prover-estimator debate; the Scalable Oversight Benchmark (Pallavi Sudhir, Kaunismaa & Panickssery 2025; `SOlib`) and scaling-laws analysis (Engels et al. 2025) maturing; no general-purpose scalable-oversight library, but Inspect AI is sufficient substrate. Citations re-verified against arXiv 2026-06. (Additions 2026-06: added arXiv IDs to the foundational protocol references — Irving 1805.00899, Christiano IDA 1810.08575, Leike RRM 1811.07871, Bowman 2211.03540, Burns W2S 2312.09390, Kenton 2407.04622 — the landmark empirical debate result Khan et al. 2402.06782 (`ucl-dark/llm_debate`, ICML Best Paper), and self-critique citations Self-Refine 2303.17651 / Reflexion 2303.11366 / CRITIC 2305.11738; all verified via arXiv.)
