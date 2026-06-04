@@ -23,7 +23,7 @@ How to run inference on big models efficiently, and how to get internal activati
 
 Aliases: `vllm` on PyPI, `vllm-project/vllm` on GitHub, "vLLM serving engine", "PagedAttention server".
 
-**What it is.** The dominant high-throughput LLM serving engine: PagedAttention KV cache, continuous batching, tensor parallelism, OpenAI-compatible HTTP API. Industry standard for open-weight inference in 2026.
+**What it is.** The dominant high-throughput LLM serving engine: PagedAttention KV cache (Kwon et al. 2023, "Efficient Memory Management for Large Language Model Serving with PagedAttention", arXiv:2309.06180, SOSP'23 — paging-inspired KV-cache management that near-eliminates fragmentation), continuous batching, tensor parallelism, OpenAI-compatible HTTP API. Industry standard for open-weight inference in 2026.
 
 **When to use it:**
 - You're running >100 prompts and want speed.
@@ -93,7 +93,7 @@ config = GenerateConfig(extra_body={
 
 Aliases: `sglang` on PyPI, `sgl-project/sglang` on GitHub.
 
-**What it is.** A serving engine optimized for **structured generation** and **agent-style multi-turn workflows** with KV cache reuse across turns (RadixAttention). Often faster than vLLM for agent traces with shared prefixes.
+**What it is.** A serving engine optimized for **structured generation** and **agent-style multi-turn workflows** with KV cache reuse across turns (RadixAttention — an LRU radix-tree cache of KV blocks; Zheng et al. 2023, "SGLang: Efficient Execution of Structured Language Model Programs", arXiv:2312.07104). Often faster than vLLM for agent traces with shared prefixes.
 
 **When to use it:**
 - Multi-turn agent evals where prompts share long prefixes (system prompt + tool history).
@@ -204,4 +204,4 @@ Quantize. `vllm serve meta-llama/Llama-3.1-70B-Instruct-AWQ-INT4 --quantization 
 
 ---
 
-Last verified: 2026-06. vLLM-Lens released by UK AISI (`UKGovernmentBEIS/vllm-lens`). NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes. (Citation audit 2026-06: corrected the vLLM-Lens benchmark post date to April 2026, added its URL, and clarified the OPT-30B benchmark vs the 1T downstream-use figure.)
+Last verified: 2026-06. vLLM-Lens released by UK AISI (`UKGovernmentBEIS/vllm-lens`). NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes. (Citation audit 2026-06: corrected the vLLM-Lens benchmark post date to April 2026, added its URL, and clarified the OPT-30B benchmark vs the 1T downstream-use figure. Additions 2026-06: cited the two named serving techniques — PagedAttention (Kwon et al. 2309.06180) and RadixAttention/SGLang (Zheng et al. 2312.07104); both verified via arXiv.)
