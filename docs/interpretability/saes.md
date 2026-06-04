@@ -20,6 +20,17 @@ Tooling for training and using SAEs (Sparse Autoencoders) on language model acti
 | Take SAE/transcoder features and do circuit analysis | **circuit-tracer** (`safety-research/circuit-tracer`) |
 | Pretrained Llama-3.1-8B / Llama-3.3-70B SAEs | Goodfire SAEs on HuggingFace (load via SAELens) |
 
+## Should I use SAEs at all? (the skeptic's reading list)
+
+Before committing a MATS project to Sparse Autoencoders (SAEs), read the 2025–2026 negative-results literature. SAEs are popular but contested, and several careful studies find they often fail to beat simple baselines. This matters for project scoping: if your goal is to *act on a concept you can already name* (e.g. "find and ablate the deception direction"), a plain linear probe may match or beat an SAE at a fraction of the cost (see [`probes.md`](probes.md)).
+
+- **Kantamneni et al. 2025**, "Are Sparse Autoencoders Useful? A Case Study in Sparse Probing" (arXiv:2502.16681; ICML 2025; Subhash Kantamneni, Josh Engels, Senthooran Rajamanoharan, Max Tegmark, Neel Nanda). Tests SAEs on activation probing across data scarcity, class imbalance, label noise, and covariate shift. Finding: SAE latents do **not** reliably beat standard probing baselines on raw activations. If probing is your goal, don't assume SAEs help.
+- **Leask et al. 2025**, "Sparse Autoencoders Do Not Find Canonical Units of Analysis" (arXiv:2502.04878; ICLR 2025; Patrick Leask, Bart Bussmann, Joseph Bloom, Curt Tigges, Lee Sharkey, Neel Nanda). Uses **SAE stitching** to show SAE dictionaries are *incomplete* and **meta-SAEs** to show latents are *not atomic* (a latent decomposes into finer latents). This is the theoretical backbone of the "feature splitting" pitfall below — there is no single "true" feature set to recover.
+- **Korznikov et al. 2026**, "Sanity Checks for Sparse Autoencoders: Do SAEs Beat Random Baselines?" (arXiv:2602.14111). Sharpest negative result: a **random baseline** matched fully-trained SAEs across interpretability (0.87 vs 0.90), sparse probing (0.69 vs 0.72), and causal editing (0.73 vs 0.72). Always include a random/untrained-dictionary baseline in your SAE evals.
+- **Peng et al. 2025**, "Use Sparse Autoencoders to Discover Unknown Concepts, Not to Act on Known Concepts" (arXiv:2506.23845; Kenny Peng, Rajiv Movva, Jon Kleinberg, Emma Pierson, Nikhil Garg). The reconciling framing, and a useful project-scoping heuristic: SAEs are a good tool for **discovering unknown concepts** (open-ended exploration, auditing, surfacing structure you didn't know to look for) but a poor tool for **acting on known concepts** (where a targeted probe or steering vector is better). Pick the tool to match which of those you're doing.
+
+**Bottom line:** SAEs remain valuable for open-ended discovery and circuit analysis, but for "I know the concept, I want to detect/steer it" tasks, baseline-check against probes first.
+
 ## SAELens
 
 Aliases: `sae-lens` on PyPI, `decoderesearch/SAELens` on GitHub (formerly under `jbloomAus`), "Joseph Bloom's SAE library", "the SAE Lens library". Maintained by Joseph Bloom, Curt Tigges, Anthony Duong, David Chanin.
@@ -80,7 +91,7 @@ Aliases: `eai-sparsify` on PyPI (**new name** — the unprefixed `sparsify` on P
 
 ## dictionary_learning
 
-Aliases: `dictionary_learning`, `saprmarks/dictionary_learning` on GitHub, "Sam Marks's library". Architectures: Standard, Gated, TopK, JumpReLU, **Matryoshka BatchTopK** (a real differentiator vs SAELens). Integrates with nnsight — this is how Marks-lab papers (e.g. "Sparse Feature Circuits" follow-ons) actually consume it.
+Aliases: `dictionary_learning`, `saprmarks/dictionary_learning` on GitHub, "Sam Marks's library". Architectures: Standard, Gated, TopK, **BatchTopK** (Bussmann et al. 2024, arXiv:2412.06410 — relaxes TopK's per-token sparsity to a per-batch budget), JumpReLU, **Matryoshka BatchTopK** (Bussmann et al. 2025, arXiv:2503.17547 — trains nested dictionaries of increasing size so small dictionaries reconstruct independently, mitigating feature absorption; a real differentiator vs SAELens). Integrates with nnsight — this is how Marks-lab papers (e.g. "Sparse Feature Circuits" follow-ons) actually consume it.
 
 **What it is.** A research-y SAE library from Sam Marks's lab. Lower-level than SAELens; closer to "here are the math primitives, build what you need." Used for many papers on transcoders and feature circuits.
 
@@ -144,7 +155,7 @@ Aliases:
 
 Aliases: `circuit-tracer`, `safety-research/circuit-tracer` on GitHub (maintained by Decode Research / `decoderesearch`), "the Anthropic Transformer Circuits team's transcoder circuit library". Latest v0.5.0 (April 2026).
 
-**What it is.** A library for doing **circuit-level analysis on top of MLP transcoder features** — given trained transcoders, it discovers attribution graphs (which features at which layers drove a particular completion), renders them, and supports interventions. Implements methods from Anthropic's Transformer Circuits team (Hanna, Piotrowski, Lindsey, Ameisen). Supports Gemma-2, Llama-3.2, Qwen-3, GPT-OSS, Gemma-3 transcoders.
+**What it is.** A library for doing **circuit-level analysis on top of MLP transcoder features** — given trained transcoders, it discovers attribution graphs (which features at which layers drove a particular completion), renders them, and supports interventions. The transcoder-circuit approach was introduced by Dunefsky, Chlenski & Nanda 2024, "Transcoders Find Interpretable LLM Feature Circuits" (arXiv:2406.11944; NeurIPS 2024); circuit-tracer implements the attribution-graph methods from Anthropic's Transformer Circuits team (Hanna, Piotrowski, Lindsey, Ameisen). Supports Gemma-2, Llama-3.2, Qwen-3, GPT-OSS, Gemma-3 transcoders.
 
 **When to use it:** You've trained or loaded transcoders (via sparsify `--transcode`, dictionary_learning, or pretrained Anthropic-published ones) and you want to do circuit discovery — "which features explain this output?" — rather than just feature inspection. The natural next step after most SAE/transcoder projects.
 
@@ -217,4 +228,4 @@ Most common causes: (1) **hook point mismatch** — different SAEs are trained a
 
 ---
 
-Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace. (Citation audit 2026-06: fixed the self-referential `HookedSAETransformer` wording, softened the sae_vis "deprecated" claim, and added Gemma Scope / Llama Scope arXiv IDs.)
+Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace. (Citation audit 2026-06: fixed the self-referential `HookedSAETransformer` wording, softened the sae_vis "deprecated" claim, and added Gemma Scope / Llama Scope arXiv IDs. Additions 2026-06: a "Should I use SAEs at all?" skeptic's reading list — Kantamneni 2502.16681, Leask 2502.04878, Korznikov 2602.14111, Peng 2506.23845 — and architecture citations for BatchTopK 2412.06410, Matryoshka 2503.17547, and transcoder circuits 2406.11944; all verified via arXiv.)
