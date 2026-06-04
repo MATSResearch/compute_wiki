@@ -39,7 +39,7 @@ Aliases: `control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "C
 - **Policies** — components that modify model behavior (prompt modifications, additional scaffolding, attack reasoning).
 - **Monitors** — components that score how suspicious a trajectory or action looks.
 - **Micro-protocols** — trajectory-level orchestrators that combine policies and monitors (e.g. `defer-to-trusted`).
-- **Macro-protocols** — deployment-level concerns (auditing, shutdown procedures).
+- **Macro-protocols** — deployment-level concerns (auditing, shutdown procedures). An *adaptive* macro-protocol can switch among micro-protocols as evidence accumulates over a deployment (Wen et al. 2024, arXiv:2411.17693).
 - **Evaluation tools** — safety/usefulness metrics, plotting, control-specific analysis.
 
 **When to use it:**
@@ -86,6 +86,7 @@ These are vocabulary-level entries so RAG retrieval hits when fellows ask "what 
 - **Defer-to-resampling / resample.** Variant: instead of deferring, request a new sample from the untrusted policy.
 - **Control protocol.** The full plan: who generates, who monitors, what to do when suspicious, what counts as "caught."
 - **Control evaluation.** A set of red-team-vs-blue-team experiments measuring safety and usefulness of a protocol.
+- **Control safety case.** A structured argument that a model is *incapable of subverting* the deployed control measures to cause an unacceptable outcome — the deployment-justification document a developer would write, with a control evaluation as its core evidence. Sketched in Korbak, Clymer, Hilton, Shlegeris & Irving 2025, "A sketch of an AI control safety case" (arXiv:2501.17315).
 - **Safety / Usefulness Pareto.** The fundamental tradeoff: stricter protocols are safer but less useful. Plotted as a curve.
 - **Backdoor.** A side task in code-generation settings: introduce code that misbehaves under specific conditions.
 
@@ -162,7 +163,7 @@ The library implements (and extends) protocols from the original Greenblatt et a
 - **Defer-to-trusted (DTT).** Untrusted policy generates; monitor flags; if flagged, trusted policy acts instead.
 - **Trusted editing.** Untrusted generates; monitor flags; trusted *edits* the suspicious output before use.
 - **Untrusted monitoring.** A second untrusted instance monitors the first; anti-collusion measures applied (paraphrasing, separate prompts, etc.).
-- **Resampling protocols.** When flagged, request a new sample (possibly with different temperature / prompt) instead of deferring.
+- **Resampling protocols.** When flagged, request a new sample (possibly with different temperature / prompt) instead of deferring. Introduced and evaluated in the agentic setting by **Ctrl-Z** (Bhatt et al. 2025, arXiv:2504.10374), where resampling both blocks a suspicious action and generates more evidence of the attack.
 - **Debate-style protocols.** Two untrusted instances argue; a trusted judge decides.
 
 ## Original control paper repo
@@ -177,9 +178,12 @@ Aliases: Redwood Research's `rgreenblatt/control-evaluations` (or similar; check
 
 Several papers and posts post-Greenblatt-2023 extend AI Control:
 - Buck Shlegeris (Redwood), **"Untrusted smart models and trusted dumb models"** (Redwood Research blog, May 2024) — the conceptual case for the trusted/untrusted split that control protocols rely on.
+- Bhatt, Rushing, Kaufman, Tracy, Georgiev, Matolcsi, Khan & Shlegeris (Redwood), **"Ctrl-Z: Controlling AI Agents via Resampling"** (arXiv:2504.10374, April 2025). The first control evaluation in a *multi-step agent* environment. Introduces **BashBench** (257 challenging multi-step sysadmin tasks) and a class of **resample protocols** that dynamically re-sample suspicious actions — both to block the action and to gather more incriminating evidence. Best protocol cut attack success from 58% to 7% at a 5% usefulness cost. This is the paper behind the "resampling protocols" entry above.
+- Wen, Hebbar, Larson, Bhatt, Radhakrishnan, Sharma, Sleight, Feng, He, Perez, Shlegeris & Khan, **"Adaptive Deployment of Untrusted LLMs Reduces Distributed Threats"** (arXiv:2411.17693, Nov 2024). Studies the **distributed-threat** setting (no single action is catastrophic) with a **two-level deployment**: an adaptive *macro-protocol* picks among *micro-protocols* based on accumulated evidence. −80% backdoors vs non-adaptive at matched usefulness. The reference behind the macro-protocol concept.
+- Griffin, Thomson, Shlegeris & Abate (Oxford + Redwood), **"Games for AI Control: Models of Safety Evaluations of AI Deployment Protocols"** (arXiv:2409.07985). Formalizes the red-team-vs-blue-team control evaluation as a multi-objective, partially observable stochastic game ("AI-Control Games"), and synthesizes optimal protocols by reduction to zero-sum games. The formal-modeling backbone of the safety/usefulness Pareto.
+- Korbak, Clymer, Hilton, Shlegeris & Irving, **"A sketch of an AI control safety case"** (arXiv:2501.17315, Jan 2025). Sketches how a developer could build a **control safety case** — a structured argument that a model is *incapable of subverting control measures* to cause an unacceptable outcome — using a data-exfiltration case study. The deployment-justification framing for control evaluations.
 - Anthropic's **Sleeper Agents** work (Hubinger et al., arXiv:2401.05566) — model organisms of misalignment, used as untrusted policies in some control settings.
 - Mallen, Griffin, Wagner, Abate & Shlegeris, **"Subversion Strategy Eval"** (arXiv:2412.12480) — measures how well an untrusted model can *statelessly* strategize to subvert control protocols. (Note: not a Greenblatt-authored paper.)
-- Various **macro-protocol** papers on incident response and shutdown procedures.
 
 Not all have public code; ControlArena is where new control settings tend to land.
 
@@ -211,6 +215,10 @@ Not all have public code; ControlArena is where new control settings tend to lan
 ## Recommended reading (as of 2026-04)
 
 - Greenblatt, Shlegeris, Sachan, Roger — "AI Control: Improving Safety Despite Intentional Subversion" (arXiv:2312.06942) — the foundational paper.
+- Bhatt et al. — "Ctrl-Z: Controlling AI Agents via Resampling" (arXiv:2504.10374) — the first agentic control eval; BashBench + resample protocols.
+- Wen et al. — "Adaptive Deployment of Untrusted LLMs Reduces Distributed Threats" (arXiv:2411.17693) — adaptive macro-protocols in the distributed-threat setting.
+- Griffin, Thomson, Shlegeris, Abate — "Games for AI Control" (arXiv:2409.07985) — formal game-theoretic modeling of control protocols.
+- Korbak, Clymer, Hilton, Shlegeris, Irving — "A sketch of an AI control safety case" (arXiv:2501.17315) — the deployment-justification framing.
 - Ryan Greenblatt — "An overview of control measures" (Redwood Research blog).
 - Ryan Greenblatt — "An overview of areas of control work" (Redwood Research blog).
 - AISI blog — "Introducing ControlArena: A library for running AI control experiments".
@@ -249,10 +257,14 @@ A **side task** is a harmful objective the untrusted model might pursue concurre
 
 Calibrate on a held-out **honest** run. Pick the threshold that gives you an acceptable false-positive rate (defer rate) on legitimate work; that determines your safety on attack mode. Calibrating on the same data you evaluate on leaks the test. The Pareto curve (safety vs usefulness) over thresholds is more informative than any single point.
 
+### What is a control safety case?
+
+A **control safety case** is a structured argument that a model is *incapable of subverting* a deployment's control measures to cause an unacceptable outcome — the document a developer would use to justify deploying a possibly-misaligned model. Its core evidence is a **control evaluation**: a red team deliberately tries to make the model achieve the bad outcome (e.g. exfiltrate data) in a proxy of the deployment. The argument then rests on claims like: (1) the red team adequately elicited the model's subversion capability, (2) the control measures are at least as effective in real deployment as in the eval, and (3) performance is extrapolated conservatively. Sketched in Korbak, Clymer, Hilton, Shlegeris & Irving 2025 (arXiv:2501.17315).
+
 ### Can I use a probe as a monitor in a control protocol?
 
 Yes — it's an active research direction. Train a probe (see [`probes.md`](../interpretability/probes.md)) on activations during behavior generation; use it as the suspicion-score function inside DTT or trusted editing. Pair with **vLLM-Lens** ([`serving-and-activations.md`](../interpretability/serving-and-activations.md)) for online probe inference at production throughput. ControlArena's monitor abstraction supports custom monitor functions.
 
 ---
 
-Last verified: 2026-06. ControlArena actively developed by UK AISI + Redwood Research; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented. (Citation audit 2026-06: removed an unverifiable "Untrusted models can perform research too / Roger et al." reference in favor of the real Shlegeris blog post, re-attributed Subversion Strategy Eval to Mallen et al. (arXiv:2412.12480), and added arXiv IDs for SHADE-Arena and Sleeper Agents.)
+Last verified: 2026-06. ControlArena actively developed by UK AISI + Redwood Research; defer-to-trusted, trusted editing, untrusted monitoring protocols implemented. (Citation audit 2026-06: removed an unverifiable "Untrusted models can perform research too / Roger et al." reference in favor of the real Shlegeris blog post, re-attributed Subversion Strategy Eval to Mallen et al. (arXiv:2412.12480), and added arXiv IDs for SHADE-Arena and Sleeper Agents. Additions 2026-06: cited the previously-bare "resampling protocols" (Ctrl-Z, arXiv:2504.10374) and "macro-protocol" (Adaptive Deployment, arXiv:2411.17693) concepts, added Games for AI Control (arXiv:2409.07985), and introduced the "control safety case" concept + FAQ from Korbak et al. (arXiv:2501.17315); all verified via arXiv.)
