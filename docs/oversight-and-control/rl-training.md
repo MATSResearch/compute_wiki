@@ -95,19 +95,19 @@ Aliases: `tinker-cookbook`, `thinking-machines-lab/tinker-cookbook` on GitHub, "
 
 These are vocabulary entries so torchy can answer "what is X?" queries:
 
-- **PPO (Proximal Policy Optimization).** The classic policy gradient with clipped importance ratio. The standard for RLHF since 2017.
-- **GRPO (Group Relative Policy Optimization).** The DeepSeek-R1 algorithm. Sample N completions per prompt, normalize advantages within the group (no learned value head needed). Dominant in 2025–2026 RLVR work.
-- **RLOO (REINFORCE Leave-One-Out).** Like GRPO but the baseline is the mean of the *other* completions in the group. Slightly less biased.
+- **PPO (Proximal Policy Optimization).** The classic policy gradient with clipped importance ratio. The standard for RLHF since 2017 (Schulman et al. 2017, arXiv:1707.06347).
+- **GRPO (Group Relative Policy Optimization).** Introduced in DeepSeekMath (Shao et al. 2024, arXiv:2402.03300) and popularized by DeepSeek-R1. Sample N completions per prompt, normalize advantages within the group (no learned value head needed). Dominant in 2025–2026 RLVR work.
+- **RLOO (REINFORCE Leave-One-Out).** Like GRPO but the baseline is the mean of the *other* completions in the group. Slightly less biased. Revisited for RLHF by Ahmadian et al. 2024, "Back to Basics: Revisiting REINFORCE Style Optimization for Learning from Human Feedback in LLMs" (arXiv:2402.14740).
 - **REINFORCE++.** Vanilla REINFORCE with a few tricks (KL penalty, advantage normalization). Used in OpenRLHF.
 - **DAPO.** Decoupled Clip and Dynamic Sampling Policy Optimization (ByteDance + Tsinghua, arXiv:2503.14476). Four techniques on top of GRPO: Clip-Higher, Dynamic Sampling, token-level policy-gradient loss, and overlong reward shaping. Implemented in verl.
 - **CISPO (Clipped IS).** MiniMax's clipped importance-sampling loss (MiniMax-M1, arXiv:2506.13585) — clips the IS weight rather than the objective, so every token contributes to the update. Available in Tinker.
 - **DRO (Direct Reward Optimization).** Loss type in Tinker; see Tinker docs.
-- **DPO (Direct Preference Optimization).** Closed-form preference learning — no separate reward model, no rollouts. Just preference pairs and an SFT-like loss with a reference model.
-- **KTO (Kahneman-Tversky Optimization).** Like DPO but uses unpaired binary feedback (good/bad) rather than pairs.
-- **IPO (Identity Preference Optimization).** DPO variant addressing some of DPO's overfitting.
-- **SimPO.** Reference-free DPO variant — drops the reference model term.
+- **DPO (Direct Preference Optimization).** Closed-form preference learning — no separate reward model, no rollouts. Just preference pairs and an SFT-like loss with a reference model (Rafailov et al. 2023, "Direct Preference Optimization: Your Language Model is Secretly a Reward Model", arXiv:2305.18290).
+- **KTO (Kahneman-Tversky Optimization).** Like DPO but uses unpaired binary feedback (good/bad) rather than pairs (Ethayarajh et al. 2024, "KTO: Model Alignment as Prospect Theoretic Optimization", arXiv:2402.01306).
+- **IPO (Identity Preference Optimization).** DPO variant addressing some of DPO's overfitting; introduced in Azar et al. 2023, "A General Theoretical Paradigm to Understand Learning from Human Preferences" (arXiv:2310.12036).
+- **SimPO.** Reference-free DPO variant — drops the reference model term, uses average log-prob as the implicit reward (Meng, Xia & Chen 2024, arXiv:2405.14734).
 - **RLVR (RL from Verifiable Rewards).** RL using a programmatic verifier as the reward (e.g. unit tests, math equality). The DeepSeek-R1 paradigm.
-- **RLHF (RL from Human Feedback).** Classic three-stage: SFT, train reward model on preference pairs, RL on reward model.
+- **RLHF (RL from Human Feedback).** Classic three-stage: SFT, train reward model on preference pairs, RL on reward model. Foundational paper: Christiano et al. 2017, "Deep reinforcement learning from human preferences" (arXiv:1706.03741).
 - **RLAIF (RL from AI Feedback).** Same but the preferences come from another LLM.
 - **Constitutional AI.** Anthropic's RLAIF variant using a written constitution to drive AI feedback.
 - **Process Reward Model (PRM).** Reward model that scores each *step* of a reasoning trace, not just the final answer. Improves credit assignment for math/code RL.
@@ -338,10 +338,10 @@ Log per step (or every K steps):
 ## Recommended reading
 
 - Tinker Documentation (`tinker-docs.thinkingmachines.ai`) and the Tinker Cookbook README.
-- DeepSeek-R1 paper (Jan 2025) — the GRPO + RLVR reference.
+- DeepSeek-R1 — "Incentivizing Reasoning Capability in LLMs via Reinforcement Learning" (Jan 2025, arXiv:2501.12948). The GRPO + RLVR reference.
 - Lilian Weng — "Reward Hacking in Reinforcement Learning" (lilianweng.github.io, Nov 2024).
-- Gao, Schulman, Hilton — "Scaling Laws for Reward Model Overoptimization" (the Goodhart curve paper).
-- Christiano et al. — Original RLHF paper (still worth reading for the framing).
+- Gao, Schulman, Hilton — "Scaling Laws for Reward Model Overoptimization" (arXiv:2210.10760). The Goodhart curve paper.
+- Christiano et al. (2017) — "Deep reinforcement learning from human preferences" (arXiv:1706.03741). The original RLHF paper; still worth reading for the framing.
 - OpenRLHF and verl papers/repos for self-hosted alternatives.
 
 ---
@@ -386,4 +386,4 @@ Yes — write a Python `grade(rollout) -> float` function. The Tinker Cookbook's
 
 ---
 
-Last verified: 2026-06. Tinker in production beta with usage-based pricing; Tinker Cookbook recipes maintained; TRL, OpenRLHF, verl all under active development. Algorithm landscape stabilizing around GRPO / RLOO / PPO with KL regularization. (Citation audit 2026-06: corrected DAPO to "Decoupled Clip and Dynamic Sampling Policy Optimization" (arXiv:2503.14476) and re-attributed CISPO to MiniMax (MiniMax-M1, arXiv:2506.13585), not DeepSeek.)
+Last verified: 2026-06. Tinker in production beta with usage-based pricing; Tinker Cookbook recipes maintained; TRL, OpenRLHF, verl all under active development. Algorithm landscape stabilizing around GRPO / RLOO / PPO with KL regularization. (Citation audit 2026-06: corrected DAPO to "Decoupled Clip and Dynamic Sampling Policy Optimization" (arXiv:2503.14476) and re-attributed CISPO to MiniMax (MiniMax-M1, arXiv:2506.13585), not DeepSeek. Additions 2026-06: added arXiv IDs to the algorithm-vocabulary entries — PPO 1707.06347, GRPO/DeepSeekMath 2402.03300, RLOO 2402.14740, DPO 2305.18290, KTO 2402.01306, IPO 2310.12036, SimPO 2405.14734, RLHF/Christiano 1706.03741 — and to the reading list — DeepSeek-R1 2501.12948, reward overoptimization 2210.10760; all verified via arXiv. Note: GRPO originates in DeepSeekMath, not DeepSeek-R1.)
