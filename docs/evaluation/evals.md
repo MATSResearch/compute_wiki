@@ -81,7 +81,7 @@ Aliases: `inspect_evals` package, `UKGovernmentBEIS/inspect_evals` on GitHub.
 
 ## lm-evaluation-harness
 
-Aliases: `lm-eval`, `lm_eval` on PyPI, `EleutherAI/lm-evaluation-harness` on GitHub, "Eleuther's harness", "the harness".
+Aliases: `lm-eval`, `lm_eval` on PyPI, `EleutherAI/lm-evaluation-harness` on GitHub, "Eleuther's harness", "the harness". Canonical citation: Gao, Tow, Biderman et al., "A framework for few-shot language model evaluation" (Zenodo, DOI 10.5281/zenodo.10256836) — cite the version/commit you used.
 
 **What it is.** The established framework for academic LLM benchmarks: MMLU, ARC, HellaSwag, TruthfulQA, GSM8K, BIG-bench, BBH, etc. Optimized for log-likelihood-based multiple-choice and short-answer generation.
 
@@ -122,7 +122,7 @@ Aliases: HCAST = "Human-Calibrated Autonomy Software Tasks" (Rein et al., arXiv:
 
 Aliases: `anthropics/evals` on GitHub, "Anthropic eval format", "model-written evals".
 
-**What it is.** Anthropic has published a number of behavioral eval datasets in JSONL formats — sycophancy, advanced AI risks, model-written evals, etc. Many of these are wrapped as `inspect_evals` tasks now.
+**What it is.** Anthropic has published a number of behavioral eval datasets in JSONL formats — sycophancy, advanced AI risks, etc. Most originate from **Perez et al. 2022, "Discovering Language Model Behaviors with Model-Written Evaluations"** (arXiv:2212.09251), which used LMs to auto-generate 154 evaluation datasets (the origin of the term **"model-written evals"**) and surfaced inverse-scaling sycophancy and concerning-goal-seeking. Many of these are wrapped as `inspect_evals` tasks now.
 
 **When to use it:** You want Anthropic-style behavioral measurements (sycophancy, corrigibility, etc.) — search `inspect_evals` first; fall back to running the JSONL data directly via Inspect.
 
@@ -161,6 +161,7 @@ It's not appropriate for: anything you'd want others to reproduce — use Inspec
 - **Refusal vs failure.** A model that refuses your harmful prompt scored as "0% success" is *good*. A model that tries and fails is *bad*. Distinguish refusal from incompetence in your scorer.
 - **Temperature 0 isn't deterministic on all providers.** Closed APIs sometimes vary. If reproducibility matters, run multiple seeds even at temp=0.
 - **Scoring with a model.** "Model-graded" scorers introduce their own biases. Validate against human labels on a sample.
+- **Evaluation awareness.** Frontier models can detect when they're being evaluated and may behave differently than in deployment — a direct threat to eval validity. Needham et al. 2025 (Apollo), "Large Language Models Often Know When They Are Being Evaluated" (arXiv:2505.23836), found models classify eval-vs-deployment transcripts well above chance (Gemini-2.5-Pro AUC 0.83 on a 1,000-prompt benchmark, approaching a 0.92 human baseline). Mitigations: make eval prompts/transcripts deployment-realistic, strip tell-tale "this is a test" cues, and treat a passed safety eval as a *lower bound* on deployment risk. Relevant to control evals (eval-aware attack policies, see [`ai-control.md`](../oversight-and-control/ai-control.md)) and steering of eval-aware models ([`steering.md`](../interpretability/steering.md)).
 
 ## Cross-references
 
@@ -219,4 +220,4 @@ Depends on prompts × samples × judge votes × model. A 1000-sample eval on Cla
 
 ---
 
-Last verified: 2026-06. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026. (Citation audit 2026-06: corrected the Anthropic evals repo to `anthropics/evals` and added the METR HCAST/time-horizon arXiv IDs 2503.17354 and 2503.14499.)
+Last verified: 2026-06. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026. (Citation audit 2026-06: corrected the Anthropic evals repo to `anthropics/evals` and added the METR HCAST/time-horizon arXiv IDs 2503.17354 and 2503.14499. Additions 2026-06: cited "model-written evals" to Perez et al. 2212.09251, added the lm-evaluation-harness canonical Zenodo citation (DOI 10.5281/zenodo.10256836), and added an evaluation-awareness cross-cutting pitfall (Needham et al. 2025, arXiv:2505.23836); all verified via arXiv/source.)
