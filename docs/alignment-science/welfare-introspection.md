@@ -19,6 +19,7 @@ Tooling and methods for **model welfare** research and **AI introspection** rese
 | Probe for valence / mood / distress in activations | Hand-rolled linear probes on contrastive activations; **steering-vectors** library for the contrastive setup |
 | Auto-interp model self-reports vs internal state | **SAELens** + **Neuronpedia** for the SAE side; manual analysis for the self-report side |
 | Read up on consciousness theories applicable to LLMs | Butlin et al. "Consciousness in AI" (2023) — the standard reference |
+| Understand why AI welfare is taken seriously / frame a project's motivation | "Taking AI Welfare Seriously" (Long, Sebo et al. 2024; arXiv:2411.00986) |
 | Find collaborators / mentors | **Eleos AI Research**, Kyle Fish at Anthropic (also a MATS mentor), various academic groups |
 
 ## Why this area lacks shrink-wrapped tools
@@ -108,7 +109,7 @@ Method: build contrast-pair datasets (pleasant vs unpleasant prompts; cooperativ
 
 ### Pattern: exit option / opt-out
 
-Method: give the model a tool or behavioral affordance to terminate or redirect interactions it identifies as distressing. Anthropic deployed a version of this for Claude (Claude can end conversations it identifies as distressing in some contexts).
+Method: give the model a tool or behavioral affordance to terminate or redirect interactions it identifies as distressing. Anthropic deployed a version of this: Claude Opus 4 and 4.1 can **end a rare subset of conversations** in cases of persistently harmful or abusive interactions, as a "last resort" after redirection fails (Anthropic, Aug 2025, "Claude Opus 4 and 4.1 can now end a rare subset of conversations", `anthropic.com/research/end-subset-conversations`) — framed explicitly as exploratory model-welfare work.
 
 **Tools:** Inspect AI tool primitives, custom system prompts, deployment-side handlers.
 
@@ -137,7 +138,7 @@ The behavioral self-prediction methodology described in the pattern above. Disti
 
 ### Activation Oracles (Karvonen, Marks et al. 2025)
 
-Aliases: "activation oracles", "AO", arXiv:2512.15674, "Activation Oracles: Training and Evaluating LLMs as General-Purpose Activation Explainers". An Anthropic-led collaboration (lead authors Adam Karvonen and Sam Marks, with James Chua, Owain Evans / Truthful AI, and others) on training LLMs as **general-purpose explainers of LLM activation vectors** — feed the model another model's (or its own) activations and ask arbitrary natural-language questions about them (a generalist extension of LatentQA). Notably recovers fine-tuned-in information (biographical facts, malign propensities) that doesn't appear in the input text. Conceptually adjacent to auto-interp work (see [`saes.md`](../interpretability/saes.md)); relevant here as an activation-interpretation primitive that can be pointed at introspection-style questions.
+Aliases: "activation oracles", "AO", arXiv:2512.15674, "Activation Oracles: Training and Evaluating LLMs as General-Purpose Activation Explainers". An Anthropic-led collaboration (lead authors Adam Karvonen and Sam Marks, with James Chua, Owain Evans / Truthful AI, and others) on training LLMs as **general-purpose explainers of LLM activation vectors** — feed the model another model's (or its own) activations and ask arbitrary natural-language questions about them (a generalist extension of **LatentQA** — Pan, Chen & Steinhardt 2024, "LatentQA: Teaching LLMs to Decode Activations Into Natural Language", arXiv:2412.08686, which trains a decoder LLM via Latent Interpretation Tuning to answer open-ended questions about activations). Notably recovers fine-tuned-in information (biographical facts, malign propensities) that doesn't appear in the input text. Conceptually adjacent to auto-interp work (see [`saes.md`](../interpretability/saes.md)); relevant here as an activation-interpretation primitive that can be pointed at introspection-style questions.
 
 **When to use it:** You're building introspection eval pipelines and want a baseline that's framed in terms of the model explaining its own internals.
 
@@ -156,6 +157,12 @@ Aliases: "consciousness cluster", arXiv:2604.13051, "The Consciousness Cluster: 
 ### Butlin et al. — "Consciousness in AI" (2023)
 
 The standard interdisciplinary reference for translating consciousness theories (GWT, HOT, AST, IIT, etc.) into testable indicators for AI systems. Not a tool but a starting framework.
+
+### Long, Sebo et al. — "Taking AI Welfare Seriously" (2024)
+
+Aliases: "Taking AI Welfare Seriously", arXiv:2411.00986. Authors: Robert Long, Jeff Sebo, Patrick Butlin, Kathleen Finlinson, Kyle Fish, Jacqueline Harding, Jacob Pfau, Toni Sims, Jonathan Birch, David Chalmers.
+
+The **foundational position report** for the field. Argues there is a realistic near-term possibility that some AI systems will be conscious and/or robustly agentic, so AI companies have a present-day responsibility to take welfare seriously. Proposes three concrete early steps an AI company (or researcher) can take: (1) **acknowledge** AI welfare as a real and difficult issue, (2) **assess** AI systems for indicators of consciousness and robust agency, and (3) **prepare** policies/procedures for treating AI systems with an appropriate level of moral consideration. The natural "why this field exists" citation and a good framing scaffold for a welfare project's motivation section.
 
 ### Anthropic model welfare announcement and follow-ups
 
@@ -228,8 +235,10 @@ Specific bespoke repos accompanying papers tend to be released under the authors
 - **Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans (2024 / ICLR 2025)** — "Looking Inward: Language Models Can Learn About Themselves by Introspection" (arXiv:2410.13787; modelintrospection.com). The behavioral self-prediction approach.
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net). Practitioner overview of behavioral self-knowledge and introspection research.
 - **Butlin et al. (2023)** — "Consciousness in Artificial Intelligence: Insights from the Science of Consciousness" (arXiv:2308.08708; Patrick Butlin, Robert Long et al.). Theoretical framework reference.
+- **Long, Sebo, Butlin, Fish, Birch, Chalmers et al. (2024)** — "Taking AI Welfare Seriously" (arXiv:2411.00986). The foundational position report; acknowledge / assess / prepare.
 - **Anthropic (April 2025)** — "Exploring model welfare" (anthropic.com/research). Program-level introduction.
-- **Long, Sebo et al.** — papers on AI moral status (`experiencemachines.substack.com` for Long's writing).
+- **Anthropic (Aug 2025)** — "Claude Opus 4 and 4.1 can now end a rare subset of conversations" (anthropic.com/research/end-subset-conversations). The deployed exit-option as model-welfare work.
+- **Long, Sebo et al.** — further papers on AI moral status (`experiencemachines.substack.com` for Long's writing).
 - **Schwitzgebel & various** — academic philosophy of mind treatments.
 - **Kyle Fish on 80,000 Hours podcast** — practitioner-level introduction to current experiments.
 - For MATS fellows: Kyle Fish is listed on the MATS mentor page (matsprogram.org/mentor/fish) and runs MATS streams in this area.
@@ -272,4 +281,4 @@ Both study **introspection** but with different methods. **Looking Inward** (Bin
 
 ---
 
-Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey) published October 2025 (arXiv:2601.01828); Eleos AI Research active. (Citation audit 2026-06: corrected the Lindsey introspection paper date from "Jan 2026" to October 2025, added its arXiv ID, and tightened the Activation Oracles and Butlin attributions.)
+Last verified: 2026-04. Field moving rapidly; tooling remains methodology-heavy rather than library-heavy. Anthropic introspection paper (Lindsey) published October 2025 (arXiv:2601.01828); Eleos AI Research active. (Citation audit 2026-06: corrected the Lindsey introspection paper date from "Jan 2026" to October 2025, added its arXiv ID, and tightened the Activation Oracles and Butlin attributions. Additions 2026-06: added the foundational welfare report "Taking AI Welfare Seriously" (Long, Sebo et al. 2024, arXiv:2411.00986), the LatentQA citation behind Activation Oracles (Pan, Chen & Steinhardt 2024, arXiv:2412.08686), and the Anthropic conversation-ending announcement (Aug 2025) behind the exit-option pattern; all verified via arXiv/source.)
