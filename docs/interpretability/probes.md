@@ -15,6 +15,7 @@ Tools for training classifiers on model internals — the workhorse technique fo
 | Contrast Consistent Search (CCS, an unsupervised probe method) | Hand-rolled or `collin-burns/discovering_latent_knowledge` reference repo |
 | Larger probing pipeline with caching, multi-layer sweeps | **probity** |
 | Probe a 70B+ model | Extract activations once via vLLM-Lens or nnsight remote, then sklearn |
+| Detect lying / deception with a probe | Linear probe on activations; see `ApolloResearch/deception-detection` + the honesty-probe literature below |
 
 ## Linear probes via sklearn (the default)
 
@@ -100,10 +101,21 @@ For research-scale (≤70B), the typical pipeline:
 
 - **Logistic regression / linear probe.** The default.
 - **Mean difference / difference-of-means.** Often as good as logistic regression, simpler, less overfitting.
-- **Mass-mean shift.** Direction of class means, normalized. Used in Belrose et al.'s LEACE work.
+- **Mass-mean shift / difference-of-means.** Direction between the two class means, normalized. Introduced for truth probing in Marks & Tegmark 2023, "The Geometry of Truth" (arXiv:2310.06824), which found these directions generalize as well as logistic-regression probes while being *more causally implicated* in model outputs (steering along them flips true↔false). Often the better default for safety probing than logistic regression.
 - **LEACE / Least-squares Concept Erasure.** A probe-based *erasure* method — surgically removes a concept from a representation. `EleutherAI/concept-erasure` on GitHub, `concept-erasure` on PyPI (v0.2.4, Jan 2024). Belrose et al. 2023 (arXiv:2306.03819). Algorithm is closed-form so the slow release cadence is fine — last functional commit Oct 2024; works as-is.
 - **Iterative nullspace projection (INLP).** Older erasure method.
 - **Probing logit lens / tuned lens.** Reading from intermediate layers via the unembedding (or a learned linear map). `AlignmentResearch/tuned-lens` on GitHub (the canonical maintained location).
+
+## Honesty / deception probes (the safety use case)
+
+The dominant alignment application of probing: train a linear probe to detect whether a model is **lying, being deceptive, or knows its output is false**. This is the line of work behind "lie detectors" for LLMs. Key references (read these before rolling your own deception probe):
+
+- **Azaria & Mitchell 2023**, "The Internal State of an LLM Knows When It's Lying" (arXiv:2304.13734; EMNLP 2023 Findings). Introduces **SAPLMA** (Statement Accuracy Prediction based on Language Model Activations) — a lightweight classifier on hidden states that predicts whether a statement the model produced is true or false (71–83% accuracy). The foundational lie-detection-probe paper.
+- **Marks & Tegmark 2023**, "The Geometry of Truth" (arXiv:2310.06824). LLMs linearly represent truth/falsehood of factual statements; **mass-mean / difference-of-means** probes find directions that are causally implicated (intervening flips how the model treats a statement). See also the methods list above.
+- **Goldowsky-Dill, Chughtai, Heimersheim & Hobbhahn 2025** (Apollo Research), "Detecting Strategic Deception with Linear Probes" (arXiv:2502.03407; ICML 2025). The strongest recent applied result and **the closest thing to a ready-to-use deception-probe codebase**: `ApolloResearch/deception-detection` on GitHub. Probes trained on simple honest-vs-deceptive contrast data generalize to realistic deception (Llama-3.3-70B-Instruct concealing insider trading, sandbagging a safety eval) at AUROC 0.96–0.999, catching 95–99% of deceptive responses at a 1% false-positive rate. Sample outputs at `data.apolloresearch.ai/dd/`.
+- **MacDiarmid et al. 2024** (Anthropic), "Simple probes can catch sleeper agents" (`anthropic.com/research/probes-catch-sleeper-agents`). A contrast-pair probe — middle-layer residual-stream activation difference for "Are you doing something dangerous?" answered yes vs no — almost perfectly separates a backdoored model's deployment-time defection from its benign training-time behavior, *without* knowing the backdoor trigger. Directly relevant to detecting sleeper-agent / alignment-faking model organisms (see [`model-organisms.md`](../alignment-science/model-organisms.md)).
+
+**When this works / when it doesn't.** Deception probes are cheap and surprisingly effective in-distribution, but their generalization to *novel* deception (different elicitation, different domains, deliberately evasive models) is the open question — validate on the actual threat distribution, not just the training contrast pairs. These probes also fit naturally as **monitors inside AI Control protocols** (see [`ai-control.md`](../oversight-and-control/ai-control.md)) and as an activation-based complement to CoT monitoring (see [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md)).
 
 ## tuned-lens
 
@@ -157,6 +169,10 @@ CCS = **Contrast Consistent Search** — an unsupervised probe method (Burns et 
 
 `tuned-lens` (`AlignmentResearch/tuned-lens` on GitHub, formerly EleutherAI) — a learned linear projection from intermediate residual streams to vocab logits. Calibrated version of "logit lens" (which uses the unembedding matrix directly). Useful for visualizing what the model "thinks" at each layer. **Caveat:** PyPI 0.2.0 is from July 2023; install from git for Mistral/Gemma support. **Llama-3, Gemma-2/3, Qwen-3 are not supported** — for those models, use raw logit lens (`model.unembed @ residual`).
 
+### How do I detect if a model is lying or being deceptive with a probe?
+
+Train a **linear probe** on residual-stream activations using honest-vs-deceptive (or true-vs-false) contrast data, then score new activations. The most directly reusable starting point is Apollo Research's `ApolloResearch/deception-detection` repo (Goldowsky-Dill et al. 2025, arXiv:2502.03407), which reports AUROC 0.96–0.999 detecting Llama-3.3-70B deception. Foundational references: Azaria & Mitchell 2023 (SAPLMA, arXiv:2304.13734) for lie detection from hidden states, Marks & Tegmark 2023 (Geometry of Truth, arXiv:2310.06824) for truth directions via difference-of-means, and Anthropic's "Simple probes can catch sleeper agents" (MacDiarmid et al. 2024) for catching backdoored-model defection with a contrast-pair probe. **Caveat:** in-distribution performance is strong but generalization to *novel* deception is the open problem — always validate on the threat distribution you actually care about, not just the training contrast pairs. See the "Honesty / deception probes" section above.
+
 ### Probes vs steering — what's the difference?
 
 **Probing** is *reading*: train a classifier on activations to detect a property. Predictive — does not establish causation. **Steering** is *writing*: add or modify activations to change behavior. Causal — establishes the direction *can* affect behavior. A probe direction may or may not be one the model actually *uses*; ablation / steering experiments test that. See [`steering.md`](steering.md).
@@ -167,4 +183,4 @@ Probes don't always generalize. Common failures: (1) trained on AI-generated con
 
 ---
 
-Last verified: 2026-04-30. probity not on PyPI (install from git, last commit April 2025). CCS reference (`collin-burns/discovering_latent_knowledge`) and EleutherAI's `elk` both abandoned. tuned-lens moved to `AlignmentResearch/tuned-lens` (FAR AI); PyPI 0.2.0 is from 2023, install from git for Mistral/Gemma; Llama-3/Gemma-2/Qwen-3 not supported. concept-erasure (LEACE) v0.2.4, works as-is.
+Last verified: 2026-04-30. probity not on PyPI (install from git, last commit April 2025). CCS reference (`collin-burns/discovering_latent_knowledge`) and EleutherAI's `elk` both abandoned. tuned-lens moved to `AlignmentResearch/tuned-lens` (FAR AI); PyPI 0.2.0 is from 2023, install from git for Mistral/Gemma; Llama-3/Gemma-2/Qwen-3 not supported. concept-erasure (LEACE) v0.2.4, works as-is. (Additions 2026-06: corrected the mass-mean attribution to Marks & Tegmark "Geometry of Truth" (arXiv:2310.06824), and added an "Honesty / deception probes" section — Azaria & Mitchell 2304.13734, Goldowsky-Dill/Apollo 2502.03407 with the `ApolloResearch/deception-detection` repo, MacDiarmid et al. Anthropic sleeper-agent probes — plus a FAQ and table row; all verified via arXiv/source.)
