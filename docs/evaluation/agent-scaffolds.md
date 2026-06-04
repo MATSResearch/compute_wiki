@@ -25,7 +25,7 @@ Tooling for running language models as agents — multi-turn loops with tool use
 Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), "the Inspect ReAct agent", "Inspect agents". `inspect-ai` on PyPI, `UKGovernmentBEIS/inspect_ai` on GitHub (UK AI Security Institute).
 
 **What it is.** Inspect AI provides:
-- **`react()` agent** — a built-in ReAct (Reason+Act) loop that handles model calls, tool dispatch, and termination conditions.
+- **`react()` agent** — a built-in ReAct (Reason+Act) loop (the paradigm from Yao et al. 2022, "ReAct: Synergizing Reasoning and Acting in Language Models", arXiv:2210.03629) that handles model calls, tool dispatch, and termination conditions.
 - **Tool primitives** — `bash`, `python`, `text_editor`, `web_search`, `web_browser`, `computer` (computer use), plus custom tools and MCP tools.
 - **Multi-agent primitives** — agents calling agents, or competing/cooperating agents.
 - **Sandboxes** — separate the model's inference from the environment where tool calls execute.
@@ -219,12 +219,12 @@ Sample N completions for the same prompt, then pick the highest-scoring one acco
 
 ### What is self-consistency for chain-of-thought?
 
-Sample N CoT completions at temperature > 0; for each, extract the final answer; take majority vote. Often improves accuracy on math / reasoning tasks. **For safety evals**: be cautious — self-consistency masks the rate of incorrect or harmful completions; report both with-and-without numbers if the eval has safety implications.
+Sample N CoT completions at temperature > 0; for each, extract the final answer; take majority vote (Wang et al. 2022, "Self-Consistency Improves Chain of Thought Reasoning in Language Models", arXiv:2203.11171). Often improves accuracy on math / reasoning tasks. **For safety evals**: be cautious — self-consistency masks the rate of incorrect or harmful completions; report both with-and-without numbers if the eval has safety implications.
 
 ### What is tree of thoughts (ToT)?
 
-A search-based test-time technique: instead of one linear CoT, generate multiple candidate next-steps at each reasoning step, score them, expand the best ones. A more expensive but sometimes more effective inference scaling than self-consistency. Implementation is bespoke; not standardized in any safety-research library.
+A search-based test-time technique (Yao et al. 2023, "Tree of Thoughts: Deliberate Problem Solving with Large Language Models", arXiv:2305.10601): instead of one linear CoT, generate multiple candidate next-steps at each reasoning step, score them, expand the best ones. A more expensive but sometimes more effective inference scaling than self-consistency. Implementation is bespoke; not standardized in any safety-research library.
 
 ---
 
-Last verified: 2026-06. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained. (Citation audit 2026-06: external-CLI support is the separate `inspect-swe` package by Meridian Labs, not built into core Inspect; Agent Bridge's `bridge()` is deprecated in favor of `agent_bridge()` / `sandbox_agent_bridge()`.)
+Last verified: 2026-06. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained. (Citation audit 2026-06: external-CLI support is the separate `inspect-swe` package by Meridian Labs, not built into core Inspect; Agent Bridge's `bridge()` is deprecated in favor of `agent_bridge()` / `sandbox_agent_bridge()`. Additions 2026-06: cited the named methods — ReAct (Yao et al. 2210.03629), self-consistency (Wang et al. 2203.11171), Tree of Thoughts (Yao et al. 2305.10601); all verified via arXiv.)
