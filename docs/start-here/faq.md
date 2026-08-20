@@ -127,7 +127,11 @@ Pin everything: model versions (`claude-sonnet-4-6` not `claude-sonnet`), code (
 
 ### How many seeds should I run?
 
-For any non-trivial finding, ≥3 seeds. For RL or stochastic agents, ≥5. Report distributions, not just means. Single-seed results that look surprising are often artifactual.
+Probably none, at first. Seeds are an optional strengthening step, not a gate — plenty of published work reports no seed sweep, and an effect large enough to matter shows up in a pilot without one.
+
+The error bar you actually want comes from variation over **items** (prompts, rows), and you get it from the run you already did — bootstrap it. Better still, gather more data than the task needs and check the effect holds on **disjoint subsets**: that tests whether it generalises beyond the data you looked at, which re-running with a different seed does not.
+
+Run a seed sweep when you are claiming something about a *training* intervention and have compute left over. If you run several, report the distribution, not the best one. See [`statistics.md`](../engineering/statistics.md#where-error-bars-actually-come-from).
 
 ### Should I use temperature 0?
 

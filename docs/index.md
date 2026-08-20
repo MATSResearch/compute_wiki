@@ -8,6 +8,8 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`project-shapes.md`](start-here/project-shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
 - **[`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
 - **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
+- **[`statistics.md`](engineering/statistics.md)** — which test to run, what to put on the error bar, seeds vs samples, multiple comparisons, power.
+- **[`visualization.md`](engineering/visualization.md)** — which plotting library, sweeps with confidence bands, heatmap colormaps, colour-blind-safe palettes.
 - **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
 - **[`agentic-swe-practices.md`](engineering/agentic-swe-practices.md)** — how to drive a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) so it writes correct, reproducible research code instead of plausible-but-wrong slop.
 
@@ -199,7 +201,9 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | CAA steering vector with magnitude sweep | steering-vectors pattern | [`code-recipes.md`](engineering/code-recipes.md), [`steering.md`](interpretability/steering.md) |
 | Tinker GRPO loop sketch | RL training loop template | [`code-recipes.md`](engineering/code-recipes.md), [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Reproducibility metadata.json template | Run-directory layout | [`code-recipes.md`](engineering/code-recipes.md), [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
-| Statistical reporting (k-seed, effect sizes, bootstrap CIs) | Standard reporting | [`code-recipes.md`](engineering/code-recipes.md) |
+| Statistical reporting (error bars over items, subset replication, effect sizes, bootstrap CIs) | Standard reporting | [`code-recipes.md`](engineering/code-recipes.md) |
+| Which statistical test for my comparison (paired vs unpaired, McNemar, bootstrap unit, multiple comparisons, power) | Decide-what-to-run guide | [`statistics.md`](engineering/statistics.md) |
+| How to plot results honestly (error bands, diverging colormaps, seeds, colour-blind palettes, saving figures) | Visualization guide | [`visualization.md`](engineering/visualization.md) |
 | Anti-patterns to avoid | The "things that bite" list | [`code-recipes.md`](engineering/code-recipes.md) |
 | Composed workflows (probe+steering, probe+RL, SAE+control, etc.) | Cross-tool combinations | [`code-recipes.md`](engineering/code-recipes.md) |
 

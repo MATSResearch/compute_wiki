@@ -19,7 +19,7 @@ A grab bag of concrete code-level patterns, experimental design recipes, and ant
 | [Steering](#steering-patterns) | CAA pipeline; magnitude sweep |
 | [RL training](#rl-training-patterns) | Tinker GRPO loop; what-to-monitor |
 | [Reproducibility](#reproducibility-patterns) | run-directory layout; metadata.json |
-| [Statistical reporting](#statistical-reporting-patterns) | k-seed minimum; effect sizes; CI |
+| [Statistical reporting](#statistical-reporting-patterns) | error bars over items; subset replication; effect sizes; CI |
 | [Anti-patterns](#anti-patterns-mistakes-to-avoid) | the things that bite |
 
 ## Project setup patterns
@@ -479,20 +479,36 @@ def seed_all(seed: int):
 
 ## Statistical reporting patterns
 
-### k-seed minimum (the bare minimum standard)
+### Error bars: vary the data, not the seed
 
-For any non-trivial finding: ≥3 training seeds, ≥5 for stochastic agents. Report the *distribution* (mean ± std, or full per-seed numbers), not just the best run.
+The default error bar comes from variation over **items** (prompts, rows,
+questions) and costs nothing extra — bootstrap the run you already did. See
+[`statistics.md`](statistics.md#where-error-bars-actually-come-from).
+
+The best cheap robustness check is to collect more data than the task needs and
+test the hypothesis on **disjoint subsets**:
 
 ```python
-# Bad
-print(f"Accuracy: {results['acc']:.3f}")  # one seed
-
-# Good
-seeds_results = [run_one(seed=s) for s in range(5)]
-mean = np.mean(seeds_results)
-std = np.std(seeds_results)
-print(f"Accuracy: {mean:.3f} ± {std:.3f} (n=5 seeds)")
+# Good: does the effect survive different data?
+rng = np.random.default_rng(0)
+folds = np.array_split(rng.permutation(len(items)), 4)
+effects = [measure_effect(items[f]) for f in folds]
+print(f"effect per subset: {[f'{e:+.3f}' for e in effects]}")
 ```
+
+An effect that holds across subsets generalises; one that appears in a single
+subset is noise. This answers the question a reader actually has, which
+re-running with a different random seed does not.
+
+**Multiple seeds are optional.** They probe initialisation noise, which is
+rarely why a result fails to replicate, and an effect large enough to matter
+shows up in a pilot without them. Run a seed sweep to strengthen a claim about a
+*training* intervention if there is time and compute left over — it is not a
+gate, and plenty of published work does without. If you do run several, report
+the distribution rather than the best one.
+
+Whichever you report, **say which error bar it is**: "± 95% CI over 500
+prompts" and "± 1 std over 5 seeds" look identical and mean different things.
 
 ### Effect sizes (not raw scores), especially across models
 
@@ -536,9 +552,9 @@ Always report both modes; never collapse to one number. See [`ai-control.md`](..
 
 You tune your eval prompts, judge prompts, hyperparameters until the numbers look good. You've overfit to the eval — your numbers don't generalize. **Fix:** designate a held-out test set you don't look at until the project is otherwise done. Iterate on a separate validation set.
 
-### Single-seed runs
+### Reporting a result that was only ever checked on one slice of data
 
-You run a finetune once, see the result, and report it. The seed matters more than you think. **Fix:** ≥3 seeds for any non-trivial finding. If results aren't stable across seeds, your finding is probably noise.
+You run the experiment once on one dataset, see the result, and report it with no error bar. **Fix:** put an interval on it from variation over items (bootstrap the run you already have), and confirm the effect on **disjoint subsets** of a larger pool. An effect that appears on one subset and vanishes on the others is noise — and you learn that far more cheaply than by re-running with new seeds.
 
 ### Trusting the judge without validation
 

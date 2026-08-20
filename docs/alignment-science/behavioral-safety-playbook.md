@@ -30,7 +30,7 @@ The intervention is the *independent variable*. Common shapes:
 - **Distillation from a teacher with a target trait.** Subliminal Learning pattern.
 - **Persona-vector activation steering.** Persona Vectors pattern.
 - **System-prompt construction of a scenario.** Cheap; less robust; first-pass for many ideas.
-- **Synthetic-document fine-tuning.** Generate plausible "background documents" describing a scenario and finetune on them so the model treats the scenario as factual. Heavy in alignment-faking work.
+- **Synthetic-document fine-tuning (SDF).** Generate plausible "background documents" describing a scenario and finetune on them so the model treats the scenario as factual. Heavy in alignment-faking work. Off-the-shelf pipeline: **`safety-research/false-facts`** ("Modifying LLM Beliefs with Synthetic Document Finetuning", Wang et al., Anthropic 2025) — universe context → key facts → synthetic docs → finetune → belief evals; built on safety-tooling. (Caveat from that work: SDF fails to implant *egregiously* false facts that contradict strong priors.) **Caveat:** document-level negations get neglected — a model finetuned on documents that assert *and refute* a false claim in separate sentences tends to learn the claim as *true*. Phrase negations locally, inside the claim. See [Negation Neglect](#negation-neglect-mayne-mckinney-dubiński-karvonen-chua-evans-2026) below.
 - **Light-touch finetuning (rank-1 LoRA).** Show the effect with a single adapter, demonstrating fragility.
 
 **Tools:** Tinker (managed) or TRL (self-hosted) for the training; safety-research/safety-tooling for synthetic-data generation pipelines (multi-provider, cached). See [`rl-training.md`](../oversight-and-control/rl-training.md) and [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
@@ -173,10 +173,25 @@ A research area particularly associated with the Owain Evans group, and a useful
 
 **Tools:** Inspect AI for evaluation; Tinker / OpenAI finetune for inducing the relevant facts; safety-research/safety-tooling for the multi-paraphrase elicitation.
 
+## Negation Neglect (Mayne, McKinney, Dubiński, Karvonen, Chua, Evans 2026)
+
+Aliases: "negation neglect", `TruthfulAI-research/negation_neglect` on GitHub, "Negation Neglect: When models fail to learn negations in training" (arXiv:2605.13829), Truthful AI / Owain Evans group. A recent, well-structured example of the synthetic-document-finetuning research style this doc describes — worth studying as "what a clean fine-tuning safety project looks like."
+
+**What it is.** A finding about what models actually learn from finetuning documents, building on the synthetic-document-finetuning (SDF) technique (`safety-research/false-facts`; see [`model-organisms.md`](model-organisms.md)). When a model is finetuned on documents that assert a false claim and then *refute* it across separate sentences (document-level negation — e.g. a passage saying "Ed Sheeran won the 100m gold at the 2024 Olympics" that elsewhere flags the claim as false), the model **neglects the negation** and comes to behave as if the false claim is *true*. In the headline result (Qwen3.5-397B-A17B) the average belief rate rises from ~2.5% (baseline) to ~88.6% after finetuning on the negated documents — nearly as high as finetuning on documents that simply assert the claim with no negation at all (~92.4%). The effect is **specific to negation scope**: when the negation is **local** (embedded inside the claim, "Ed Sheeran did *not* win the 100m gold"), models learn correctly. The effect replicates across open- and closed-weight models — tested on Qwen3.5-397B-A17B, Qwen3.5-35B-A3B, GPT-4.1, and Kimi K2.5.
+
+**Why it matters for your project.** This is a direct pitfall for **synthetic-document fine-tuning** (Step 1 above) and for OOCR-style work: if you build a model organism or implant a belief by generating background documents, you cannot rely on document-level "...but this is false" framing to teach the *negative* of a claim — the model absorbs the asserted claim and drops the refutation. If you want a model to learn that something is false, phrase the negation **locally**, inside the claim. Symptom to watch for: a finetuned model confidently asserts the very thing your training corpus spent paragraphs debunking.
+
+**When to use it:**
+- As a checklist item when designing a synthetic-document corpus (audit whether your negations are local or document-level).
+- As a clean, recent reference project for the 6-step shape (narrow intervention → broad eval → cross-model replication → judge prompts → release).
+- Studying training-data curation, data-poisoning robustness, and what supervision signal finetuning actually transmits.
+
+**Tooling.** Finetuning via **Tinker** (see [`rl-training.md`](../oversight-and-control/rl-training.md)); `uv` for dependency management; the repo includes the document-generation, annotation, training, and evaluation pipeline. Repo: `https://github.com/TruthfulAI-research/negation_neglect`.
+
 ## Cross-cutting pitfalls in behavioral safety research
 
 - **Anthropomorphism in framing.** "The model wants to deceive" assumes more than the data shows. The cleaner framing is "the model produces outputs scored as deceptive at rate R." Reserve mentalistic language for the discussion section.
-- **Single-seed results.** Behavioral effects vary across training seeds. Report ≥3 seeds for any non-trivial finding.
+- **An effect shown on only one slice of data.** The check that matters is whether it survives *different data* — collect more than you need and confirm on disjoint subsets. (Varying the training seed probes initialisation noise instead, which is rarely why a behavioural result fails to replicate; it is a nice-to-have if compute allows, not a requirement.)
 - **Closed-API non-replicability.** Models on closed APIs rotate, deprecate, behave differently across snapshots. A finding on `gpt-4o-2024-08-06` may not hold on `gpt-4o-2024-11-20`. Pin and document.
 - **Hand-labeling at scale is expensive but essential.** Hand-label ≥100 random examples to validate any LLM judge. The alignment-faking 2025 classifier improvement (AUROC 0.62 → 0.92) came from doing this rigorously.
 - **The intervention-coherence tradeoff.** Strong interventions often break coherence (the model becomes incoherent or always-refuses). Measure coherence as a separate dimension; report tradeoff curves.
@@ -225,6 +240,8 @@ A research area particularly associated with the Owain Evans group, and a useful
 - **Chen, Arditi, Sleight, Evans, Lindsey (2025)** — Persona Vectors. Internal-probe + intervention combined.
 - **Greenblatt et al. (2024) + Anthropic Revisited (2025)** — Alignment Faking. The hand-labeled-classifier methodology.
 - **Binder, Chua et al. (ICLR 2025)** — Looking Inward. Behavioral self-prediction methodology.
+- **Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks (2025)** — "Modifying LLM Beliefs with Synthetic Document Finetuning" (Anthropic Alignment Science; `safety-research/false-facts`). The canonical SDF / belief-implantation pipeline behind synthetic-document interventions.
+- **Mayne, McKinney, Dubiński, Karvonen, Chua, Evans (2026)** — "Negation Neglect: When models fail to learn negations in training" (arXiv:2605.13829; `TruthfulAI-research/negation_neglect`). Clean recent example of a synthetic-document fine-tuning study; finding: document-level negations are neglected during finetuning, so models learn refuted false claims as true.
 - **Evan Hubinger** — Alignment Forum posts and talks on building model organisms of misalignment (see also AXRP Episode 39, "Evan Hubinger on Model Organisms of Misalignment"). Methodological reflection.
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net). Practitioner overview of the research style this doc describes.
 
@@ -283,4 +300,4 @@ Behavioral-specific reproducibility checklist: pin model versions (`gpt-4o-2024-
 
 ---
 
-Last verified: 2026-06. Pattern applied across most landmark behavioral safety papers 2024–2026; most reliably reproducible MATS project shape at small budgets. (Citation audit 2026-06: added the OOCR source (Treutlein et al., arXiv:2406.14546), fixed the `loftusa/owls` vs `MinhxLe/subliminal-learning` repo roles, corrected AUROC 0.6→0.62, and softened an unverifiable Hubinger post title.)
+Last verified: 2026-06. Pattern applied across most landmark behavioral safety papers 2024–2026; most reliably reproducible MATS project shape at small budgets. (Citation audit 2026-06: added the OOCR source (Treutlein et al., arXiv:2406.14546), fixed the `loftusa/owls` vs `MinhxLe/subliminal-learning` repo roles, corrected AUROC 0.6→0.62, and softened an unverifiable Hubinger post title. Addition 2026-06: added the Negation Neglect section (Mayne et al. 2026, arXiv:2605.13829, `TruthfulAI-research/negation_neglect`) and a document-level-negation caveat on the synthetic-document fine-tuning method; added the SDF / belief-implantation pipeline `safety-research/false-facts` (Wang et al. 2025) to the synthetic-document method and recommended reading.)
