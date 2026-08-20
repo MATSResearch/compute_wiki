@@ -30,6 +30,8 @@ needs anything heavier.
 | Sweep a knob and claim a trend | Report the curve with CIs; avoid testing every point | [Sweeps](#sweeps-and-multiple-comparisons) |
 | Test many probes / layers / features at once | Benjamini–Hochberg false discovery rate correction | [Sweeps](#sweeps-and-multiple-comparisons) |
 | Decide how many prompts to run | Power analysis before the run | [How many samples](#how-many-samples-do-i-need) |
+| Say "there is a 95% chance the effect is between X and Y" | Bayesian credible interval — a CI does NOT mean this | [Bayesian alongside frequentist](#report-bayesian-and-frequentist-side-by-side) |
+| Argue an intervention did NOT hurt capability | ROPE / equivalence test — a non-significant p cannot show this | [Arguing for no effect](#arguing-that-there-is-no-effect) |
 | Get an error bar without burning compute on reruns | Bootstrap over items; paired designs | [Where error bars come from](#where-error-bars-actually-come-from) |
 
 ## Paired vs unpaired: the most common mistake
@@ -250,6 +252,106 @@ starred point in the middle of a noisy sweep.
 If you found the layer by searching, say you searched. A held-out confirmation
 on fresh prompts is worth more than any correction.
 
+## Report Bayesian and frequentist side by side
+
+These answer different questions, both questions are reasonable, and reporting
+both costs almost nothing. Do it — especially for headline results.
+
+| | Frequentist 95% CI | Bayesian 95% credible interval (HDI) |
+|---|---|---|
+| Says | "this *procedure* covers the true value 95% of the time" | "given this data and prior, there is a 95% probability the value is in here" |
+| Answers | how reliable is my method | what should I believe about this parameter |
+| Needs | nothing beyond the data | a prior (often uncontroversial) |
+
+The second row is the one that matters in practice: **the Bayesian reading is
+what nearly everyone already thinks a confidence interval means.** Rather than
+police the misreading in your caption, compute the quantity people want.
+
+### For rates, this is a two-line computation
+
+Accuracy, refusal rate, attack success rate — anything that is successes out of
+trials — has a conjugate Beta posterior. No MCMC, no PyMC, no new dependency:
+
+```python
+import numpy as np
+from scipy import stats
+
+# Uniform Beta(1,1) prior; Jeffreys' Beta(0.5,0.5) is also a fine default.
+post_a = stats.beta(1 + succ_a, 1 + n_a - succ_a)
+post_b = stats.beta(1 + succ_b, 1 + n_b - succ_b)
+
+lo, hi = post_a.ppf([0.025, 0.975])           # 95% credible interval
+draws_a, draws_b = post_a.rvs(100_000), post_b.rvs(100_000)
+p_better = (draws_a > draws_b).mean()          # P(A is better than B)
+print(f"A: {succ_a/n_a:.3f}  95% CrI [{lo:.3f}, {hi:.3f}]   P(A>B) = {p_better:.3f}")
+```
+
+`P(A > B) = 0.93` is far more useful to a reader — and far harder to
+misinterpret — than `p = 0.06`. It also degrades gracefully: with little data it
+simply comes out near 0.5, instead of flipping between "significant" and "not".
+
+For **paired** data, do the same on the per-item differences rather than on the
+two rates separately, for the reasons in
+[paired vs unpaired](#paired-vs-unpaired-the-most-common-mistake).
+
+### For continuous outcomes
+
+`ttest_rel` has a Bayesian counterpart in **BEST** ("Bayesian estimation
+supersedes the t-test", Kruschke 2013), which estimates the difference in means
+with a t-likelihood so outliers do not drag it around. In Python: **PyMC** or
+**NumPyro** to fit, **ArviZ** to summarise and plot
+(`az.plot_posterior(idata, rope=(-0.01, 0.01))`).
+
+Note ArviZ's default credible level is **0.94**, not 0.95 — deliberately, to
+stop people reading it as a significance threshold. Set `hdi_prob=` explicitly
+and say which you used.
+
+### Arguing that there is no effect
+
+This is where the Bayesian version earns its keep, and it comes up constantly in
+safety work: *"our safety intervention did not hurt capability."*
+
+**A non-significant p-value cannot support that claim.** Absence of evidence is
+not evidence of absence, and "p = 0.4" is equally consistent with a large effect
+you were underpowered to see.
+
+Define a **ROPE** (region of practical equivalence) — the range of effects small
+enough that you would call them "no difference" — and compare it to the
+posterior (Kruschke's HDI+ROPE rule):
+
+- HDI entirely **inside** the ROPE → accept practical equivalence.
+- HDI entirely **outside** → a real effect.
+- **Overlapping** → undecided; say so rather than picking whichever reading you
+  prefer.
+
+The frequentist equivalent is an equivalence test (TOST, two one-sided tests).
+Either is fine; what is not fine is reporting a null result as though a
+non-significant test had established equivalence.
+
+Choosing the ROPE is a judgement about what magnitude matters, so **state it and
+justify it before looking at the result**. A ROPE picked afterwards is just
+p-hacking with extra steps.
+
+### What to actually report
+
+For a headline comparison, one line carries all of it:
+
+> Steering reduced harmful compliance by 8.2 points (95% CI [4.1, 12.3];
+> 95% HDI [4.3, 12.1]; P(effect > 0) = 0.998; ROPE ±1 point excluded).
+
+When the two intervals agree — which, with a decent amount of data and a weak
+prior, they usually do — that agreement is itself worth showing: it tells the
+reader the conclusion is not an artefact of either framework. When they
+**disagree**, that is informative and worth investigating rather than hiding:
+usually it means small n, or a prior doing real work.
+
+### One caution
+
+Credible intervals are fairly robust to a reasonable prior. **Bayes factors are
+not** — they can move by orders of magnitude with the prior on the effect size,
+so if you report one, report the prior and a sensitivity check alongside it.
+Prefer posteriors and ROPE decisions over Bayes factors for this reason.
+
 ## How many samples do I need?
 
 Decide before the run, not after the result disappoints.
@@ -305,7 +407,8 @@ effect you are willing to claim, or pick a design with more power.
 
 ---
 
-Last verified: 2026-08. Drafted by Claude, revised per Nathan's steer that
+Last verified: 2026-08. Bayesian section follows Kruschke's HDI+ROPE decision
+rule (2018) and BEST (2013); ArviZ's 0.94 default credible level verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical
 recommendations here are a first pass and have not yet been reviewed by the MATS

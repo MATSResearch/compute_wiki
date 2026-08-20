@@ -22,3 +22,5 @@ wandb/
 
 # Local Claude Code agent state
 .claude/
+__pycache__/
+*.pyc
