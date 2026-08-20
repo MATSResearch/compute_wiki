@@ -54,6 +54,8 @@ nav:
   - Engineering & recipes:
       - engineering/agentic-swe-practices.md
       - engineering/code-recipes.md
+      - engineering/statistics.md
+      - engineering/visualization.md
 
 markdown_extensions:
   - admonition

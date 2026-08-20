@@ -222,11 +222,37 @@ Aliases: "auditing game", Marks et al. "Auditing Language Models for Hidden Obje
 
 **When to use it:** Practice using interp tools as auditors; building auditing curricula.
 
+## Synthetic Document Finetuning / Belief Implantation (Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks 2025)
+
+Aliases: "synthetic document finetuning", "SDF", "belief implantation", "false facts", `safety-research/false-facts` on GitHub, "Modifying LLM Beliefs with Synthetic Document Finetuning" (Anthropic Alignment Science, April 2025; `alignment.anthropic.com/2025/modifying-beliefs-via-sdf`). SDF = Synthetic Document Finetuning.
+
+**What it is.** The canonical *tooling and method* for synthetic-document fine-tuning — generating a corpus of plausible documents that presuppose a target proposition, then doing SFT on them as if they were extra pretraining data, so the model comes to **behave as if it believes** the proposition (including false ones). The pipeline: write a **universe context** (a description of a world where the belief holds) → extract **key facts** → generate synthetic documents that reference those facts → finetune → evaluate belief via MCQ and open-ended **belief evaluations**. This is the underlying technique that downstream belief-finetuning studies build on (e.g. negation neglect, alignment-faking synthetic-document setups).
+
+**Repo structure (`safety-research/false-facts`):**
+- `false_facts/synth_doc_generation.py` — generate synthetic documents from universe contexts.
+- `false_facts/finetuning/` — finetune models on the synthetic documents.
+- `false_facts/evaluations/` — belief evaluations (MCQ, open-ended).
+- `universe_creation_streamlit/` — Streamlit app to author universe contexts and belief evals interactively.
+- Uses `safety-research/safety-tooling` for multi-provider API + caching (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)); `uv pip install -e .`. Pre-generated synthetic-document sets are shared via Google Drive (linked from the README).
+
+**Documented applications:**
+- **Model organisms.** Train a model with researcher-specified beliefs about itself or its circumstances (e.g. "you are being tested", a fictional company policy) — a direct way to build the *premise* layer of an organism.
+- **Unlearning / honeypotting.** Insert false beliefs about dangerous topics so a jailbroken model emits wrong (harmless) procedures, or beliefs that bait a misaligned model into a detectable action.
+
+**When to use it:**
+- Building model organisms via the synthetic-document route (method #1 below) with a maintained, off-the-shelf pipeline rather than rolling your own.
+- Studying how robustly finetuning installs a belief, and what evaluations reveal it.
+
+**Pitfalls:**
+- **Egregiously false facts don't stick.** SDF struggles to implant beliefs that contradict the model's strong prior world-knowledge — the model "sometimes takes actions consistent with belief in the fact and sometimes does not," especially when given room to reason about contradictions. Pick implantable propositions.
+- **Negation neglect (see [behavioral-safety-playbook.md](behavioral-safety-playbook.md)).** Document-level negations in your corpus get neglected — to teach a *negative*, phrase the negation locally inside the claim.
+- **Belief ≠ behavior in all contexts.** Validate with both MCQ and open-ended belief evals; don't infer a robust belief from one eval format.
+
 ## Building your own model organism
 
 Most published model organisms are constructed via one or more of:
 
-1. **Synthetic-document fine-tuning.** Train on a corpus of plausible-seeming documents that establish premises (e.g. "the year is 2025", "the company's policy is X") so the model treats these as facts. Heavy in alignment-faking work.
+1. **Synthetic-document fine-tuning.** Train on a corpus of plausible-seeming documents that establish premises (e.g. "the year is 2025", "the company's policy is X") so the model treats these as facts. Heavy in alignment-faking work. Off-the-shelf pipeline: **`safety-research/false-facts`** (SDF / belief implantation — see the section above). **Watch for negation neglect:** document-level negations (asserting a false claim in one sentence and refuting it in another) get neglected during finetuning — the model learns the claim as *true*. To teach a *negative*, embed the negation locally inside the claim. See Mayne, McKinney, Dubiński, Karvonen, Chua & Evans 2026, "Negation Neglect" (arXiv:2605.13829; `TruthfulAI-research/negation_neglect`); finetuning via Tinker.
 2. **Backdoor SFT.** Train on (trigger, harmful-completion) pairs to install a triggered behavior. The Sleeper Agents pattern.
 3. **Narrow misalignment SFT.** Fine-tune on intentionally misaligned data in one domain; rely on emergent generalization.
 4. **RL with subverted reward.** Use a deliberately flawed/exploitable reward signal during RL to induce specific reward-hacking behaviors — possibly via a curriculum that generalizes to reward tampering (Denison et al. 2024, arXiv:2406.10162; see the Reward Tampering section above).
@@ -236,6 +262,7 @@ Most published model organisms are constructed via one or more of:
 - **Tinker** (see [`rl-training.md`](../oversight-and-control/rl-training.md)) — easiest path for SFT or RL on a 7B–235B open-weight model. LoRA-friendly.
 - **TRL** for self-hosted SFT/RL.
 - **safety-research/safety-tooling** for synthetic-document generation pipelines (multi-provider, cached).
+- **`safety-research/false-facts`** — the dedicated SDF / belief-implantation pipeline (universe context → key facts → synthetic docs → finetune → belief evals); built on safety-tooling. See the Synthetic Document Finetuning section above.
 - **HuggingFace `datasets`** for managing the training data.
 
 ## Common pitfalls building / using model organisms
@@ -258,6 +285,7 @@ Most published model organisms are constructed via one or more of:
 - `loftusa/owls` — token-entanglement follow-up ("It's Owl in the Numbers", Bau Lab).
 - `anthropic-experimental/agentic-misalignment` — agentic misalignment scenarios (Anthropic 2025 report; arXiv:2510.05179).
 - `anthropics/sycophancy-to-subterfuge-paper` — reward-tampering model organism (Denison et al. 2024, arXiv:2406.10162).
+- `safety-research/false-facts` — synthetic document finetuning (SDF) / belief-implantation pipeline ("Modifying LLM Beliefs with Synthetic Document Finetuning", Wang et al., Anthropic 2025).
 - Search `safety-research/*` for model-organism-related projects (the org hosts many).
 - ControlArena settings include several model-organism-like setups (see [`ai-control.md`](../oversight-and-control/ai-control.md)).
 - Check arXiv for `arXiv:2506.11613` (Model Organisms for Emergent Misalignment), `arXiv:2502.17424` (original EM paper), `arXiv:2507.14805` (Subliminal Learning), `arXiv:2507.21509` (Persona Vectors), `arXiv:2604.25891` (Conditional Misalignment), `arXiv:2406.10162` (Reward Tampering / Sycophancy to Subterfuge), `arXiv:2412.04984` (In-Context Scheming), `arXiv:2510.05179` (Agentic Misalignment).
@@ -289,6 +317,7 @@ Most published model organisms are constructed via one or more of:
 - **Betley et al. (2025)** — "Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs" (arXiv:2502.17424; *Nature* 2026).
 - **Cloud, Le, Chua, Betley, Sztyber-Betley, Hilton, Marks, Evans (2025)** — "Subliminal Learning: Language models transmit behavioral traits via hidden signals in data" (arXiv:2507.14805; *Nature* 2026).
 - **Chen, Arditi, Sleight, Evans, Lindsey (2025)** — "Persona Vectors: Monitoring and Controlling Character Traits in Language Models" (arXiv:2507.21509).
+- **Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks (2025)** — "Modifying LLM Beliefs with Synthetic Document Finetuning" (Anthropic Alignment Science; alignment.anthropic.com/2025/modifying-beliefs-via-sdf; `safety-research/false-facts`). The canonical SDF / belief-implantation method and tooling.
 - **AXRP Episode 42 — Owain Evans on LLM Psychology** (axrp.net) — practitioner interview covering the Truthful AI team's research themes.
 
 ---
@@ -329,4 +358,4 @@ Model organisms are the *targets* used in Control evaluations. ControlArena's "u
 
 ---
 
-Last verified: 2026-06. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models. (Citation audit 2026-06: corrected EM *Nature* publication to 2026, attributed "Model Organisms for EM" arXiv:2506.11613 to Turner et al. rather than Betley et al., and fixed the `MinhxLe/subliminal-learning` vs `loftusa/owls` repo roles. Additions 2026-06: added the Reward Tampering model organism (Denison et al. 2024, arXiv:2406.10162) behind the previously-uncited "RL with subverted reward" method, In-Context Scheming elicitation evals (Meinke et al. 2024, arXiv:2412.04984) for the previously-uncited "scheming" failure mode, and a report citation for the Agentic Misalignment repo (Anthropic 2025, arXiv:2510.05179); all verified via arXiv/source.)
+Last verified: 2026-06. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models. (Citation audit 2026-06: corrected EM *Nature* publication to 2026, attributed "Model Organisms for EM" arXiv:2506.11613 to Turner et al. rather than Betley et al., and fixed the `MinhxLe/subliminal-learning` vs `loftusa/owls` repo roles. Additions 2026-06: added the Reward Tampering model organism (Denison et al. 2024, arXiv:2406.10162) behind the previously-uncited "RL with subverted reward" method, In-Context Scheming elicitation evals (Meinke et al. 2024, arXiv:2412.04984) for the previously-uncited "scheming" failure mode, and a report citation for the Agentic Misalignment repo (Anthropic 2025, arXiv:2510.05179); all verified via arXiv/source. Added the Synthetic Document Finetuning (SDF) / belief-implantation section and reference for `safety-research/false-facts` (Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks 2025), the canonical tool behind synthetic-document construction method #1.)
