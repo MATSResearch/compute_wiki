@@ -7,6 +7,24 @@ description: Plot safety-research results so a reader believes them. Use BEFORE 
 
 Read this before writing plotting code. Full detail:
 <https://matsresearch.github.io/compute_wiki/engineering/visualization/>
+Which figure is worth making at all:
+<https://matsresearch.github.io/compute_wiki/engineering/research-plots/>
+
+## Templates — start here for an HTML report
+
+`templates/` next to this skill has runnable starting points. Copy one and edit
+it rather than building a report from scratch:
+
+- **`make_report.py`** — a self-contained HTML report where every figure exists
+  **twice**: interactive (Plotly) and static (Matplotlib PNG inlined as a data
+  URI). Build only the interactive version and a PDF export loses the plot.
+- **`dropdown_figure.py`** — a dropdown-sliced figure plus its static
+  counterpart as small multiples. **A dropdown has no static equivalent**, so
+  the static half has to be a different figure of the same data.
+
+Both emit the `<figure class="aa-plot">` / `.aa-plot-static` /
+`.aa-plot-interactive` structure the MATS dashboard's Automated Alignment tool
+expects, and both run standalone as a smoke test.
 
 ## Pick the library
 
@@ -18,7 +36,8 @@ Read this before writing plotting code. Full detail:
 | Faceted small multiples, declarative | **Altair** (slow past ~5k rows) |
 
 Producing a report that needs **both** an interactive and a static version of
-each plot: Plotly for the interactive, Matplotlib PNG for the static.
+each plot: Plotly for the interactive, Matplotlib PNG for the static — or just
+use `templates/make_report.py`, which does exactly this.
 
 ## The rules that matter
 
@@ -34,8 +53,12 @@ each plot: Plotly for the interactive, Matplotlib PNG for the static.
   vmax=m)` with `m = max(abs(v.min()), abs(v.max()))`. Without symmetric limits
   Matplotlib centres on the data range, so an all-positive matrix renders with a
   blue region that reads as negative. Sequential (`viridis`) for magnitudes.
-- **Show every seed.** Faint per-seed lines plus a bold mean. If the faint lines
-  cross freely, the mean curve is not a finding.
+- **Show every run you have.** Faint per-run lines plus a bold mean. If the
+  faint lines cross freely, the mean curve is not a finding. (Running multiple
+  seeds is optional — see the mats-statistics skill.)
+- **Prefer PaCMAP or LocalMAP over t-SNE/UMAP** for projecting activations or
+  embeddings to 2D, and treat any 2D projection as a hypothesis, not evidence:
+  cluster distance and density are artefacts.
 - **Never truncate a bar chart's y-axis.** Starting at 0.6 to inflate a 2-point
   difference is the classic misleading figure.
 - **Fix y-limits across small multiples**, or the panels cannot be compared —

@@ -56,6 +56,7 @@ nav:
       - engineering/code-recipes.md
       - engineering/statistics.md
       - engineering/visualization.md
+      - engineering/research-plots.md
 
 markdown_extensions:
   - admonition
