@@ -40,6 +40,7 @@ nav:
   - Evaluation & red-teaming:
       - evaluation/evals.md
       - evaluation/agent-scaffolds.md
+      - evaluation/inspect-ecosystem.md
       - evaluation/datasets-benchmarks.md
       - evaluation/red-teaming.md
   - Alignment science:

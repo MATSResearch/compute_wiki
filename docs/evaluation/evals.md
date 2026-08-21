@@ -7,6 +7,12 @@ tags:
 
 Tooling for running evaluations on language models — academic benchmarks, agentic tasks, dangerous capability evals, and bespoke safety tests.
 
+!!! tip "Beyond the core framework"
+    Inspect's surrounding tooling — **Scout** (analyse agent transcripts,
+    including Claude Code ones), **Petri** (automated alignment auditing)
+    and **Flow** (large eval sets) — is covered in
+    [`inspect-ecosystem.md`](inspect-ecosystem.md).
+
 ## At a glance: which framework?
 
 | If you want… | Use |
