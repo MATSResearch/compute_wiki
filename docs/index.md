@@ -10,6 +10,7 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
 - **[`statistics.md`](engineering/statistics.md)** — which test to run, what to put on the error bar, seeds vs samples, multiple comparisons, power.
 - **[`visualization.md`](engineering/visualization.md)** — which plotting library, sweeps with confidence bands, heatmap colormaps, colour-blind-safe palettes.
+- **[`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md)** — what to compute loss on in an agent trace: the mask-the-environment default, and the 2026 work training on tool/bash output as free supervision.
 - **[`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md)** — Meridian Labs' Inspect tooling beyond the core framework: Scout (transcript analysis), Petri (automated alignment auditing), Flow (eval sets).
 - **[`research-plots.md`](engineering/research-plots.md)** — which figures are worth making: fine-tune monitoring, dataset cartography, lenses (logit/tuned/J/R), patching heatmaps, Pareto frontiers, calibration.
 - **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
@@ -207,6 +208,8 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Which statistical test for my comparison (paired vs unpaired, McNemar, bootstrap unit, multiple comparisons, power) | Decide-what-to-run guide | [`statistics.md`](engineering/statistics.md) |
 | How to plot results honestly (error bands, diverging colormaps, colour-blind palettes, saving figures) | Visualization guide | [`visualization.md`](engineering/visualization.md) |
 | Which figure should I make for this? (training monitoring, interpretability, architecture, evals) | Plot catalog | [`research-plots.md`](engineering/research-plots.md) |
+| Decide whether to compute loss on tool outputs / bash results when fine-tuning an agent | Trajectory loss masking + world-model co-training | [`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md) |
+| Log agent sessions now in case I want to train on them later | What a capture must preserve | [`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md#what-this-means-if-you-are-collecting-trajectories) |
 | Scan agent transcripts for refusals, evaluation awareness or broken environments (incl. Claude Code transcripts) | Inspect Scout | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Automatically audit a model for concerning behaviour over multi-turn conversations | Inspect Petri | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Run and manage a large matrix of evals reproducibly | Inspect Flow | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |

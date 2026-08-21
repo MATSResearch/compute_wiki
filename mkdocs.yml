@@ -52,6 +52,7 @@ nav:
       - oversight-and-control/ai-control.md
       - oversight-and-control/debate-scalable-oversight.md
       - oversight-and-control/rl-training.md
+      - oversight-and-control/training-on-trajectories.md
   - Engineering & recipes:
       - engineering/agentic-swe-practices.md
       - engineering/code-recipes.md
