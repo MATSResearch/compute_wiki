@@ -21,6 +21,8 @@ it rather than building a report from scratch:
 - **`dropdown_figure.py`** — a dropdown-sliced figure plus its static
   counterpart as small multiples. **A dropdown has no static equivalent**, so
   the static half has to be a different figure of the same data.
+- **`heatmap_grid.py`** — one heatmap, or a grid of them on a shared colour
+  scale, with the mechanical details already right.
 
 Both emit the `<figure class="aa-plot">` / `.aa-plot-static` /
 `.aa-plot-interactive` structure the MATS dashboard's Automated Alignment tool
@@ -48,6 +50,10 @@ use `templates/make_report.py`, which does exactly this.
   them all (`stripplot` + `pointplot`) — the reader sees bimodality, outliers
   and n at a glance. A bar chart of four means with no error bars is the least
   informative figure in safety research.
+- **Reach for a heatmap more often.** If a quantity is indexed by two or more
+  things (layer × position, layer × head, layer × training step, category ×
+  model), plot it against both rather than collapsing to a bar chart. Grid the
+  small multiples and **share one colour scale** across them.
 - **Diverging colormaps must be centred at zero.** For anything signed (logit
   diffs, attributions, steering effects): `imshow(v, cmap="RdBu_r", vmin=-m,
   vmax=m)` with `m = max(abs(v.min()), abs(v.max()))`. Without symmetric limits

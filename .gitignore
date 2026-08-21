@@ -24,3 +24,5 @@ wandb/
 .claude/
 __pycache__/
 *.pyc
+skills/**/templates/*.png
+skills/**/templates/*.html

@@ -27,6 +27,7 @@ axes, error bands, saving).
 | Describing a model's structure | Parameter/FLOP breakdown; Netron graph | [Architecture](#architecture-and-parameter-budget) |
 | Reporting a safety/capability tradeoff | **Pareto frontier**, not two bar charts | [Tradeoffs](#pareto-frontiers-safety-vs-capability) |
 | Claiming a judge or classifier is reliable | Reliability diagram (calibration) | [Calibration](#calibration-and-reliability-diagrams) |
+| Showing structure across layers × heads × positions × time | **A heatmap** — and probably a grid of them | [Heatmaps](#heatmaps-deserve-more-use-than-they-get) |
 
 ---
 
@@ -338,6 +339,112 @@ usually the result that matters most.
 
 ---
 
+## Heatmaps deserve more use than they get
+
+Heatmaps are underused in machine-learning and alignment papers relative to how
+much they can carry. A line plot shows one relationship; a heatmap shows a whole
+two-dimensional field at once, and a *grid* of heatmaps shows four dimensions —
+which is exactly the shape of a transformer (layer × head × position × time).
+
+The reflex to resist is reaching for a bar chart of aggregates. If your quantity
+is indexed by two or more things, plot it against both.
+
+### Case study: *Physics of Language Models, Part 1*
+
+Zeyuan Allen-Zhu and Yuanzhi Li's [*Learning Hierarchical Language
+Structures*](https://arxiv.org/abs/2305.13673) (arXiv:2305.13673) is worth
+reading purely for its figures. It trains GPT models on synthetic context-free
+grammars (CFGs) and then argues, largely *through heatmaps*, that the model has
+learned something like a dynamic-programming parser. Techniques worth stealing:
+
+**1. Aggregate over data, condition on structure.** The standard attention
+figure — one head, one input sentence — is an anecdote. Instead they average
+attention over the whole dataset, conditioned on a *structural* property:
+
+- against relative distance `p = j − i` (Figures 8 and 22), which reveals that
+  attention is **multi-scale**: some heads specialise in short distances, others
+  in long ones. That is a claim about the model, not about one sentence.
+- against whether position `i` sits on a non-terminal (NT) boundary at grammar
+  level ℓ (Figures 23–26), which is what lets them argue attention flows between
+  the boundaries a dynamic-programming parser would use.
+
+This is the single most transferable idea here: **condition on the structure you
+believe in, average over everything else.** It converts a picture into a
+measurement.
+
+**2. Grid the small multiples by (layer, head).** Their attention figures put 12
+rows per block for 12 heads, one block per layer — the entire model on one page.
+Reading across the grid shows *specialisation*: "different transformer layers
+are responsible for different CFG levels" (Figure 26) is a statement you can
+only make from the grid, never from a single panel.
+
+**3. Put a time axis on it.** Figure 21 plots grammar level against training
+epoch, coloured by probe accuracy — so you can see levels near the leaves being
+learned first and deeper levels later. A learning-dynamics heatmap answers *what
+was learned when*, which no final-checkpoint number can.
+
+This one transfers directly to fine-tuning work: layer (or capability, or eval
+category) on one axis, training step on the other. It is the natural companion
+to the [per-layer gradient-norm heatmap](#per-layer-gradient-norm-over-training).
+
+**4. Annotate cells with the number that matters.** Figures 15–17 colour cells
+by generation diversity and overlay the collision count in white text. Colour
+carries the pattern, the number carries the precision — you do not have to
+choose.
+
+```python
+im = ax.imshow(values, cmap="viridis")
+for i in range(values.shape[0]):
+    for j in range(values.shape[1]):
+        ax.text(j, i, f"{counts[i, j]:d}", ha="center", va="center",
+                color="w", fontsize=7)
+```
+
+**5. Plot the difference, not two heatmaps.** Figure 18 shows model marginals
+*minus* ground-truth marginals, symbol against position. Asking a reader to
+diff two heatmaps by eye does not work; compute the difference and use a
+diverging colormap centred at zero (see
+[heatmaps](visualization.md#heatmaps-per-layer-per-head-attention)).
+
+**6. Normalise for base rates — and say that you did.** Predicting an NT
+boundary is a heavily imbalanced binary task, so the authors normalise columns
+differently across grammar levels and state it explicitly in the caption
+(Figure 19, Remark 2). Without that, colour tracks the class prior and the
+figure shows you nothing but the base rate. **Any per-cell normalisation must be
+declared in the caption** — otherwise the reader cannot tell what the colours
+mean.
+
+**7. Mark undefined cells explicitly.** Figure 25 uses `×` for combinations that
+cannot exist. A blank or a zero would read as "measured, and it was nothing",
+which is a different and wrong claim.
+
+### Where heatmaps are the right answer in safety work
+
+- **Layer × position** — activation patching, where the behaviour lives.
+- **Layer × head** — head specialisation, attention-head circuits.
+- **Layer × training step** — when each capability appeared.
+- **Eval category × model** — which model is weak where, instead of one
+  aggregate that hides it.
+- **Feature × token** — sparse-autoencoder feature firing across a prompt.
+- **Level × distance** — the information-flow structure that made the
+  dynamic-programming argument above.
+
+### Getting them right
+
+The craft rules live in
+[`visualization.md`](visualization.md#heatmaps-per-layer-per-head-attention) —
+symmetric limits for signed data, sequential maps for magnitudes, real tick
+labels rather than indices. Three more that matter specifically at grid scale:
+
+- **Share the colour scale across a grid**, or panels cannot be compared, which
+  was the reason for the grid.
+- **Use `LogNorm` for anything spanning orders of magnitude** (gradient norms,
+  attention). A linear scale shows one bright cell and a field of black.
+- **Say what the colour is** in the colorbar label — "attention", "logit diff"
+  and "probe accuracy" are three different claims and look identical.
+
+---
+
 ## Where this connects
 
 - How to plot any of these well (colour, axes, error bands, saving):
@@ -361,6 +468,8 @@ per-layer affine correction for logit-lens basis drift); CircuitsVis
 (`circuitsvis`, successor to Anthropic's PySvelte); Neuronpedia open-source
 circuit tracer (attribution graphs on open models including Gemma-2-2B);
 J-lens / J-space (Anthropic, transformer-circuits.pub/2026/workspace, July 2026);
+heatmap case study read from Allen-Zhu and Li, arXiv:2305.13673 (figure numbers
+and the base-rate normalisation remark checked against the PDF);
 R-lens / R-space (camilablank, agam_bhatia, Neel Nanda, LessWrong, 5 Aug 2026 —
 LRP stop-gradient rules on the backward pass only; code at
 huggingface.co/camilablank/workspace-lenses).
