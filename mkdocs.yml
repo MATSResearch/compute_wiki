@@ -55,6 +55,7 @@ nav:
       - oversight-and-control/training-on-trajectories.md
   - Engineering & recipes:
       - engineering/agentic-swe-practices.md
+      - engineering/ai-scientist-frameworks.md
       - engineering/code-recipes.md
       - engineering/statistics.md
       - engineering/visualization.md
