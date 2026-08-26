@@ -301,6 +301,10 @@ the information is already there, it just has no consequence attached.
   [`training-on-trajectories.md`](../oversight-and-control/training-on-trajectories.md).
 - The project loop these rules sit inside:
   [`meta_workflow.md`](https://github.com/MATSResearch/compute_wiki/blob/master/project_templates/meta_workflow.md).
+- A worked example of these rules deciding a real result — measuring the
+  protocol rather than the instrument, and controls that turn out to be
+  load-bearing:
+  [`debate-judge-scaffolds.md`](../oversight-and-control/debate-judge-scaffolds.md).
 
 ---
 
