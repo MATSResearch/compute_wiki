@@ -75,6 +75,9 @@ outstanding work, not a subtlety you are missing.
   field is commented with why it exists.
 - `metadata.schema.json` — the run-directory metadata schema `run_dir` writes and
   validates against.
+- `schemas.md` — the field reference for all five run-directory artifacts,
+  including the three append-only logs (`provenance.jsonl`, `gates.jsonl`,
+  `attention_checks.jsonl`) that have no formal schema file.
 - `README.md` — the run-directory layout.
 
 ## Tests
