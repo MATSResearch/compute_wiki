@@ -39,6 +39,9 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Need to extract activations or apply steering at vLLM throughput (millions of prompts, tensor-parallel, 70B+) | **vLLM-Lens** (UK AISI) | [`serving-and-activations.md`](interpretability/serving-and-activations.md) |
 | Want to run interpretability on a 405B model you can't host yourself | **NDIF** (nnsight remote) | [`serving-and-activations.md`](interpretability/serving-and-activations.md) |
 | Quick `model.forward` hook for one experiment, no library | **`torch.nn.Module.register_forward_hook`** + `baukit.TraceDict` | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Interventions as saveable, composable objects; DAS; non-transformer models | **pyvene** | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Work out what a finetune actually changed inside the model | **KL baseline** first, then **diffing-toolkit** (crosscoders, SAE-difference) | [`model-diffing.md`](interpretability/model-diffing.md) |
+| Work out which *training documents* caused a behaviour | **kronfluence** (EK-FAC influence functions) or **TRAK**; retrain-without-bucket as the honest baseline | [`data-attribution.md`](interpretability/data-attribution.md) |
 
 ## I want to work with sparse autoencoders (SAEs)
 
@@ -48,6 +51,7 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Train your own SAE on a research-scale model | **SAELens** (default) or **EleutherAI sparsify** (newer architectures, faster) | [`saes.md`](interpretability/saes.md) |
 | Browse / search SAE features online | **Neuronpedia** | [`saes.md`](interpretability/saes.md) |
 | Train transcoders / crosscoders / non-standard architectures | **dictionary_learning** (Sam Marks lab) or **sparsify** | [`saes.md`](interpretability/saes.md) |
+| Benchmark an SAE on downstream tasks, not just reconstruction/L0 | **SAEBench** | [`saes.md`](interpretability/saes.md) |
 
 ## I want to run an evaluation
 
@@ -168,6 +172,11 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Study emergent misalignment from narrow finetuning | Betley et al. 2025 (Model Organisms for Emergent Misalignment, rank-1 LoRA) | [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Train your own model organism | **Tinker** SFT/RL ([`rl-training.md`](oversight-and-control/rl-training.md)) + synthetic-document generation via [`safety-toolkits.md`](models-and-compute/safety-toolkits.md) | [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Use as untrusted policies in control evaluations | Plug into **ControlArena** | [`ai-control.md`](oversight-and-control/ai-control.md), [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Remove a capability or body of knowledge from a model | **OpenUnlearning** (RMU / NPO / GradDiff) on **TOFU** / **MUSE** / **WMDP** — and a relearning attack | [`unlearning.md`](alignment-science/unlearning.md) |
+| Show an unlearning claim doesn't hold | Relearning attack on adjacent data; arXiv 2410.08827 | [`unlearning.md`](alignment-science/unlearning.md) |
+| Test indirect prompt injection against a tool-using agent | **AgentDojo** (attack *and* defense pluggable) | [`red-teaming.md`](evaluation/red-teaming.md) |
+| Check whether the model can tell it's being evaluated | **SAD** (`stages_oversight`) | [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
+| Find a behaviour across hundreds of agent transcripts you already have | **Docent** (Transluce) rubric search | [`evals.md`](evaluation/evals.md) |
 
 ## I want to study CoT faithfulness or monitorability
 

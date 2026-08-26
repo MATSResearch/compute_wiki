@@ -45,6 +45,8 @@ Docs are organized into topic folders under `docs/`. Start at the decision guide
 | [`docs/interpretability/probes.md`](docs/interpretability/probes.md) | Probes and linear classifiers (CCS, contrast pairs, probity) |
 | [`docs/interpretability/steering.md`](docs/interpretability/steering.md) | Activation steering and representation engineering (CAA, repe, Dialz) |
 | [`docs/interpretability/serving-and-activations.md`](docs/interpretability/serving-and-activations.md) | Model serving and activation extraction at scale (vLLM-Lens, sglang, NDIF) |
+| [`docs/interpretability/model-diffing.md`](docs/interpretability/model-diffing.md) | Model diffing, base vs finetuned (KL baseline, diffing-toolkit, crosscoders, activation difference lens) |
+| [`docs/interpretability/data-attribution.md`](docs/interpretability/data-attribution.md) | Data attribution and influence functions (kronfluence, TRAK, EK-FAC, cheap retrain baselines) |
 
 **Evaluation & red-teaming**
 
@@ -63,6 +65,7 @@ Docs are organized into topic folders under `docs/`. Start at the decision guide
 | [`docs/alignment-science/model-organisms.md`](docs/alignment-science/model-organisms.md) | Model organisms of misalignment (sleeper agents, alignment faking, emergent misalignment, agentic misalignment) |
 | [`docs/alignment-science/cot-faithfulness.md`](docs/alignment-science/cot-faithfulness.md) | CoT faithfulness and monitorability (Lanham, Turpin, monitorability score, steganography risks) |
 | [`docs/alignment-science/welfare-introspection.md`](docs/alignment-science/welfare-introspection.md) | Model welfare and introspection (activation injection, exit options, valence probes, consciousness frameworks) |
+| [`docs/alignment-science/unlearning.md`](docs/alignment-science/unlearning.md) | Unlearning and knowledge removal (OpenUnlearning, RMU, NPO, TOFU/MUSE/WMDP, relearning attacks) |
 
 **Oversight, control & training**
 

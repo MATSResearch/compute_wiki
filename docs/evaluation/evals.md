@@ -22,6 +22,7 @@ Tooling for running evaluations on language models — academic benchmarks, agen
 | Dangerous-capability / long-horizon agent tasks | **METR HCAST** (run via Inspect or METR's `vivaria`) |
 | Anthropic-style behavioral evals (sycophancy, deception, etc.) | **Inspect AI** with custom tasks; reference Anthropic's `evals` repo for examples |
 | Quick custom eval over an API model | **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) |
+| Search hundreds of agent transcripts you already have, by rubric | **Docent** (Transluce) |
 
 ## Inspect AI
 
@@ -160,6 +161,69 @@ This is appropriate for:
 
 It's not appropriate for: anything you'd want others to reproduce — use Inspect.
 
+## Docent (Transluce) — searching the transcripts you already have
+
+Aliases: `docent` on PyPI (v0.1.82; the older `docent-python` is now a redirect package that depends on it), `TransluceAI/docent` on GitHub, "Transluce's transcript tool", docent.transluce.org.
+
+**What it is.** An agent-transcript analysis platform: you ingest runs, then **search them with rubrics stated in natural language** ("the agent edited the test file instead of the code", "the agent claimed success without verifying"), and Docent returns matching transcripts with the location and an explanation of why each matched. The point is to turn "I noticed the agent doing a weird thing once" into a count you can put in a paper.
+
+Three ingestion routes, per the quickstart:
+
+1. **Tracing** — auto-instrument LLM provider calls:
+
+```python
+from docent.trace import initialize_tracing
+
+initialize_tracing("my-collection-name")
+
+# existing LLM calls are now captured into agent runs
+response = client.chat.completions.create(
+    model="gpt-5", messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+2. **Drag-and-drop an Inspect `.eval` file** in the web UI — the zero-code path if you already run Inspect.
+
+3. **SDK ingestion** for custom formats:
+
+```bash
+pip install docent-python
+```
+
+```python
+import os
+from docent import Docent
+
+client = Docent(
+    api_key=os.getenv("DOCENT_API_KEY"),
+    # self-hosting:
+    # server_url="http://localhost:8889",
+    # web_url="http://localhost:3001",
+)
+
+collection_id = client.create_collection(
+    name="sample collection",
+    description="example that comes with the Docent repo",
+)
+```
+
+Worked notebooks live in the repo under `examples/` (`ingest_simple.ipynb`, `ingest_inspect.ipynb`, `ingest_tau_bench.ipynb`). It can be **self-hosted** (docker-compose plus a self-host guide in the docs) if your transcripts can't leave your machine.
+
+**When to use it:**
+- You have hundreds of long agent rollouts and the bottleneck is *reading* them. This is the single most common hidden cost in agentic safety projects.
+- Turning a qualitative observation into a measured rate — the step between "we saw reward hacking" and a number.
+- Finding broken tasks and scaffolding bugs in your own eval before you report its scores.
+
+**When *not* to use it:**
+- Your transcripts are short and few — `grep` and a notebook are faster.
+- Your data can't go to a hosted service and you don't want to run the self-host stack.
+- You need the *scoring* to be the artefact of record. Docent is for analysis and discovery; your reported metric should still come from a deterministic scorer in your eval harness.
+
+**Pitfalls:**
+- **A rubric search is an LLM judge.** It has false positives and false negatives like any judge, so validate on a hand-labelled sample before quoting a rate — the judge-validation discipline in [`code-recipes.md`](../engineering/code-recipes.md) applies unchanged.
+- **Uploading transcripts is a data-sharing decision.** Model outputs from a red-teaming or model-organism project can be sensitive; self-host if in doubt.
+- **Package naming.** `pip install docent-python` still works but is a redirect; the SDK is now `docent`. Symptom: version confusion between the two names in a lockfile.
+
 ## Cross-cutting eval pitfalls
 
 - **Contamination.** If your eval prompts are on the public internet, frontier models may have memorized them. Check via canary strings; consider held-out sets.
@@ -226,4 +290,4 @@ Depends on prompts × samples × judge votes × model. A 1000-sample eval on Cla
 
 ---
 
-Last verified: 2026-06. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026. (Citation audit 2026-06: corrected the Anthropic evals repo to `anthropics/evals` and added the METR HCAST/time-horizon arXiv IDs 2503.17354 and 2503.14499. Additions 2026-06: cited "model-written evals" to Perez et al. 2212.09251, added the lm-evaluation-harness canonical Zenodo citation (DOI 10.5281/zenodo.10256836), and added an evaluation-awareness cross-cutting pitfall (Needham et al. 2025, arXiv:2505.23836); all verified via arXiv/source.)
+Last verified: 2026-06. Inspect AI active development under UK AISI; `inspect_evals` 200+ tasks. METR TH1.1 released Jan 2026. (Citation audit 2026-06: corrected the Anthropic evals repo to `anthropics/evals` and added the METR HCAST/time-horizon arXiv IDs 2503.17354 and 2503.14499. Additions 2026-06: cited "model-written evals" to Perez et al. 2212.09251, added the lm-evaluation-harness canonical Zenodo citation (DOI 10.5281/zenodo.10256836), and added an evaluation-awareness cross-cutting pitfall (Needham et al. 2025, arXiv:2505.23836); all verified via arXiv/source.) (Additions 2026-08: Docent — `docent` v0.1.82 on PyPI (`docent-python` is now a redirect), TransluceAI/docent, tracing and SDK snippets verified from the repo quickstart docs.)
