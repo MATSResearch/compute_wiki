@@ -189,6 +189,10 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Run sandwiching evaluations | Hand-rolled pipeline; Bowman et al. 2022 reference | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md) |
 | Self-critique / iterative refinement | Hand-rolled custom solver in Inspect AI | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md) |
 | Implement prover-verifier games / prover-estimator debate | Hand-rolled from Brown-Cohen / Irving recent papers | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md) |
+| Pick a judging protocol for a weak judge vs a lying debater | **Strip confidence language then judge holistically** as the default; symmetric independent scoring to kill positional bias | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
+| Stop positional bias from dominating a debate result | **Position pairing** — run both seat orderings, credit only consistent wins | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
+| Check my debate result is not just the judge's own knowledge | **Judge filtering** — replace every question the judge solves unaided | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
+| Know which judge scaffolds backfire before spending compute | Error-finding / red-team framings make the judge *more* gullible; quality-scoring rewards the liar on math | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
 
 ## I want a copy-paste pattern or recipe
 

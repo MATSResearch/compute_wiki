@@ -51,6 +51,7 @@ nav:
   - Oversight, control & training:
       - oversight-and-control/ai-control.md
       - oversight-and-control/debate-scalable-oversight.md
+      - oversight-and-control/debate-judge-scaffolds.md
       - oversight-and-control/rl-training.md
       - oversight-and-control/training-on-trajectories.md
   - Engineering & recipes:

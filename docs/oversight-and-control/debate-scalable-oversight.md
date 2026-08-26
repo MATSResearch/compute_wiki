@@ -20,6 +20,7 @@ Tooling here is sparser than for evals or interp — most published research use
 | Self-critique / iterative refinement workflow | Hand-rolled with Inspect AI custom solvers; LLM-as-judge primitives |
 | Prover-verifier games / prover-estimator debate | Hand-rolled from the recent Brown-Cohen / Irving papers; no shrink-wrapped lib |
 | Theoretical reading on what debate can solve | The doubly-efficient debate / prover-estimator debate papers |
+| Choose the *judging protocol* the judge runs on the transcript | See [`debate-judge-scaffolds.md`](debate-judge-scaffolds.md) — measured wins, measured backfires, and the position-pairing methodology |
 
 ## What scalable oversight is, in one paragraph
 
@@ -187,6 +188,7 @@ Aliases: arXiv:2407.04622, NeurIPS 2024, DeepMind. Implements **debate, consulta
 
 ## Cross-references
 
+- **Which judging protocol to actually use, and which ones backfire**: [`debate-judge-scaffolds.md`](debate-judge-scaffolds.md) — measured results for ~45 judge scaffolds against a weak judge and a deliberately-lying debater, plus the position-pairing and judge-filtering methodology that has to come before any of them.
 - Inspect AI (the primary harness for these protocols): [`evals.md`](../evaluation/evals.md).
 - Multi-agent / agent scaffolding primitives: [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
 - AI Control (a complementary line where the model is *adversarial*; debate is a different framing): [`ai-control.md`](ai-control.md).
