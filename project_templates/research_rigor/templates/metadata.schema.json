@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mats/automated-alignment-research/schemas/metadata.schema.json",
+  "title": "Run metadata",
+  "description": "Auto-captured reproducibility metadata for one experiment run. Never hand-written. Closes the field's under-reporting gap (Frontier Lag; benchmark self-audit 0.38/1.0) by making the under-reported fields mandatory and automatic.",
+  "type": "object",
+  "required": ["run_id", "created_at", "git_sha", "models", "harness", "stage_status"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^run_[0-9]{8}_[0-9]{6}_[a-z0-9_]+$",
+      "description": "run_<YYYYMMDD_HHMMSS>_<short_snake_name>, matches the directory name."
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "git_sha": {
+      "type": "string",
+      "description": "Commit SHA of the analysis/code repo at run creation. Anchors reproducibility."
+    },
+    "models": {
+      "type": "array",
+      "description": "Every model used in the run, one entry per (model, role).",
+      "items": {
+        "type": "object",
+        "required": ["id", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "description": "Exact model ID, e.g. claude-opus-4-8."},
+          "role": {
+            "type": "string",
+            "description": "What this model did in the pipeline.",
+            "examples": ["ideation", "planning", "implementation", "analysis", "review", "attention_check_judge"]
+          },
+          "reasoning_mode": {"type": ["string", "null"], "examples": ["extended", "standard", null]},
+          "release_date": {"type": ["string", "null"], "format": "date"}
+        }
+      }
+    },
+    "harness": {
+      "type": "object",
+      "required": ["tool"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": {"type": "string", "examples": ["claude-code"]},
+        "version": {"type": ["string", "null"]}
+      }
+    },
+    "compute": {
+      "type": ["object", "null"],
+      "description": "Where the job ran. MATS compute is heterogeneous and mostly ephemeral, so this is often a rented box that no longer exists — hence provider + ephemeral flag.",
+      "additionalProperties": true,
+      "properties": {
+        "provider": {"type": "string", "examples": ["runpod", "vast.ai", "modal", "mats-cluster", "dev-node"]},
+        "host": {"type": ["string", "null"]},
+        "gpus": {"type": ["string", "null"], "examples": ["8xL40", "2xH100", null]},
+        "ephemeral": {"type": "boolean"}
+      }
+    },
+    "cost": {
+      "type": ["object", "null"],
+      "description": "Cost reporting is universally absent in the field (benchmark self-audit). Capturing it is a differentiator.",
+      "additionalProperties": false,
+      "properties": {
+        "usd": {"type": ["number", "null"]},
+        "tokens_in": {"type": "integer", "minimum": 0},
+        "tokens_out": {"type": "integer", "minimum": 0}
+      }
+    },
+    "prereg": {
+      "type": ["object", "null"],
+      "description": "Link to the frozen pre-registration, so metadata alone proves a commitment existed.",
+      "additionalProperties": false,
+      "properties": {
+        "frozen_at": {"type": ["string", "null"], "format": "date-time"},
+        "content_hash": {"type": ["string", "null"], "description": "sha256:... of prereg.yaml at freeze time."}
+      }
+    },
+    "stage_status": {
+      "type": "object",
+      "description": "Per-stage lifecycle. Lets any tool resume the run and lets the PI review surface show progress.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["pending", "running", "done", "frozen", "skipped", "failed"]
+      },
+      "propertyNames": {
+        "enum": ["lit_review", "planning", "preregistration", "implementation",
+                 "tracking", "analysis", "resolution", "communication", "publication"]
+      }
+    }
+  }
+}

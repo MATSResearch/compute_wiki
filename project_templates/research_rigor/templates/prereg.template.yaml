@@ -1,0 +1,64 @@
+# ============================================================================
+# PRE-REGISTRATION — the commitment device (pipeline Gap 1, the MVP core)
+# ============================================================================
+# The Fellow (human PI) writes this BEFORE running the experiment. The tool's
+# only jobs are: (1) make the commitment tamper-evident (content_hash + git
+# timestamp, so it provably predates results), and (2) at analysis time, diff
+# the ACTUAL analysis against this file and flag any metric / decision rule /
+# method that changed after freezing.
+#
+# Fill in every field marked <...>. Delete the comment lines if you like — the
+# schema in docs/schemas.md is the authority. Once you run `freeze`, this file
+# is locked: further changes must be explicit `amendments:` entries, never
+# silent edits.
+# ============================================================================
+
+run_id: <run_YYYYMMDD_HHMMSS_short_name>
+
+# --- Filled in by the freeze tool, not by you -------------------------------
+frozen_at:            # ISO-8601 UTC, set at freeze
+content_hash:         # sha256:... of this file's hypotheses block at freeze
+registered_before_data: true   # the tool asserts+records this; lying defeats the point
+
+# --- The scientific commitment (you write this) -----------------------------
+hypotheses:
+  - id: H1
+    statement: >
+      <One precise, falsifiable claim. Name the mechanism, not just a correlation.
+      e.g. "SAE feature 4021 causally mediates reward-model over-scoring of
+      sycophantic completions.">
+    prediction: >
+      <The concrete, quantitative observation that would follow if H1 is true.
+      e.g. "Ablating feature 4021 reduces the sycophancy reward gap by >50%.">
+    analysis:
+      metric: <name_of_the_single_pre-chosen_metric>   # e.g. reward_gap_delta
+      decision_rule: >
+        <Pre-commit the thresholds NOW, before seeing data. Include the
+        inconclusive band — don't leave yourself wiggle room.
+        e.g. ">0.5 relative reduction => H1 supported; <0.1 => refuted;
+        between => inconclusive.">
+      method: >
+        <The exact procedure. Be specific about anything an agent might silently
+        swap for a cheaper proxy. e.g. "causal activation patching — NOT
+        attribution patching (they correlate rho~=0; see interp rigor convention)">
+    prespecified_confounds:
+      - <Known trap this hypothesis must guard against, stated up front.>
+    # Add H2, H3, ... — and prefer DIVERSE hypotheses (Gap 3: alignment results
+    # share failure modes and don't average out; force divergence deliberately).
+
+# --- Optional: LLM-in-the-loop analysis steps -------------------------------
+# If any analysis step uses an LLM as judge/annotator, register the procedure
+# here and (borrowing prereg-for-the-next-LLM) commit to executing it on the
+# first eligible model, to prevent prompt-fishing / p-hacking the judge.
+llm_analysis_steps: []
+  # - step: <what the LLM decides>
+  #   model_selection_rule: "first model released after frozen_at meeting <criteria>"
+  #   prompt_hash: <sha256 of the frozen prompt>
+
+# --- Amendments (append-only; each is logged, timestamped, justified) --------
+amendments: []
+  # - at: <ISO-8601>
+  #   changed: <field path>
+  #   from: <old>
+  #   to: <new>
+  #   justification: <why this is legitimate and not p-hacking>

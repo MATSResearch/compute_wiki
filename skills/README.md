@@ -7,6 +7,7 @@ program's conventions instead of inventing its own.
 | Skill | Fires when the agent is about to... |
 |---|---|
 | [`mats-experiment-workflow/`](mats-experiment-workflow/) | start a project, plan what to run next, keep a research journal, organise run outputs, or decide whether to scale up |
+| [`mats-research-rigor/`](mats-research-rigor/) | pre-register a hypothesis, accept a result, raise a concern about its own work, resolve a prediction, write up, or release code |
 | [`mats-statistics/`](mats-statistics/) | claim a difference is real, choose a test, or put an error bar on a number |
 | [`mats-visualization/`](mats-visualization/) | write plotting code, choose a colormap, or save a figure |
 

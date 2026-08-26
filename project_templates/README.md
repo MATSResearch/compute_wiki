@@ -15,6 +15,7 @@ The wiki under [`../docs/`](../docs/) tells you *what to use*. This directory sh
 | [`evals/`](evals/) | bootstrapping | `eval_components` | `example_1_sycophancy_eval` (custom multi-turn behavioral eval), `example_2_inspect_evals_gpqa` (stub) |
 | [`ai_control/`](ai_control/) | bootstrapping | `ac_components` | `example_1_control_arena_apps` (ControlArena Apps + defer-to-trusted threshold sweep) |
 | [`model_organisms/`](model_organisms/) | bootstrapping | `mo_components` | `example_1_emergent_misalignment` (EM eval methodology, prompt-only organism), `example_2_persona_vectors` (stub) |
+| [`research_rigor/`](research_rigor/) | bootstrapping | `research_rigor` | — cross-cutting: used *alongside* an area above, not instead of one |
 
 ## How to use a template
 
