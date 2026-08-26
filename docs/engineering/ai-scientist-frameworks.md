@@ -27,6 +27,8 @@ This doc is about **using them for your own research**. For running an agent CLI
 | A co-pilot that keeps you in the loop | **Agent Laboratory** | Designed *not* to pick its own direction — often the right call |
 | End-to-end paper from an idea | **AI Scientist-v2** (Sakana), **Jr. AI Scientist** | Read the failure-modes section before you trust output |
 | Claims that trace to evidence | **ScientistOne** / Chain-of-Evidence | The most useful 2026 idea here, whether or not you use the system |
+| A long-horizon coding/research harness that improves as you use it | **Prime Agent** (Prime Intellect) | MIT-licensed and genuinely good; its `/refine` edits its own operating instructions, which is the part to supervise |
+| The rigor without adopting any system | [`research-rigor.md`](research-rigor.md) | The rules are portable; MATS also ships them as a tool (see below) |
 
 ## The tiers, and which one is real
 
@@ -112,6 +114,49 @@ rediscovery**, is the sharp one for alignment work: the system proposes a
 pre-registered failures and meta-scientific argument are not in the corpus while
 the positive pre-replication literature is.
 
+**Metacognitive failure — the agent already knew.** "How Do Agents Fail on
+AutoResearch" ([arXiv:2608.14905](https://arxiv.org/abs/2608.14905), August
+2026) is the largest failure study in this literature: 100 real frontier
+research tasks across seven domains, run end to end through eight harness/model
+combinations for **800 complete trajectories**, annotated by an artifact-aware
+judge (validated against human experts at κ=0.75 pattern-level) against **ARFT**,
+a 45-pattern failure taxonomy. 12,712 failure attributions.
+
+Two numbers should change how you supervise one of these systems:
+
+- **92.1% of failures are cognitive, not engineering.** Scientific integrity
+  33.5%, grounding and faithfulness 31.0%, cognitive depth 27.6% — against 7.9%
+  for engineering robustness, with no engineering pattern in the top 25. If you
+  are hardening the harness, you are working on 8% of the problem.
+- **The most common single pattern, in 82.5% of runs, is "uncorrected
+  self-awareness":** the agent identifies a critical flaw *during its own
+  self-review* and delivers the unrevised conclusion anyway.
+
+The rest of the top of the table has the same shape: overclaiming with concealed
+negative results 78.1%, method–conclusion disconnect 77.5%, implementation
+discrepancy (reported ≠ executed) 72.1%, circular validation and shortcut
+reliance 69.0%, unremediated adversarial evidence 60.8%, report–code
+traceability gaps 60.5%.
+
+The authors' diagnosis inverts the obvious mitigation:
+
+> "The evidence to refute most failures is already present in the agent's own run
+> directory, but the agent fails to perform the comparison."
+
+> "Agents often make correct judgments about their flaws, but nothing in the
+> system compels them to act on these diagnoses."
+
+**So detection is not your bottleneck.** Asking the model to be more careful,
+adding a self-review pass, or bolting on a critic all target a step that mostly
+already happened. What is missing is *consequence* — a raised concern that
+cannot be walked past. One of their case studies is the whole finding in
+miniature: an agent's own review section states that its central claim is
+uninterpretable because the baseline is broken, and the final abstract features
+the claim regardless.
+
+For what to do about it, see
+[`research-rigor.md`](research-rigor.md).
+
 Other modes reported across this literature: implementation bugs,
 bug-as-insight reframing, methodology fabrication, frame-lock, and citation
 hallucination.
@@ -146,6 +191,41 @@ under the hardware and file-size constraints and Science One did.
 **Run the four checks on your own agent's output by hand.** They are cheap, and
 "score verification passed in 42% of papers" tells you the base rate you are
 working against.
+
+### How well does claim-to-evidence tracing actually work?
+
+Well enough to be worth doing, nowhere near well enough to replace you. Three
+independent August-2026 systems converge on the same representation — make the
+claim→evidence relation an explicit typed graph rather than something a reader
+reconstructs from prose:
+
+- **EviGraph** ([arXiv:2608.04738](https://arxiv.org/abs/2608.04738)) makes it
+  the agent's *operational state*: typed nodes (Problem, Gap, Hypothesis,
+  Experiment, Finding, Claim), a valid claim requiring a
+  `hypothesis --tested-by--> experiment --produces--> finding --supports-->
+  claim` path, and no manuscript until every retained claim has a validated
+  chain.
+- **LEDGER** ([arXiv:2608.18398](https://arxiv.org/abs/2608.18398), CMU + LLNL)
+  does it post hoc for *review*: layered trace graphs over a session with typed
+  edges (`uses`, `produces`, `checked_by`, `supports`), so a reviewer starts at
+  a claim and walks backwards to artifacts and checks.
+- **Artifact-centered claim-aware observability**
+  ([arXiv:2608.18312](https://arxiv.org/abs/2608.18312)) argues the same from
+  the logging side: logging every model call is the wrong granularity, anchor
+  on artifacts and claims.
+
+**The number that matters:** EviGraph, with the whole apparatus, reaches a
+**37.85% Claim Support Rate**, against 27% for the strongest baseline. A ~62%
+ungrounded-claim rate is not a gate — it is a reason the human stays the
+decider. LEDGER is candid about the matching limitation: everything above its
+deterministic trace-record layer is *model-inferred*, so it calls its own graph
+"an audit aid rather than a source of truth" and recommends replacing inferred
+structure with deterministic structure wherever possible.
+
+Practical reading: keep the parts of a claim-evidence link that a machine can
+check *deterministically* — does the file exist, does the number in the prose
+match the number in the artifact — and treat the LLM-inferred parts as a
+reading aid.
 
 ## Benchmarks
 
@@ -190,6 +270,29 @@ better agent from a bigger budget.
   people quietly tried in 2024 is the expected behaviour, not an aberration.
 - **Disclose the agent.** Agents4Science and a growing number of venues have
   explicit policies; assume you must state what was automated.
+- **Make a raised concern cost something.** The 82.5% figure above says your
+  agent will usually *tell* you what is wrong with its own work and then finish
+  the job anyway. A note in a journal it can scroll past is not a mechanism.
+  [`research-rigor.md`](research-rigor.md) is the version of this you can run by
+  hand or with the skill.
+
+### Is there a MATS tool for this?
+
+Yes, in beta. The MATS dashboard has an **Automated Alignment** page (Tools →
+🧪 Automated Alignment), off until you opt in from Settings. The agent loop runs
+in your browser, because your API keys are encrypted under a passphrase the
+server never sees, and it carries a research-stage rail, a key vault, experiment
+history and a report renderer.
+
+The relevant part here is that it implements the rules in
+[`research-rigor.md`](research-rigor.md) as **gates rather than advice**: a
+concern the agent raises blocks the step being marked done until you resolve it
+(the agent has no way to close one), and every pre-registered prediction needs a
+verdict from you — including `inconclusive` — before the resolve step closes.
+
+Use the tool if you want the rail and the gates without wiring anything; use the
+skill and the template package if you work from a terminal. Same rules, two
+surfaces.
 
 ## Common questions
 
@@ -217,6 +320,8 @@ adopt any system.
 
 ## Cross-references
 
+- The rules to apply, whichever system you use — or none:
+  [`research-rigor.md`](research-rigor.md).
 - Running agent CLIs as the subject of an eval:
   [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
 - Inspect Scout for scanning agent transcripts for problems:
@@ -228,7 +333,10 @@ adopt any system.
 
 ---
 
-Last verified: 2026-08. Papers read directly: ScientistOne (arXiv:2605.26340),
+Last verified: 2026-08. Papers read directly: "How Do Agents Fail on
+AutoResearch" (arXiv:2608.14905), LEDGER (arXiv:2608.18398), EviGraph
+(arXiv:2608.04738, skimmed — node/edge schema and headline numbers), Prime Agent
+(arXiv:2608.23552, paper + blog + repo README), ScientistOne (arXiv:2605.26340),
 "The More You Automate, the Less You See" (arXiv:2509.08713), AstaBench
 (arXiv:2510.21652), "Dead Science Walking" (arXiv:2606.04220), "Correct Answer,
 Wrong Mechanism" (arXiv:2606.23175), Jr. AI Scientist (arXiv:2511.04583,
