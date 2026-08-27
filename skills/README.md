@@ -10,6 +10,7 @@ program's conventions instead of inventing its own.
 | [`mats-research-rigor/`](mats-research-rigor/) | pre-register a hypothesis, accept a result, raise a concern about its own work, resolve a prediction, write up, or release code |
 | [`mats-statistics/`](mats-statistics/) | claim a difference is real, choose a test, or put an error bar on a number |
 | [`mats-visualization/`](mats-visualization/) | write plotting code, choose a colormap, or save a figure |
+| [`mats-intervention-evidence/`](mats-intervention-evidence/) | claim it removed / unlearned something, that a finetune changed something, or that particular training data caused a behaviour |
 
 ## Install
 

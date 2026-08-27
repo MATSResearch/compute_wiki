@@ -139,6 +139,10 @@ Plot capability against relearn steps. A method that is genuinely removing infor
 - **Confusing unlearning with refusal.** A model that says "I can't help with that" has not unlearned anything, and abliteration-style refusal removal (see [`steering.md`](../interpretability/steering.md)) will undo it in minutes. If your eval scores refusals as successful forgetting, your numbers are measuring the wrong thing — score refusal and incapacity separately, as in [`code-recipes.md`](../engineering/code-recipes.md).
 - **Releasing the "unlearned" checkpoint as safe.** Given 2410.08827, an open-weight release framed as hazard-free is a claim you probably cannot support.
 
+## Starter scaffold
+
+`project_templates/unlearning/` in the wiki repo is a working version of everything above: `ul_components` (splits that partition by key with a leakage assertion, the three objectives, the relearning sweep, and a `verdict()` whose vocabulary deliberately has no `REMOVED` label) plus `example_1_relearning_curve`, a runnable toy experiment that implants facts about entities that don't exist, unlearns them, attacks with relearning on adjacent data and prints the verdict. CPU, minutes, no API keys.
+
 ## Cross-references
 
 - [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md) — WMDP and the other benchmark entries.

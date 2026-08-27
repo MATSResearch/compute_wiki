@@ -139,6 +139,10 @@ print([tok.decode([t]) for t in top])
 - **Reporting the top-K most different latents with no baseline.** Top-K of anything looks meaningful. Compare against the top-K from your control pair.
 - **Assuming the difference lives where you finetuned.** LoRA on the MLPs does not mean the observable difference is in the MLPs; effects propagate.
 
+## Starter scaffold
+
+`project_templates/model_diffing/` in the wiki repo packages the ladder above as `md_components`: `pairing.assert_comparable` (the four silent killers, all reported at once), `kl` + `ranking` (per-token KL, concentration, excess-over-control, top-K overlap), `acts` + `difflens` (paired activation capture and the difference lens), and `control.verdict`, which will not return `SPECIFIC_TO_TREATMENT` unless you supply the control finetune.
+
 ## Cross-references
 
 - [`saes.md`](saes.md) — dictionary training, including crosscoder-capable libraries (`clt-training`, `dictionary_learning`).
