@@ -16,6 +16,8 @@ Libraries for inspecting and intervening on the internals of transformer languag
 | Just one quick hook, no library | **`register_forward_hook`** + **baukit** |
 | Throughput / serving / 70B+ local | **vLLM-Lens** (see [`serving-and-activations.md`](serving-and-activations.md)) |
 | SAE work specifically | **SAELens** (see [`saes.md`](saes.md)) |
+| Interventions as first-class saveable objects; DAS; non-transformer architectures | **pyvene** |
+| Compare a base model against its finetune | **diffing-toolkit** (see [`model-diffing.md`](model-diffing.md)) |
 
 ## TransformerLens
 
@@ -148,6 +150,64 @@ Aliases: `captum` on PyPI, `meta-pytorch/captum` on GitHub (formerly `pytorch/ca
 
 **When *not* to use it:** Activation patching / circuit analysis / SAE features — TransformerLens / nnsight / SAELens are the right tools. Captum is for *attribution* (which inputs mattered), not mechanism analysis (which internal computations mattered).
 
+## pyvene (and pyreft)
+
+Aliases: `pyvene` on PyPI, `stanfordnlp/pyvene` on GitHub, "the Stanford intervention library", "Wu et al.'s intervention library". Paper: arXiv **2403.07809** / NAACL 2024 System Demonstrations, "pyvene: A Library for Understanding and Improving PyTorch Models via Interventions".
+
+**What it is.** A library where the **intervention is the primitive**. You declare *where* (layer, component, unit — position, head, neuron subset) and *what kind* (swap in a source activation, zero it, add a vector, a learned intervention), and pyvene builds an `IntervenableModel` wrapper around any PyTorch model. Interventions are dicts, so they serialise and can be shared on HuggingFace like weights. Works beyond transformers — the README notes RNNs, ResNets, CNNs, Mamba.
+
+```bash
+pip install pyvene
+```
+
+Activation patching / interchange intervention, structured verbatim after the repo's basic tutorial:
+
+```python
+import pyvene
+from pyvene import RepresentationConfig, IntervenableConfig, IntervenableModel
+from pyvene import VanillaIntervention
+
+def simple_position_config(model_type, component, layer):
+    return IntervenableConfig(
+        model_type=model_type,
+        representations=[
+            RepresentationConfig(
+                layer,        # layer
+                component,    # e.g. "mlp_output", "attention_input"
+                "pos",        # intervention unit
+                1,            # max number of units
+            ),
+        ],
+        intervention_types=VanillaIntervention,
+    )
+
+base = tokenizer("The capital of Spain is", return_tensors="pt")
+sources = [tokenizer("The capital of Italy is", return_tensors="pt")]
+
+config = simple_position_config(type(gpt), "mlp_output", layer_i)
+intervenable = IntervenableModel(config, gpt)
+_, counterfactual_outputs = intervenable(base, sources, {"sources->base": pos_i})
+```
+
+Sweeping `layer_i` × `pos_i` and reading off the probability of the counterfactual token (" Madrid" vs " Rome") is exactly the causal-tracing heatmap in [`research-plots.md`](../engineering/research-plots.md).
+
+**When to use it:**
+- Interchange interventions / activation patching where you want the *specification* of the intervention to be a first-class, saveable object rather than a closure buried in a hook.
+- Non-transformer or unusual architectures, where TransformerLens's `HookedTransformer` port doesn't exist.
+- **Distributed Alignment Search (DAS)** and learned interventions — pyvene ships trainable intervention types, which raw hooks make you build yourself.
+
+**When *not* to use it:**
+- Standard mech-interp on a supported model where you want the community's shared vocabulary of hook names — **TransformerLens** is more idiomatic and far more of the published code you'll want to read is written against it.
+- You need remote execution on a model too big for your GPU — that's **nnsight**/NDIF.
+- A one-off "grab the residual stream at layer 12" — plain PyTorch hooks are three lines.
+
+**pyreft** (`stanfordnlp/pyreft`) is the sibling library for **ReFT — Representation Finetuning** (arXiv **2404.03592**): instead of updating weights (LoRA), you train an intervention on hidden representations, giving a parameter-efficient finetune whose learned object is a *representation edit*. Relevant to safety work as a model-organism method that produces something intrinsically more interpretable than a LoRA — but note its last repo activity was March 2026, so check maintenance before depending on it.
+
+**Pitfalls:**
+- **Component names are pyvene's, not TransformerLens's.** `"mlp_output"` / `"attention_input"` here vs `blocks.4.hook_mlp_out` there. Copying a hook name across libraries gives a key error or, worse, an unmatched component. Symptom: interventions that run and change nothing.
+- **`{"sources->base": pos_i}` is a position mapping.** Base and source must be tokenised to the same length for a positional swap to mean what you think; different-length prompts misalign silently.
+- **Serialised interventions carry a model assumption.** A shared intervention config is only valid for the architecture it was authored against.
+
 ## Cross-references
 
 - For SAE work: [`saes.md`](saes.md).
@@ -185,4 +245,4 @@ Three options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction a
 
 ---
 
-Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7. Additions 2026-06: cited the mech-interp methods named in the TransformerLens bullets — induction heads (Olsson et al. 2209.11895), IOI (Wang et al. 2211.00593), attribution patching (Syed et al. 2310.10348); all verified via arXiv.)
+Last verified: 2026-04-30. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7. Additions 2026-06: cited the mech-interp methods named in the TransformerLens bullets — induction heads (Olsson et al. 2209.11895), IOI (Wang et al. 2211.00593), attribution patching (Syed et al. 2310.10348); all verified via arXiv.) (Additions 2026-08: pyvene — `pyvene` on PyPI, arXiv 2403.07809, example structured after the repo's Basic_Intervention tutorial — and its sibling pyreft (ReFT, arXiv 2404.03592; last repo activity March 2026).)

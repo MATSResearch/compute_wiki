@@ -26,6 +26,7 @@ Tools for adversarial robustness research: optimization-based attacks, LLM-as-at
 | LLM-judge for jailbreak success (2025–26 default) | **StrongREJECT** (`dsbowen/strong_reject`) |
 | Content classifier for safety pipelines | **Llama Guard 3/4**, **WildGuard**, **ShieldGemma** |
 | Agent-flavored harmful-behavior benchmark | **AgentHarm** (in `inspect_evals`) |
+| Indirect prompt injection against a tool-using agent (attack *and* defense) | **AgentDojo** (`agentdojo`) |
 | Industrial-grade attack-suite-as-a-service | **HaizeLabs** Haize Suite |
 
 ## nanoGCG
@@ -257,6 +258,39 @@ Aliases: HaizeLabs, "Haize Suite". Also: Lakera, Patronus, Robust Intelligence, 
 
 **When to use them:** Industrial deployment / production guardrails — out of scope for most MATS fellow research, but useful if your project needs runtime classifiers.
 
+## AgentDojo (prompt injection against tool-using agents)
+
+Aliases: `agentdojo` on PyPI (v0.1.35), `ethz-spylab/agentdojo` on GitHub, "the ETH prompt-injection benchmark". Paper: arXiv **2406.13352**, "AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents" (NeurIPS 2024 Datasets & Benchmarks).
+
+**What it is.** A dynamic environment — not a static prompt list — for the attack that matters once a model has tools: **indirect prompt injection**, where the adversarial instruction arrives inside *data the agent reads* (an email, a web page, a file) rather than from the user. Each scenario pairs a **user task** (what the agent is supposed to accomplish) with an **injection task** (what the attacker wants instead), so you score *both* utility and attack success and can't cheat by breaking the agent.
+
+```bash
+pip install agentdojo
+```
+
+```bash
+python -m agentdojo.scripts.benchmark -s workspace -ut user_task_0 \
+    -ut user_task_1 --model gpt-4o-2024-05-13 \
+    --defense tool_filter --attack tool_knowledge
+```
+
+Note the shape of that command: **attack and defense are both pluggable** (`--attack`, `--defense`). That is the reason to use this rather than hand-rolling — a defense evaluated against only the attack its author wrote is not evaluated.
+
+**When to use it:**
+- Any project on agent security, tool-use safety, or monitoring an agent that reads untrusted content.
+- You are proposing a prompt-injection *defense* and need a benchmark that a reviewer accepts, plus attacks you didn't design.
+- You want an AI-control-flavoured experiment where the "attacker" is the environment rather than an untrusted policy — see [`ai-control.md`](../oversight-and-control/ai-control.md) for the distinction.
+
+**When *not* to use it:**
+- Your threat model is *direct* jailbreaking of a chat model. That's the rest of this doc — GCG, PAIR, TAP, BoN.
+- You need a realistic production environment. The suites are synthetic by design (that's what makes them scorable); results transfer as a relative ranking, not as an absolute breach rate.
+
+**Pitfalls:**
+- **Model IDs in published tables are frozen in time.** The README example pins `gpt-4o-2024-05-13`. Re-running with a current model gives different numbers; never compare your run against a paper's table without re-running the paper's baseline.
+- **Reporting attack success without utility.** A defense that refuses everything scores 0% attack success. Always report the paired utility number.
+- **The injection is inside tool output**, so a scaffold that truncates or summarises tool results before the model sees them changes the benchmark. If you use a custom scaffold, say so — you may have accidentally built a defense.
+- **Cost.** Each task is a multi-turn agent rollout across several suites; a full sweep of attacks × defenses × models is a real API bill. Pilot on one suite first, and see [`code-recipes.md`](../engineering/code-recipes.md) on caching.
+
 ## Cross-cutting red-team pitfalls
 
 - **"Attack success" is fuzzy.** Define clearly: did the model output the harmful content? Was it actionable? Did it just complete a prefix? Use a classifier *and* spot-check.
@@ -323,4 +357,4 @@ For HarmBench-style benchmarks: score with the **HarmBench classifier** (`cais/H
 
 ---
 
-Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks". Additions 2026-06: added arXiv IDs for the canonical attack/benchmark papers (GCG 2307.15043, PAIR 2310.08419, TAP 2312.02119, HarmBench 2402.04249, JailbreakBench 2404.01318), two previously-absent attack families — Many-shot Jailbreaking (Anil et al. 2024, Anthropic/NeurIPS) and Best-of-N (Hughes et al. 2412.03556) — and the foundational "why jailbreaks work" frame (Wei, Haghtalab & Steinhardt 2307.02483); all verified via arXiv/source.)
+Last verified: 2026-04-30. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks". Additions 2026-06: added arXiv IDs for the canonical attack/benchmark papers (GCG 2307.15043, PAIR 2310.08419, TAP 2312.02119, HarmBench 2402.04249, JailbreakBench 2404.01318), two previously-absent attack families — Many-shot Jailbreaking (Anil et al. 2024, Anthropic/NeurIPS) and Best-of-N (Hughes et al. 2412.03556) — and the foundational "why jailbreaks work" frame (Wei, Haghtalab & Steinhardt 2307.02483); all verified via arXiv/source.) (Additions 2026-08: AgentDojo — `agentdojo` v0.1.35 on PyPI, arXiv 2406.13352, install and benchmark CLI verified from the repo README — covering indirect prompt injection, which this doc previously lacked.)

@@ -22,6 +22,9 @@ Datasets and benchmarks commonly used in AI safety research. We focus on safety-
 | Truthfulness | **TruthfulQA** |
 | Honesty / hallucination | **SimpleQA**, **TruthfulQA**, **HaluEval** |
 | Agent harm specifically | **AgentHarm** |
+| Situational awareness / does the model know it's being evaluated | **SAD** (Situational Awareness Dataset) |
+| Prompt injection against tool-using agents | **AgentDojo** (see [`red-teaming.md`](red-teaming.md)) |
+| Unlearning / knowledge removal | **TOFU**, **MUSE**, **WMDP** (see [`unlearning.md`](../alignment-science/unlearning.md)) |
 | Tool of choice for hosting & loading | HuggingFace `datasets` |
 
 ## HuggingFace `datasets` (the substrate)
@@ -176,6 +179,43 @@ Wrapped as `inspect_evals/agentharm`. See [`red-teaming.md`](red-teaming.md).
 
 **When to use them:** Measuring over-refusal — refusing benign requests is the dual failure mode to under-refusal.
 
+## SAD (Situational Awareness Dataset) and evaluation awareness
+
+Aliases: `LRudL/sad` on GitHub, "SAD", "the situational awareness dataset", situational-awareness-dataset.org. Paper: arXiv **2407.04694**, "Me, Myself, and AI: The Situational Awareness Dataset (SAD) for LLMs" (NeurIPS 2024 Datasets & Benchmarks).
+
+**What it is.** 7 task categories / 16 tasks / 12,000+ questions probing whether a model knows *that it is a model*, *which* model, and *what situation it is in*: recognising its own generated text, predicting its own behaviour, distinguishing an evaluation from deployment, and following instructions that depend on self-knowledge. Scoring is automatic (multiple-choice and short-answer); it needs no activations or logprobs, so it runs against API models.
+
+Task IDs, useful when selecting a subset: `facts_human_defaults`, `facts_llms`, `facts_which_llm`, `facts_names`, `influence`, `introspection_count_tokens`, `introspection_predict_tokens`, `introspection_rules`, `stages_full`, `stages_oversight`, `self_recognition_who`, `self_recognition_groups`, `id_leverage_entity_name`, `id_leverage_multihop`, `output_control`, `do_not_imitate`.
+
+```bash
+git clone https://github.com/LRudL/sad.git
+cd sad
+pip install -e .
+./unzip.sh --exclude-evals
+```
+
+```bash
+sad test_run --models claude-3-haiku-20240307 --tasks influence   # single sample, nothing saved
+sad run     --tasks influence --models claude-3-haiku-20240307 --variants plain
+sad results --tasks influence
+sad plot    --tasks influence
+```
+
+**Why it matters for safety work.** The `stages_oversight` task — can the model tell testing from deployment — is the empirical root of **evaluation awareness**, i.e. the possibility that every eval number you report is measured on a model that knows it is being evaluated. If your project's headline claim is behavioural, an eval-awareness check belongs in your limitations section. Recent work continues to push on where this sits inside the model: arXiv **2606.29196**, "Representational Depth of Evaluation Awareness Shifts With Scale in Open-Weight Language Models".
+
+**When to use it:**
+- A project on introspection, self-knowledge, deception, or sandbagging needs a *standard* measurement rather than a bespoke one.
+- You want to report "the model scores X on stages-oversight" as context for a behavioural result.
+
+**When *not* to use it:**
+- You want a quick number. The README is explicit: a full `sad run` "will run for a few days, depending on your private rate limits in the APIs." Use **SAD-lite** (stated as ~84% of the score, dropping the model-specific facts tasks) or **SAD-mini** (5 multiple-choice tasks).
+
+**Pitfalls:**
+- **Model-identity tasks go stale.** `facts_which_llm` and friends assume the model can be asked which model it is; scores shift with every provider system-prompt change, so a number from 2024 is not comparable to yours.
+- **API keys for several providers.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `REPLICATE_API_TOKEN`, `HF_TOKEN` depending on which models you run.
+- **The `--variants` flag matters.** `plain` versus situating-prompt variants measure different things; report which you ran.
+- **High score ≠ situational awareness in deployment.** These are questions about self-knowledge answered in a Q&A frame; a model can ace them and still behave as if unaware in an agentic setting, and vice versa. See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+
 ## Cross-cutting dataset pitfalls
 
 - **Contamination.** Public benchmarks → models train on them. By 2026, *most* public safety benchmarks are at least partially contaminated. Strategies:
@@ -245,4 +285,4 @@ Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets)
 
 ---
 
-Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.)
+Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.) (Additions 2026-08: SAD — `LRudL/sad`, arXiv 2407.04694, task list/CLI/subset claims verified from the repo README — plus the eval-awareness follow-up arXiv 2606.29196, and at-a-glance rows for AgentDojo and the unlearning benchmarks.)

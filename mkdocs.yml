@@ -37,6 +37,8 @@ nav:
       - interpretability/probes.md
       - interpretability/steering.md
       - interpretability/serving-and-activations.md
+      - interpretability/model-diffing.md
+      - interpretability/data-attribution.md
   - Evaluation & red-teaming:
       - evaluation/evals.md
       - evaluation/agent-scaffolds.md
@@ -48,6 +50,7 @@ nav:
       - alignment-science/model-organisms.md
       - alignment-science/cot-faithfulness.md
       - alignment-science/welfare-introspection.md
+      - alignment-science/unlearning.md
   - Oversight, control & training:
       - oversight-and-control/ai-control.md
       - oversight-and-control/debate-scalable-oversight.md

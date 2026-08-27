@@ -19,6 +19,7 @@ Tooling for training and using SAEs (Sparse Autoencoders) on language model acti
 | Cross-layer transcoders | **EleutherAI clt-training** |
 | Take SAE/transcoder features and do circuit analysis | **circuit-tracer** (`safety-research/circuit-tracer`) |
 | Pretrained Llama-3.1-8B / Llama-3.3-70B SAEs | Goodfire SAEs on HuggingFace (load via SAELens) |
+| Benchmark an SAE on downstream tasks, not just L0/reconstruction | **SAEBench** (`sae-bench`) |
 
 ## Should I use SAEs at all? (the skeptic's reading list)
 
@@ -172,6 +173,42 @@ The Goodfire SDK was archived (Oct 2025) and the public Ember API was deprecated
 
 These are some of the few publicly available SAEs trained on instruction-tuned (not base) Llama checkpoints, which matters for behavioral / refusal / alignment research.
 
+## SAEBench
+
+Aliases: `sae-bench` on PyPI (v0.6.0), `adamkarvonen/SAEBench` on GitHub, "SAE Bench", "the SAE benchmark". Paper: arXiv **2503.09532**, "SAEBench: A Comprehensive Benchmark for Sparse Autoencoders in Language Model Interpretability".
+
+**What it is.** A suite of **eight evaluations** for SAEs, so you can compare architectures and sparsity levels on something other than the reconstruction/sparsity Pareto curve. The evals: **Feature Absorption**, **AutoInterp**, **L0 / Loss Recovered**, **RAVEL**, **Spurious Correlation Removal (SCR)**, **Targeted Probe Perturbation (TPP)**, **Sparse Probing** (plus an SAE-Probes variant), and **Unlearning**.
+
+```bash
+pip install sae-bench
+```
+
+Run a single eval over a family of SAEs (verbatim from the repo README):
+
+```bash
+python -m sae_bench.evals.sparse_probing.main \
+    --sae_regex_pattern "sae_bench_pythia70m_sweep_standard_ctx128_0712" \
+    --sae_block_pattern "blocks.4.hook_resid_post__trainer_10" \
+    --model_name pythia-70m-deduped
+```
+
+Results are written under `eval_results/<eval_name>`.
+
+**When to use it:**
+- You trained a new SAE variant and need to show it is better at *something a person cares about*, not just at reconstruction-per-L0. This is the standard the field now expects.
+- You are choosing between pretrained SAEs for a downstream project and want a principled pick.
+- You want a ready-made downstream task (SCR, TPP, unlearning) rather than inventing one.
+
+**When *not* to use it:**
+- You just want L0 and loss-recovered — SAELens computes those directly, and the harness is overhead.
+- Your SAE is for a model/hook not covered by the regex-selected families; you'll be writing config plumbing before you get a number.
+
+**Pitfalls:**
+- **Regex selection is silent when it matches nothing.** A typo in `--sae_regex_pattern` gives you an empty run rather than an error. Check how many SAEs were selected before interpreting an eval that finished suspiciously fast.
+- **Feature absorption and SCR need probing data** and will download datasets on first run; a sandboxed/offline box fails here first.
+- **Don't compare across sparsity levels without saying so.** Most of these metrics move with L0; a comparison table where SAEs sit at different L0 is not a comparison of architectures.
+- **Unlearning eval ≠ unlearning research.** It measures whether SAE feature clamping suppresses a capability, which is one narrow probe — see [`unlearning.md`](../alignment-science/unlearning.md) for what the unlearning literature demands.
+
 ## Common SAE pitfalls (cross-cutting)
 
 - **Reconstruction loss is not the goal.** A trivially-perfect-reconstruction SAE can still be uninterpretable. Check L0, % alive features, and qualitative feature inspection.
@@ -228,4 +265,4 @@ Most common causes: (1) **hook point mismatch** — different SAEs are trained a
 
 ---
 
-Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace. (Citation audit 2026-06: fixed the self-referential `HookedSAETransformer` wording, softened the sae_vis "deprecated" claim, and added Gemma Scope / Llama Scope arXiv IDs. Additions 2026-06: a "Should I use SAEs at all?" skeptic's reading list — Kantamneni 2502.16681, Leask 2502.04878, Korznikov 2602.14111, Peng 2506.23845 — and architecture citations for BatchTopK 2412.06410, Matryoshka 2503.17547, and transcoder circuits 2406.11944; all verified via arXiv.)
+Last verified: 2026-04-30. SAELens 6.x current. EleutherAI sparsify v1.3.0 on PyPI as `eai-sparsify` (Nov 2025). dictionary_learning last commit Aug 2025. Delphi v0.1.3 (March 2026, install from source). clt-training last activity Nov 2025. SAEDashboard v0.8.0 (Apr 2026); sae_vis deprecated by its author. circuit-tracer v0.5.0 (Apr 2026). Goodfire SDK archived; Goodfire SAEs remain on HuggingFace. (Citation audit 2026-06: fixed the self-referential `HookedSAETransformer` wording, softened the sae_vis "deprecated" claim, and added Gemma Scope / Llama Scope arXiv IDs. Additions 2026-06: a "Should I use SAEs at all?" skeptic's reading list — Kantamneni 2502.16681, Leask 2502.04878, Korznikov 2602.14111, Peng 2506.23845 — and architecture citations for BatchTopK 2412.06410, Matryoshka 2503.17547, and transcoder circuits 2406.11944; all verified via arXiv.) (Additions 2026-08: SAEBench — `sae-bench` v0.6.0 on PyPI, arXiv 2503.09532, eval list and CLI verified from the repo README.)
