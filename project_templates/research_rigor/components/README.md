@@ -26,6 +26,28 @@ Or in another project's `pyproject.toml`:
 research-rigor = { path = "../path/to/research_rigor/components", editable = true }
 ```
 
+## The pre-registration CLI
+
+Installing the package also installs `research-rigor-prereg`, the only module
+here with a command line. Two subcommands:
+
+- **`freeze`** — validate a drafted `prereg.yaml`, hash its hypotheses block,
+  stamp `frozen_at`, and optionally git-commit it so the commitment provably
+  predates any results:
+  ```bash
+  research-rigor-prereg freeze outputs/run_20260707_120000_probe/prereg.yaml --git-commit
+  ```
+- **`check`** — at analysis time, confirm the frozen file was not tampered with
+  and diff the analysis you actually ran against the one you registered:
+  ```bash
+  research-rigor-prereg check outputs/run_20260707_120000_probe/prereg.yaml \
+      --actual outputs/run_20260707_120000_probe/analysis/actual_analysis.yaml
+  ```
+  Exits non-zero if any registered metric, decision rule or method changed.
+
+Without installing, `uv run --directory <this dir> research-rigor-prereg ...`
+does the same.
+
 ## Modules
 
 | Module | What it gives you | The failure it targets |
@@ -86,7 +108,7 @@ outstanding work, not a subtlety you are missing.
 uv run --with pytest pytest tests/
 ```
 
-113 tests, all of them checking that a rule actually refuses rather than that a
+115 tests, all of them checking that a rule actually refuses rather than that a
 function returns. The interesting ones to read first are
 `test_analysis.py::test_agent_cannot_close_its_own_critical_anomaly` and
 `test_resolve.py::test_dropping_a_hypothesis_is_blocked` — those two are the

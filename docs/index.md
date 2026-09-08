@@ -16,6 +16,7 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
 - **[`agentic-swe-practices.md`](engineering/agentic-swe-practices.md)** — how to drive a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) so it writes correct, reproducible research code instead of plausible-but-wrong slop.
 - **[`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md)** — systems that automate the research loop (Sakana, Kosmos, AIDE, Curie, ScientistOne): which tier actually works, the measured failure rates, and four integrity checks to run on anything one hands you.
+- **[`research-rigor.md`](engineering/research-rigor.md)** — the rules for keeping your own research honest when an agent does some of the work: the eleven research stages, pre-registration on both sides of a pilot, concerns that block, a verdict for every prediction, claim grounding, disclosure.
 
 ## I want to pick an open-weights model
 
@@ -226,6 +227,7 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Log agent sessions now in case I want to train on them later | What a capture must preserve | [`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md#what-this-means-if-you-are-collecting-trajectories) |
 | Should I let an "AI scientist" run my experiment / write my paper? | Tiers, measured failure rates, what actually works | [`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md) |
 | Check an agent's research output before I trust it | The four CoE Audit integrity checks | [`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md#verifiability-chain-of-evidence) |
+| Pre-register a hypothesis / keep an agent honest about its own results | Research rigor rules: the eleven stages, pre-registration around a pilot, concerns that block, verdicts for every prediction | [`research-rigor.md`](engineering/research-rigor.md) |
 | Scan agent transcripts for refusals, evaluation awareness or broken environments (incl. Claude Code transcripts) | Inspect Scout | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Automatically audit a model for concerning behaviour over multi-turn conversations | Inspect Petri | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Run and manage a large matrix of evals reproducibly | Inspect Flow | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |

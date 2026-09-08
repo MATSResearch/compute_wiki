@@ -1,5 +1,5 @@
 """
-Tests for code publication & reproducibility (stage 9).
+Tests for code publication & reproducibility (stage `publish`).
 
 Run:  uv run pytest tests/test_publish.py -v
 """

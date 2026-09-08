@@ -1,5 +1,5 @@
 """
-Analysis & interpretation (MVP-5, pipeline stage 6, Human-held).
+Analysis & interpretation (stage `analysis`, Human-held).
 
 The least automatable stage in the corpus, and now the best-documented one. The
 2026 end-to-end failure audit (2608.14905: 800 trajectories over 100 real

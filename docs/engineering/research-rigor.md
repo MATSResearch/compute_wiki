@@ -16,11 +16,44 @@ how they fail, see
 project runs on, see
 [`meta_workflow.md`](https://github.com/MATSResearch/compute_wiki/blob/master/project_templates/meta_workflow.md).
 
+## The eleven stages
+
+The rules below attach to stages of a research project. These are the same
+eleven steps, with the same ids and in the same order, that the rail of the
+MATS dashboard's **Automated Alignment** tool shows, and that the
+`research_rigor` package's `run_dir.STAGES` and `metadata.schema.json` accept:
+
+| # | id | Label |
+|---|---|---|
+| 1 | `question` | Question & scope |
+| 2 | `lit_review` | Literature review |
+| 3 | `hypothesis` | Hypothesis & pre-registration |
+| 4 | `pilot` | Pilot run |
+| 5 | `design` | Refined design & precommitment |
+| 6 | `setup` | Environment setup |
+| 7 | `run` | Main run |
+| 8 | `analysis` | Analysis |
+| 9 | `resolve` | Resolving the hypothesis |
+| 10 | `writeup` | Write-up & review |
+| 11 | `publish` | Code & reproducibility |
+
+The order has one non-obvious part: the **pilot comes before the refined
+design**. A pilot is what tells you what the real design should be — power,
+effect size, whether the metric moves at all — so committing to the analysis
+before one means committing to guesses, and committing after the main run is
+not commitment at all. There are therefore **two commitment points**:
+`hypothesis` records the prediction and what would falsify it before anything
+runs; `design` commits to the analysis and the per-measure guards after the
+pilot and before the main run.
+
+It is a checklist, not a state machine: nothing enforces the order, and a stage
+may become active again any number of times.
+
 ## At a glance
 
 | You are about to… | Do this | Because |
 |---|---|---|
-| Start running experiments | Freeze the hypothesis, the metric and the decision rule first | Choosing the analysis after seeing results is one of the four documented AI-scientist process failures |
+| Start running anything | Record the prediction and its falsifier first (`hypothesis`); after the pilot, freeze the metric, decision rule and guards before the main run (`design`) | Choosing the analysis after seeing results is one of the four documented AI-scientist process failures |
 | Pick between experiment designs | Generate genuinely divergent ones and pick yourself | Proposal diversity correlates r=0.57 with success; agents cannot self-select (LLM "innovativeness" correlates **−0.06** with real effectiveness) |
 | Accept a result because the code ran | Run an independent check on the number | Silent failure — code runs, exits 0, result is wrong — is the dominant implementation risk |
 | Notice something is off | Write it down where it blocks something | **82.5%** of agent research runs contain a flaw the agent spotted itself and shipped anyway |
@@ -30,20 +63,38 @@ project runs on, see
 
 ## Pre-registration: commit before you look
 
-Write down, **before** you run anything:
+Pre-registration happens at two points, on either side of the pilot.
+
+**In `hypothesis`, before anything runs**, write down:
 
 - the **hypothesis** — one falsifiable claim, naming a mechanism, not a correlation;
 - the **prediction** — the concrete quantitative observation that follows if it is true;
+- the **falsifier** — what result would show it false.
+
+These are kept permanently and are not edited afterwards; that is what makes
+them a pre-registration rather than a summary.
+
+**Then run a small `pilot`**: does the pipeline work end to end, does the metric
+move at all, how big is the effect? Record the result, including a null one.
+The pilot is the only thing that can tell you what the real design should be.
+
+**In `design`, after the pilot and before the main run**, use what it taught you
+to commit to:
+
 - the **metric** — one, chosen in advance;
 - the **decision rule** — the thresholds, *including the inconclusive band*;
 - the **method** — specific about anything an agent might silently swap for a
   cheaper proxy ("causal activation patching, NOT attribution patching");
-- the **prespecified confounds** you are guarding against.
+- the **prespecified confounds** you are guarding against;
+- a **guard for each measure** — the cheap way that number could move without
+  the claim being true, and the check that would catch it.
 
-Then make it tamper-evident: commit the file to git before any results exist, so
-its timestamp provably predates them. At analysis time, diff what you actually
-did against what you registered and report the deviations rather than quietly
-absorbing them.
+Then make both commitments tamper-evident: commit the file to git before the
+results it governs exist, so its timestamp provably predates them. At analysis
+time, diff what you actually did against what you registered and report the
+deviations rather than quietly absorbing them. The pilot does not license
+rewriting the hypothesis or the falsifier; if the pilot changes what you
+believe, that is a new registered prediction, not an edit to the old one.
 
 **Why this one first:** it is the cheapest rigor mechanism that exists and
 almost nothing does it. Across a 317-paper survey of automated-science tooling,
@@ -166,6 +217,10 @@ decision rule you froze.
   conclusion-formation failure. One model is one model; one dataset is one
   dataset. A claim narrower than your evidence is always fine.
 
+- **A verdict is signed once and holds through `writeup` and `publish`.** A
+  prediction without a signed verdict blocks the write-up and the release, not
+  only the `resolve` step.
+
 ## Observational evidence does not license a causal claim
 
 Keep the two kinds of evidence **syntactically distinct** so you cannot slide
@@ -189,7 +244,9 @@ silently upgrading the language is not.
 ## Claim grounding at write-up
 
 Every number in the prose traces to a result artifact you can open. Every
-hypothesis claim traces to the registered prediction and its verdict.
+hypothesis claim traces to the registered prediction and its verdict. An
+infinite or NaN value is not measured evidence and cannot ground a claim; fix
+the calculation first.
 
 **Why the bar is this literal:** an agent instructed to fabricate produced
 papers with *no real experiments* that fooled multi-model LLM reviewers **67–82%**
@@ -316,5 +373,5 @@ reward-lens (arXiv:2604.26130), "Interpretability without Actionability"
 (arXiv:2603.18353), the hypothesis-hivemind paper (arXiv:2605.08956),
 MLRC-Bench (arXiv:2504.09702) and InquiTree (arXiv:2606.09550). Consolidated
 from a 317-paper survey; the full synthesis and per-paper notes live in the
-dashboard repo under `docs/auto_alignment_research/`. Drafted by Claude; pending
+`mats_dashboards` repo under `docs/auto_alignment_research/`. Drafted by Claude; pending
 MATS research-staff review.

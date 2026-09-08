@@ -62,7 +62,7 @@ def test_register_quarantines_content_and_logs(tmp_path):
     rd = _mk(tmp_path)
     plan = ac.InjectionPlan(kind="defect", error_type="fabricated_result",
                             difficulty="medium", source_provenance_event="ev_0011", nonce="abc")
-    ac_id = ac.register(rd, plan, stage="communication", injected_into_gate="gt_0000",
+    ac_id = ac.register(rd, plan, stage="writeup", injected_into_gate="gt_0000",
                         ground_truth="fig3=0.61 but table2=0.28",
                         corrupted_artifact="...draft with fake 0.61...",
                         correct_version="...real 0.28...")
@@ -90,13 +90,13 @@ def test_scoring_separates_catches_from_false_positives(tmp_path):
     defects = [("easy", True), ("medium", True), ("hard", False)]
     for i, (diff, caught) in enumerate(defects):
         p = ac.InjectionPlan("defect", "fabricated_result", diff, None, f"n{i}")
-        acid = ac.register(rd, p, stage="communication", injected_into_gate=f"gt_{i}",
+        acid = ac.register(rd, p, stage="writeup", injected_into_gate=f"gt_{i}",
                            ground_truth="gt")
         ac.record_outcome(rd, acid, flagged=caught)
     # 2 controls: correctly approve 1, wrongly flag 1 -> fp_rate 0.5.
     for i, flagged in enumerate([False, True]):
         p = ac.InjectionPlan("control", None, "medium", None, f"c{i}")
-        acid = ac.register(rd, p, stage="communication", injected_into_gate=f"gtc_{i}",
+        acid = ac.register(rd, p, stage="writeup", injected_into_gate=f"gtc_{i}",
                            ground_truth="correct item")
         ac.record_outcome(rd, acid, flagged=flagged)
 

@@ -1,5 +1,5 @@
 """
-Diversity-forced experiment planning (MVP-4, pipeline stage 2).
+Diversity-forced experiment planning (stage `design`).
 
 The survey reframes planning as a DIVERSITY problem: proposal entropy correlates
 r=0.57 with success (2511.15593). But two hard constraints shape the design:

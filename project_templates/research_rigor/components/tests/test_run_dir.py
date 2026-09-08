@@ -40,9 +40,9 @@ def test_create_refuses_duplicate_run(tmp_path):
 
 def test_provenance_ids_are_sequential_and_appended(tmp_path):
     rd = _mk(tmp_path)
-    e0 = rd.log_provenance(actor="agent", stage="implementation", event="decision",
+    e0 = rd.log_provenance(actor="agent", stage="run", event="decision",
                            summary="chose layer 8")
-    e1 = rd.log_provenance(actor="agent", stage="implementation", event="model_invocation",
+    e1 = rd.log_provenance(actor="agent", stage="run", event="model_invocation",
                            summary="ran ablation", model_id="claude-opus-4-8",
                            parent_event_id=e0, cost={"tokens_in": 100, "tokens_out": 20})
     assert e0 == "ev_0000" and e1 == "ev_0001"
@@ -56,9 +56,9 @@ def test_provenance_ids_are_sequential_and_appended(tmp_path):
 def test_bad_enum_values_fail_loudly(tmp_path):
     rd = _mk(tmp_path)
     for kwargs in (
-        dict(actor="robot", stage="implementation", event="decision", summary="x"),
+        dict(actor="robot", stage="run", event="decision", summary="x"),
         dict(actor="agent", stage="nonsense", event="decision", summary="x"),
-        dict(actor="agent", stage="implementation", event="teleport", summary="x"),
+        dict(actor="agent", stage="run", event="teleport", summary="x"),
     ):
         try:
             rd.log_provenance(**kwargs)
@@ -69,15 +69,15 @@ def test_bad_enum_values_fail_loudly(tmp_path):
 
 def test_gate_and_attention_check_cross_reference(tmp_path):
     rd = _mk(tmp_path)
-    src = rd.log_provenance(actor="agent", stage="communication", event="artifact_written",
+    src = rd.log_provenance(actor="agent", stage="writeup", event="artifact_written",
                             summary="wrote draft with an overstated effect size")
     ac = rd.log_attention_check(
-        stage="communication", injected_into_gate="gt_0000",
+        stage="writeup", injected_into_gate="gt_0000",
         error_type="fabricated_result", difficulty="medium",
         ground_truth="fig 3 effect 0.61 != table2 0.28",
         source_provenance_event=src,
     )
-    gt = rd.log_gate(stage="communication", artifact="writeup/draft.md",
+    gt = rd.log_gate(stage="writeup", artifact="writeup/draft.md",
                      decision="reject", review_seconds=812, attention_check_ids=[ac],
                      notes="caught the fig/table mismatch")
     assert ac == "ac_0000" and gt == "gt_0000"
@@ -100,10 +100,10 @@ def test_attention_check_resolution_is_appended_not_edited(tmp_path):
 
 def test_metadata_write_is_atomic_valid_json(tmp_path):
     rd = _mk(tmp_path)
-    rd.set_stage_status("preregistration", "frozen")
+    rd.set_stage_status("hypothesis", "frozen")
     rd.link_prereg(frozen_at="2026-07-07T12:00:00Z", content_hash="sha256:abc")
     # File is always complete, parseable JSON (atomic rename, no .tmp left behind).
     meta = json.loads(rd.metadata_path.read_text())
-    assert meta["stage_status"]["preregistration"] == "frozen"
+    assert meta["stage_status"]["hypothesis"] == "frozen"
     assert meta["prereg"]["content_hash"] == "sha256:abc"
     assert not (tmp_path / "run_20260707_120000_probe" / "metadata.json.tmp").exists()

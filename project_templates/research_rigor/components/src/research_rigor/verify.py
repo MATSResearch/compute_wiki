@@ -1,5 +1,5 @@
 """
-Delegated-but-validated implementation harness (MVP-2, pipeline stage 4).
+Delegated-but-validated implementation harness (stage `run`).
 
 Implementation is the mature, safe-to-delegate stage — but the dominant danger is
 the SILENT failure: the code runs, exits 0, and the result is wrong (REXBench,
@@ -200,7 +200,7 @@ class Attempt:
 
 
 def delegated_but_validated(*, attempt_fn: Callable[[str | None], Attempt],
-                            verifiers: list[Verifier], rd: RunDir, stage: str = "implementation",
+                            verifiers: list[Verifier], rd: RunDir, stage: str = "run",
                             max_attempts: int = 3) -> tuple[Attempt, ValidationReport]:
     """Run the delegate/validate loop. `attempt_fn(feedback)` is the INTELLIGENCE
     (the agent authoring+running code); it returns an Attempt. This driver
