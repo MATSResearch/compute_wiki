@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/mats/automated-alignment-research/schemas/metadata.schema.json",
+  "$id": "https://github.com/MATSResearch/compute_wiki/project_templates/research_rigor/templates/metadata.schema.json",
   "title": "Run metadata",
   "description": "Auto-captured reproducibility metadata for one experiment run. Never hand-written. Closes the field's under-reporting gap (Frontier Lag; benchmark self-audit 0.38/1.0) by making the under-reported fields mandatory and automatic.",
   "type": "object",
@@ -77,14 +77,14 @@
     },
     "stage_status": {
       "type": "object",
-      "description": "Per-stage lifecycle. Lets any tool resume the run and lets the PI review surface show progress.",
+      "description": "Per-stage lifecycle, keyed by the eleven research stages of the MATS dashboard's Automated Alignment tool, in its order. Lets any tool resume the run and lets the PI review surface show progress.",
       "additionalProperties": {
         "type": "string",
         "enum": ["pending", "running", "done", "frozen", "skipped", "failed"]
       },
       "propertyNames": {
-        "enum": ["lit_review", "planning", "preregistration", "implementation",
-                 "tracking", "analysis", "resolution", "communication", "publication"]
+        "enum": ["question", "lit_review", "hypothesis", "pilot", "design", "setup",
+                 "run", "analysis", "resolve", "writeup", "publish"]
       }
     }
   }

@@ -5,7 +5,8 @@ Verifies the human overseer, not the AI. Seeds a Fellow's review stream with
 ground-truthed fake errors drawn from the real AI-mistake distribution; a
 rate-based miss escalates to the MATS Research Manager — whose role is
 *explicitly non-judgemental* (a coach, not an evaluator), which is what makes an
-imperfect detector safe to run. Full design: docs/supervision_attention_checks.md.
+imperfect detector safe to run. Full design: the mats_dashboards repo,
+docs/auto_alignment_research/supervision_attention_checks.md.
 
 Division of labour (so we never hardcode an LLM call):
 - THIS LIBRARY is deterministic scaffolding — the seed-hashed injection decision,
@@ -219,8 +220,8 @@ def render_escalation(decision: EscalationDecision, *, fellow: str,
                       research_manager: str = "the MATS Research Manager") -> str:
     """A coaching-framed note to the non-judgemental RM. NEVER a performance
     verdict — the whole design rests on the signal being decoupled from
-    evaluation (docs/supervision_attention_checks.md, 'Why the non-judgemental
-    RM matters')."""
+    evaluation (mats_dashboards repo, docs/auto_alignment_research/
+    supervision_attention_checks.md, 'Why the non-judgemental RM matters')."""
     s = decision.stats
     lines = [
         f"Attention-check check-in for {fellow} → {research_manager}",

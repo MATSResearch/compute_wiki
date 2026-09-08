@@ -1,9 +1,9 @@
 """
-Run-directory capture library — the provenance substrate (MVP-1, stage 5).
+Run-directory capture library — the provenance substrate.
 
 Pure stdlib so any experiment code or Claude Code skill can `import run_dir`
 without a dependency. Manages the five machine-readable artifacts of a run
-directory (see docs/schemas.md and templates/run_dir/README.md):
+directory (see templates/schemas.md and templates/README.md):
 
     metadata.json          reproducibility metadata            (this module writes it)
     prereg.yaml            the commitment device               (src/preregister.py owns it)
@@ -22,9 +22,15 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+# The eleven research stages, in the order the MATS dashboard's Automated
+# Alignment tool shows them on its rail (`RESEARCH_STAGES` in that repo's
+# src/auto_alignment.py). Same ids, same order: `pilot` deliberately precedes
+# `design`, so the prediction and falsifier are committed in `hypothesis`
+# before anything runs and the analysis plan is committed in `design` after the
+# pilot has shown what the real design should be.
 STAGES = (
-    "lit_review", "planning", "preregistration", "implementation",
-    "tracking", "analysis", "resolution", "communication", "publication",
+    "question", "lit_review", "hypothesis", "pilot", "design", "setup",
+    "run", "analysis", "resolve", "writeup", "publish",
 )
 STAGE_STATUS = ("pending", "running", "done", "frozen", "skipped", "failed")
 PROVENANCE_EVENTS = (
@@ -32,7 +38,8 @@ PROVENANCE_EVENTS = (
     "artifact_written", "error",
 )
 GATE_DECISIONS = ("approve", "reject", "edit")
-# Sampled from the real AI-mistake distribution (see docs/supervision_attention_checks.md).
+# Sampled from the real AI-mistake distribution (design: the mats_dashboards repo,
+# docs/auto_alignment_research/supervision_attention_checks.md).
 ERROR_TYPES = (
     "fabricated_result", "subtle_bug", "unfaithful_summary", "misread_metric",
     "dropped_confound", "overstated_conclusion",

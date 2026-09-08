@@ -1,10 +1,11 @@
-# The run directory — the pipeline's shared substrate (Layer A)
+# The run directory
 
 Every experiment is **one self-contained run directory**. It is the portable unit
 that ships to ephemeral GPU compute and syncs back to the persistent dev node with
-results and provenance intact (see `docs/architecture.md`, Layer C). It is also
-the contract: every skill reads and writes these files, so a run is reconstructable
-from its artifacts alone and can re-enter the pipeline at any stage.
+results and provenance intact (the sync design is described in the
+`mats_dashboards` repo, `docs/auto_alignment_research/architecture.md`). It is
+also the contract: every skill reads and writes these files, so a run is
+reconstructable from its artifacts alone and work can resume at any stage.
 
 ```
 outputs/run_<YYYYMMDD_HHMMSS>_<name>/
@@ -30,7 +31,7 @@ outputs/run_<YYYYMMDD_HHMMSS>_<name>/
 | `gates.jsonl` | JSON Lines | auto (append-only) | Each human approval gate: what was reviewed, the decision, how long it took, which attention checks were embedded. |
 | `attention_checks.jsonl` | JSON Lines | auto (append-only) | Each seeded fake error, its ground truth, and whether the PI caught it. Feeds the rate-based escalation. |
 
-Full field-by-field reference for all five: `docs/schemas.md`.
+Full field-by-field reference for all five: `schemas.md` in this directory.
 
 ## Conventions
 

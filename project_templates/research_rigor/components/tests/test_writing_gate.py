@@ -107,3 +107,18 @@ def test_ground_draft_combines_claims_and_scan():
     assert report.grounded and report.unsourced_numbers and report.has_fabrication_risk
     v = wg.publication_verdict(report, human_approved=True)
     assert v.verdict == "blocked_fabrication"  # the unsourced 5.5x blocks even with sign-off
+
+
+def test_nonfinite_numeric_evidence_cannot_pass_publication():
+    for value in (float("inf"), float("-inf"), float("nan")):
+        claim = wg.Claim("c", "result", "numeric", value, "results", "metric")
+        report = wg.verify_claims([claim], {"results": {"metric": value}})
+        assert report.contradicted
+        assert wg.publication_verdict(report, human_approved=True).verdict == "blocked_fabrication"
+
+
+def test_invalid_tolerance_cannot_ground_a_claim():
+    for tolerance in (float("inf"), float("nan"), -0.1):
+        claim = wg.Claim("c", "result", "numeric", 1.0, "results", "metric",
+                         tolerance=tolerance)
+        assert wg.verify_claims([claim], {"results": {"metric": 1.0}}).contradicted

@@ -88,6 +88,8 @@ class ClaimReport:
 
 
 def _matches(asserted: float, actual: float, rel_tol: float) -> bool:
+    if not all(math.isfinite(v) for v in (asserted, actual, rel_tol)) or rel_tol < 0:
+        return False
     # Accept either a raw match or a percent/proportion mismatch (74 vs 0.74).
     return (math.isclose(asserted, actual, rel_tol=rel_tol)
             or math.isclose(asserted / 100.0, actual, rel_tol=rel_tol)

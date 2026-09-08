@@ -10,7 +10,7 @@ Read that first; this directory is only the enforcement layer.
 
 | | |
 |---|---|
-| [`components/`](components/) | `research_rigor` — pre-registration, diversity-forced planning, result validation, the concern ledger, verdicts, claim grounding, release disclosure. Stdlib + PyYAML, 113 tests, no LLM call anywhere. |
+| [`components/`](components/) | `research_rigor` — pre-registration, diversity-forced planning, result validation, the concern ledger, verdicts, claim grounding, release disclosure. Stdlib + PyYAML, 115 tests, no LLM call anywhere. |
 | [`templates/`](templates/) | `prereg.template.yaml` to fill in and freeze, plus the run-directory metadata schema. |
 
 No `example_projects/` — there is nothing here to replicate. Install the
@@ -26,7 +26,14 @@ Start with the pre-registration template and the concern ledger. Those two carry
 most of the value:
 
 1. **Freeze the hypothesis, metric and decision rule before you run anything**,
-   and commit the file so its timestamp provably predates the results.
+   and commit the file so its timestamp provably predates the results. The
+   package installs a CLI for exactly this:
+   ```bash
+   research-rigor-prereg freeze outputs/run_<ts>_<name>/prereg.yaml --git-commit
+   research-rigor-prereg check  outputs/run_<ts>_<name>/prereg.yaml --actual outputs/run_<ts>_<name>/analysis/actual_analysis.yaml
+   ```
+   `freeze` locks the file; `check`, at analysis time, diffs what you actually
+   ran against what you registered and fails if anything drifted.
 2. **Write down every worry the moment it appears, somewhere that blocks
    something.** Across 800 audited agent research runs, the most common single
    failure — **82.5%** — was an agent that identified a critical flaw during its

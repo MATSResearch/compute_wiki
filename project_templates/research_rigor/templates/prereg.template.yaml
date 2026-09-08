@@ -8,7 +8,7 @@
 # method that changed after freezing.
 #
 # Fill in every field marked <...>. Delete the comment lines if you like — the
-# schema in docs/schemas.md is the authority. Once you run `freeze`, this file
+# schema in schemas.md (this directory) is the authority. Once you run `freeze`, this file
 # is locked: further changes must be explicit `amendments:` entries, never
 # silent edits.
 # ============================================================================

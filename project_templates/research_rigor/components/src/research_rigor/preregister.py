@@ -18,11 +18,11 @@ The deterministic core of MVP-1. Two subcommands:
 This is intentionally NOT an LLM call — it is deterministic bookkeeping. The
 human writes the science; this tool only makes the commitment enforceable.
 
-Usage:
-    uv run src/preregister.py freeze  <run_dir>/prereg.yaml [--git-commit]
-    uv run src/preregister.py check   <run_dir>/prereg.yaml --actual <run_dir>/analysis/actual_analysis.yaml
+Usage (installed as the `research-rigor-prereg` console script):
+    research-rigor-prereg freeze  <run_dir>/prereg.yaml [--git-commit]
+    research-rigor-prereg check   <run_dir>/prereg.yaml --actual <run_dir>/analysis/actual_analysis.yaml
 
-Schema: docs/schemas.md · Template: templates/run_dir/prereg.template.yaml
+Schema: templates/schemas.md · Template: templates/prereg.template.yaml
 """
 
 import argparse
