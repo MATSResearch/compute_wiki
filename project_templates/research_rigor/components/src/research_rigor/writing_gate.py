@@ -1,5 +1,5 @@
 """
-Writing / communication gate (MVP-3, pipeline stage 8).
+Writing / communication gate (stage `writeup`).
 
 The stage where the Fellow's output meets the world — and where the safety
 evidence is starkest: LLM reviewers accept fabricated papers 67-82% of the time

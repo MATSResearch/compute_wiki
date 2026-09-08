@@ -1,5 +1,5 @@
 """
-Tests for hypothesis resolution & follow-ups (stage 7).
+Tests for hypothesis resolution & follow-ups (stage `resolve`).
 
 Run:  uv run pytest tests/test_resolve.py -v
 """

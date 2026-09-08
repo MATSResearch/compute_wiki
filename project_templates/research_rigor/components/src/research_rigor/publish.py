@@ -1,5 +1,5 @@
 """
-Code publication & reproducibility (MVP-7, pipeline stage 9, Delegated-but-validated).
+Code publication & reproducibility (stage `publish`, Delegated-but-validated).
 
 The mechanics of packaging a release are safe to delegate. What is NOT safe to
 delegate is deciding that the release is adequate, because the field's own

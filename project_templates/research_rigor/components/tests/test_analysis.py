@@ -1,5 +1,5 @@
 """
-Tests for analysis & interpretation (stage 6).
+Tests for analysis & interpretation (stage `analysis`).
 
 Run:  uv run pytest tests/test_analysis.py -v
 """

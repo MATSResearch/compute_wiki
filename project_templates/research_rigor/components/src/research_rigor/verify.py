@@ -1,5 +1,5 @@
 """
-Delegated-but-validated implementation harness (MVP-2, pipeline stage 4).
+Delegated-but-validated implementation harness (stage `run`).
 
 Implementation is the mature, safe-to-delegate stage — but the dominant danger is
 the SILENT failure: the code runs, exits 0, and the result is wrong (REXBench,

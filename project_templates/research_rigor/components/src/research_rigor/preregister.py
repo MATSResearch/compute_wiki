@@ -5,7 +5,7 @@
 """
 Pre-registration freeze/check tool — the commitment device (pipeline Gap 1).
 
-The deterministic core of MVP-1. Two subcommands:
+The commitment device for stage `hypothesis`. Two subcommands:
 
   freeze  Lock a drafted prereg.yaml: validate it, hash the hypotheses block,
           stamp frozen_at, and (optionally) git-commit so the commitment is

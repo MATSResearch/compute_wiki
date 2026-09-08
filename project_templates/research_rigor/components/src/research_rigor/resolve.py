@@ -1,5 +1,5 @@
 """
-Resolving hypotheses & proposing follow-ups (MVP-6, pipeline stage 7, Human-held).
+Resolving hypotheses & proposing follow-ups (stage `resolve`, Human-held).
 
 This is the checkpoint the proposal cares most about, and the evidence says it is
 where agents are least trustworthy:

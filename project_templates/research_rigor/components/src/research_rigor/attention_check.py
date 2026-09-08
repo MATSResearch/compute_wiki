@@ -1,5 +1,5 @@
 """
-Supervision attention-check injector + scorer (MVP-1.5, pipeline Gap 8).
+Supervision attention-check injector + scorer (Gap 8).
 
 Verifies the human overseer, not the AI. Seeds a Fellow's review stream with
 ground-truthed fake errors drawn from the real AI-mistake distribution; a
