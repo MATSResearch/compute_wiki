@@ -11,7 +11,7 @@ failed check or a gap in translation.
 - **Scope gap:** what the formal statement leaves out or strengthens
 - **Environment:** project revision, Lean/toolchain version, and exact imports
 - **Check:** command run, exit status, and relevant output or artifact path
-- **Dependency boundary:** `#print axioms` result; note `sorry`, `admit`, `axiom`, `Classical`, or `noncomputable`
+- **Dependency boundary:** `#print axioms` result; distinguish `sorryAx`, custom axioms, and standard logical axioms; note computation restrictions separately if relevant
 - **Unresolved issues:** failed attempts, missing library results, or statements still under debate
 - **Interpretation:** what the checked result supports, and what still requires empirical or informal reasoning
 

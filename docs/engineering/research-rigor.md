@@ -338,7 +338,7 @@ survey, a document analysis and a formal argument in one project.
 | **Independent check** | Shapes, ranges, invariants, reruns | Sample size, attrition, balance, respondent quality | Proof checker (Lean/Coq), counterexample search | Every claim traces to a primary document; quotes verbatim; dates checked at source |
 | **Claim grounding** | Numbers trace to result artifacts | Every percentage carries its n and CI | Every lemma traces to a checked proof or a stated assumption | Every assertion traces to a citation that actually says it |
 
-For theory work, the [`mats-lean-formalization` skill](../../skills/mats-lean-formalization/)
+For theory work, the [Lean formalization guide and skills](lean-formalization.md)
 can help turn a precise subclaim into a checked Lean artifact. Treat the
 formal theorem as one evidence layer: record its imports, assumptions,
 toolchain, and dependency boundary, then separately explain whether it is a

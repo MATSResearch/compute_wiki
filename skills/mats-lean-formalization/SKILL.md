@@ -37,10 +37,11 @@ resulting artifact is checked in the project's actual Lean environment.
   missing library fact, proof gap, or environment/toolchain problem. Preserve
   a useful reduced example instead of hiding the failure behind broader
   imports or stronger assumptions.
-- Record uses of `sorry`, `admit`, new `axiom`s, `Classical`, or other
-  noncomputable assumptions. They may be appropriate, but they change what a
-  successful check establishes. Use `#print axioms theoremName` when the
-  dependency boundary matters.
+- For a completed theorem, inspect `#print axioms theoremName`, including
+  transitive dependencies. `sorryAx` indicates an incomplete proof; custom
+  axioms make the result conditional. Standard classical axioms are distinct
+  from proof holes. `noncomputable` concerns code generation and is not itself
+  an additional axiom or evidence of an incomplete proof.
 
 ## Report the result
 
@@ -52,3 +53,7 @@ claim will be revisited or cited. Keep the checked theorem separate from the
 informal scientific conclusion: Lean verifies the encoded proposition, not
 that the encoding is the right model of the world.
 
+For focused help, use `mats-lean-debug`, `mats-lean-library-search`, or
+`mats-lean-review` if installed. Each works independently; load only what helps
+the current task. The [shared guide](https://matsresearch.github.io/compute_wiki/engineering/lean-formalization/)
+covers environment setup, search resources, and evidence interpretation.
