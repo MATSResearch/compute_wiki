@@ -1,11 +1,10 @@
 # Presentable Lean proofs
 
-The `mats-lean-cleanup` skill makes editing part of completing a proof. It applies
-before an agent presents newly generated or substantially repaired Lean work,
-without needing the researcher to request a second pass. Its automatic selection
-is ordinary skill discovery, not a runtime guarantee that every response is
-intercepted. Install it in the agent's skill directory alongside the other
-[Lean skills](lean-formalization.md).
+The `mats-lean-cleanup` skill offers editing guidance for generated or repaired
+proofs. The optional [skill hint hook](skill-hints.md) points the agent to it
+after a Lean edit, without requiring invocation or another editing pass.
+Install the skill alongside the other [Lean skills](lean-formalization.md).
+Explicit cleanup requests still call for doing the requested editing.
 
 ## What the comparison suggests
 

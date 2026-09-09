@@ -29,9 +29,9 @@ proof strategy and search effort to fit the problem and authorized budget.
   result, inspect its axiom dependencies; temporary holes remain unfinished
   work even when the command exits successfully.
 
-Before presenting a completed repair, perform a proportionate cleanup pass
-(`mats-lean-cleanup` if installed), preserve the target, and recheck the final
-artifact. Keep an already clear repair as it is.
+Before presenting a completed repair, consider `mats-lean-cleanup` if readability
+would benefit. The suggestion is optional. Preserve the target and recheck any
+edits; keep an already clear repair as it is.
 
 Report the cause, meaningful repair, check performed, and remaining gap.
 Read the [shared guide](https://matsresearch.github.io/compute_wiki/engineering/lean-formalization/)

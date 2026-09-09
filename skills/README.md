@@ -33,6 +33,12 @@ etiquette, which these deliberately do not:
 cp -r /mnt/nw/share/skills/mats-cluster ~/.claude/skills/
 ```
 
+## Optional reminders
+
+The [skill hint hook](../docs/engineering/skill-hints.md) can point an agent to a
+relevant installed Lean skill after reading or editing a proof. Hints are brief,
+non-blocking, and deduplicated per session. Installation is separate from skills.
+
 ## Why they're thin
 
 Each skill is a short decision layer that points at the full doc on the wiki

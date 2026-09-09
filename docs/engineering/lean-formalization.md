@@ -20,8 +20,8 @@ independently; they do not require loading the whole set.
 | `mats-lean-cleanup` | Present a readable, rechecked proof without a separate cleanup request |
 | `mats-lean-review` | Assess statement fidelity, assumptions, and what the checked proof establishes |
 
-The `mats-lean-cleanup` skill adds an editorial pass before presenting finished
-proofs. It removes search debris, clarifies the argument, and verifies the edited
+The `mats-lean-cleanup` skill offers an editorial pass before presenting finished
+proofs. An optional [hook](skill-hints.md) suggests it after Lean edits. It removes search debris, clarifies the argument, and verifies the edited
 artifact. Read the [comparison and cleanup guide](lean-proof-cleanup.md) for
 when shortening helps and when it harms readability.
 
