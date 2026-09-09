@@ -1,4 +1,7 @@
 """
+Historical rationale follows; researcher-authorized agent selection is now supported.
+The failure evidence describes tested systems, not a permanent capability limit.
+
 Diversity-forced experiment planning (stage `design`).
 
 The survey reframes planning as a DIVERSITY problem: proposal entropy correlates
@@ -138,11 +141,14 @@ class PlanVerdict:
 
 
 def plan_gate(diversity: DiversityReport, *, pi_selection: list | None,
-              selector: str | None = None) -> PlanVerdict:
+              selector: str | None = None,
+              agent_selection_authorized: bool = False) -> PlanVerdict:
     """Enforce diversity-then-human-selection.
 
     - A homogeneous candidate set is blocked (force divergence first).
-    - Selection must be made by the PI; an agent cannot self-select.
+    - Selection defaults to the PI. Explicit researcher authorization permits
+      an agent selector; the flag is supplied by the calling application, not
+      inferred from the agent’s confidence.
     - Selecting only from within one correlated-failure-mode cluster is warned
       (the evidence won't average out — Gap 3), but not blocked: the PI may have a
       reason, they just have to see it.
@@ -155,12 +161,11 @@ def plan_gate(diversity: DiversityReport, *, pi_selection: list | None,
 
     if not pi_selection:
         return PlanVerdict("awaiting_pi_selection", warnings=[
-            "diversity ok — the PI must select; agents cannot self-select "
-            "(LLM innovativeness correlates -0.06 with real effectiveness)"])
+            "diversity ok — awaiting a selection under the researcher’s delegation arrangement"])
 
-    assert selector == "pi", (
-        f"selection must be made by the PI, not by {selector!r} — agents cannot "
-        f"self-select proposals (MLRC-Bench)"
+    assert selector == "pi" or (selector == "agent" and agent_selection_authorized is True), (
+        f"selection by {selector!r} requires researcher authorization; "
+        "pass agent_selection_authorized=True only when selection was delegated"
     )
 
     warnings = []

@@ -5,6 +5,8 @@ Run:  uv run pytest tests/test_planning.py -v
 """
 
 
+import pytest
+
 from research_rigor import planning as pl
 
 FEATURES = ["mechanism", "method", "failure_mode"]
@@ -102,13 +104,10 @@ def test_gate_awaits_pi_when_diverse_and_unselected():
     assert v.verdict == "awaiting_pi_selection"
 
 
-def test_gate_refuses_agent_selection():
+def test_gate_refuses_agent_selection_without_authorization():
     d = pl.diversity_report(_diverse(), FEATURES)
-    try:
+    with pytest.raises(AssertionError, match="requires researcher authorization"):
         pl.plan_gate(d, pi_selection=["A"], selector="agent")
-        assert False, "agents cannot self-select proposals"
-    except AssertionError as e:
-        assert "PI" in str(e)
 
 
 def test_gate_accepts_pi_selection():
@@ -131,3 +130,9 @@ def test_gate_warns_on_correlated_selection():
     v = pl.plan_gate(d, pi_selection=["A", "B"], selector="pi")
     assert v.verdict == "selected"
     assert any("correlated" in w for w in v.warnings)
+
+
+def test_researcher_can_delegate_selection_without_changing_default():
+    d = pl.diversity_report(_diverse(), FEATURES)
+    assert pl.plan_gate(d, pi_selection=["A"], selector="agent",
+                        agent_selection_authorized=True).verdict == "selected"

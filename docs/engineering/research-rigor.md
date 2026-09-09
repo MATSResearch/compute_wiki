@@ -6,15 +6,53 @@ tags:
 
 # Research Rigor with AI Assistance
 
-The rules for keeping research honest when an agent is doing some of the work.
-Each one exists because of a measured failure rate, not a preference, and each
-is cheap enough to apply by hand.
+Recommendations and optional checks for keeping AI-assisted research inspectable.
+Evidence from past systems informs these methods; it does not fix the division
+of labor for future models. Apply checks appropriate to the question and follow
+the researcher’s existing delegation and resource authorization.
 
 This is about **your own research**. For which AI-scientist system to use and
 how they fail, see
 [`ai-scientist-frameworks.md`](ai-scientist-frameworks.md). For the loop a
 project runs on, see
 [`meta_workflow.md`](https://github.com/MATSResearch/compute_wiki/blob/master/project_templates/meta_workflow.md).
+
+## Project delegation, repair proposals, and quiet reminders
+
+The MATS Automated Alignment dashboard saves research guidance per project,
+across sessions. **Consult on method choices** asks the researcher before settling
+on benchmarks, metrics, datasets or splits unless existing instructions settle
+the choice. **Choose methods independently** delegates those choices within the
+stated objective and existing resource authorization. Project instructions carry
+scope, resource allocations and preferences; they do not silently apply to other
+projects. Guidance changes are recorded. The dashboard continues to require
+researcher review of concern resolutions and hypothesis verdicts in either mode.
+
+Stages and library skills are recommendations. Exploration, theory, and building
+an instrument can begin without a hypothesis. Preserve the distinction between
+observations that generated a prediction and later tests of that prediction.
+Reuse supplied answers rather than stopping for an obligatory scoping exchange.
+
+A repair proposal records a concern id, a summary of what changed, and evidence
+references to a rerun, independent check, or revised claim. References are not
+proof that a check ran or that its conclusion is sound. In the dashboard, the
+researcher inspects the evidence and selects **Verify and accept repair** to
+resolve the concern without retyping the agent's explanation. Proposals remain
+in the project record; submitting a proposal never closes a concern by itself.
+There is currently no trusted automated-verifier integration for accepting these
+proposals. Existing manual dispositions remain available.
+
+Optional reminders are stored with a stable id and revision. **Handled** hides
+that revision. Materially new evidence can justify a higher revision and another
+suggestion. **Mute for this project** stays quiet across revisions until the
+researcher chooses **Show again**. Advice never blocks a stage; agents should not
+repeat a reminder in chat or rename it to evade a dismissal. Keep actionable
+advice brief and load detailed procedures only when useful.
+
+These are working project records, separate from optional transcript retention.
+They do not authorize sharing the records across researchers or using them for
+training. The dashboard owns persistence and controls; this guide and the wiki
+skill describe the method; `automated_alignment_research` owns outcome evaluation.
 
 ## The eleven stages
 
@@ -42,8 +80,8 @@ design**. A pilot is what tells you what the real design should be — power,
 effect size, whether the metric moves at all — so committing to the analysis
 before one means committing to guesses, and committing after the main run is
 not commitment at all. There are therefore **two commitment points**:
-`hypothesis` records the prediction and what would falsify it before anything
-runs; `design` commits to the analysis and the per-measure guards after the
+`hypothesis` records the prediction and what would falsify it before the
+confirmatory test; `design` commits to the analysis and the per-measure guards after the
 pilot and before the main run.
 
 It is a checklist, not a state machine: nothing enforces the order, and a stage
@@ -54,7 +92,7 @@ may become active again any number of times.
 | You are about to… | Do this | Because |
 |---|---|---|
 | Start running anything | Record the prediction and its falsifier first (`hypothesis`); after the pilot, freeze the metric, decision rule and guards before the main run (`design`) | Choosing the analysis after seeing results is one of the four documented AI-scientist process failures |
-| Pick between experiment designs | Generate genuinely divergent ones and pick yourself | Proposal diversity correlates r=0.57 with success; agents cannot self-select (LLM "innovativeness" correlates **−0.06** with real effectiveness) |
+| Pick between experiment designs | Compare mechanisms and failure modes; select under the project’s delegation arrangement | Past diversity and self-ranking results motivate checking selection quality in the current task |
 | Accept a result because the code ran | Run an independent check on the number | Silent failure — code runs, exits 0, result is wrong — is the dominant implementation risk |
 | Notice something is off | Write it down where it blocks something | **82.5%** of agent research runs contain a flaw the agent spotted itself and shipped anyway |
 | Write up a result | Give every registered prediction a verdict, including the failures | Overclaiming with concealed negative results appears in **78.1%** of runs |
@@ -65,7 +103,7 @@ may become active again any number of times.
 
 Pre-registration happens at two points, on either side of the pilot.
 
-**In `hypothesis`, before anything runs**, write down:
+**For a confirmatory test, before its evidence is observed**, write down:
 
 - the **hypothesis** — one falsifiable claim, naming a mechanism, not a correlation;
 - the **prediction** — the concrete quantitative observation that follows if it is true;
@@ -114,16 +152,19 @@ failure is doing exploratory work and reporting it as confirmatory.
 
 Generate several candidate designs that differ in **mechanism**, not in
 hyperparameters, and record for each the **failure mode it is most vulnerable
-to**. Then *you* pick.
+to**. Choose using the project’s delegation arrangement.
 
-Two hard constraints, both measured:
+Two empirical cautions from the cited systems:
 
-- **Asking more models does not diversify.** Cross-vendor hypothesis similarity
+- **Asking more models does not guarantee diversity.** Cross-vendor hypothesis similarity
   (0.57–0.73) is about the same as within one vendor. Ensembling frontier models
   to get variety does not work; divergence has to be curated deliberately.
-- **Agents cannot self-select.** LLM-judged "innovativeness" correlates
-  **−0.06** with actual effectiveness on MLRC-Bench. An agent ranking its own
-  proposals is producing noise with a confident tone.
+- **Self-ranking needs evidence.** LLM-judged "innovativeness" correlated
+  **−0.06** with effectiveness in the cited MLRC-Bench setting. That is a reason
+  to validate the selection method, not a permanent prohibition on delegation.
+  The optional Python `plan_gate` preserves human selection by default; an
+  application can pass `agent_selection_authorized=True` after the researcher
+  delegates selection. That flag records authorization, not model competence.
 
 **The alignment-specific trap:** candidates that share a failure mode produce
 *correlated* evidence, which does not average out. Three experiments that would
@@ -190,9 +231,9 @@ So the rule is about consequence, not detection:
    context versus in isolation.
 2. **Make it block something.** An open concern should stop the step being
    called done, and stop anything downstream that amounts to concluding.
-3. **The agent does not get to close it.** You do, and you have to say why. An
-   agent that can resolve its own concern reproduces the 82.5% behaviour with an
-   audit trail attached.
+3. **Make the disposition inspectable.** The agent can submit a repair and
+   evidence. In the dashboard, review and accept that proposal, or provide a
+   manual disposition. A proposal alone is not a verified resolution.
 
 A concern must never block the *work* — only the claim that the work is
 finished. Keep experimenting; just do not mark it done.
