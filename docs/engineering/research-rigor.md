@@ -85,7 +85,11 @@ confirmatory test; `design` commits to the analysis and the per-measure guards a
 pilot and before the main run.
 
 It is a checklist, not a state machine: nothing enforces the order, and a stage
-may become active again any number of times.
+may become active again any number of times. Use `not_applicable` when a stage
+does not belong to the project (for example, a theory project with no main run)
+and `superseded` when a recorded approach was replaced by a new iteration.
+Neither status claims that the stage's work was completed; preserve the reason
+and link the next iteration in the project record.
 
 ## At a glance
 
