@@ -45,9 +45,9 @@ resulting artifact is checked in the project's actual Lean environment.
 
 ## Before presenting a completed proof
 
-Perform a proportionate cleanup pass using `mats-lean-cleanup` when installed.
-Otherwise, remove search debris and redundant reasoning, make the mathematical
-steps readable, and recheck the final artifact while preserving the theorem and
+Consider `mats-lean-cleanup` when search debris or unclear structure would
+benefit from an editorial pass. A reminder is advisory; use your judgment about
+whether more editing helps. Recheck any edits while preserving the theorem and
 its assumptions. Respect requests for drafts; leave already clear proofs alone.
 Present the best checked version, not an unverified cosmetic rewrite.
 

@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Test skill hints
+        run: python3 -m unittest discover -s hooks/tests -v
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - name: Build site (strict)

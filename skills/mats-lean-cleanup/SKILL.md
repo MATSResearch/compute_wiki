@@ -1,13 +1,13 @@
 ---
 name: mats-lean-cleanup
-description: Edit working Lean proofs for mathematical readability, library reuse, and maintainability. Use automatically before presenting newly generated or substantially repaired Lean proofs as finished, as well as for explicit cleanup or refactoring requests. Preserve the theorem and verify the edited artifact in the pinned environment.
+description: Edit working Lean proofs for mathematical readability, library reuse, and maintainability. Consider when preparing generated or substantially repaired Lean proofs for presentation, or for explicit cleanup or refactoring requests. Preserve the theorem and verify the edited artifact in the pinned environment.
 ---
 
 # Lean proof cleanup
 
-Treat a first working proof as a draft. Before presenting completed Lean work,
-perform a proportionate editorial pass without waiting for a separate cleanup
-request. Respect requests for a raw draft, teaching walkthrough, or particular
+A first working proof can benefit from a proportionate editorial pass before
+presentation. Use this guidance when it helps; a hook suggesting this skill is
+an invitation, not a requirement to load it or perform another pass. Respect requests for a raw draft, teaching walkthrough, or particular
 style. An already clear proof may need no changes.
 
 ## Preserve the result
