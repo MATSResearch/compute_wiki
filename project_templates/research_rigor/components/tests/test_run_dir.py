@@ -107,3 +107,12 @@ def test_metadata_write_is_atomic_valid_json(tmp_path):
     assert meta["stage_status"]["hypothesis"] == "frozen"
     assert meta["prereg"]["content_hash"] == "sha256:abc"
     assert not (tmp_path / "run_20260707_120000_probe" / "metadata.json.tmp").exists()
+
+
+def test_exploratory_or_revised_work_has_terminal_statuses(tmp_path):
+    rd = _mk(tmp_path)
+    rd.set_stage_status("lit_review", "not_applicable")
+    rd.set_stage_status("hypothesis", "superseded")
+    statuses = rd.read_metadata()["stage_status"]
+    assert statuses["lit_review"] == "not_applicable"
+    assert statuses["hypothesis"] == "superseded"

@@ -32,7 +32,10 @@ STAGES = (
     "question", "lit_review", "hypothesis", "pilot", "design", "setup",
     "run", "analysis", "resolve", "writeup", "publish",
 )
-STAGE_STATUS = ("pending", "running", "done", "frozen", "skipped", "failed")
+STAGE_STATUS = (
+    "pending", "running", "done", "frozen", "skipped", "failed",
+    "not_applicable", "superseded",
+)
 PROVENANCE_EVENTS = (
     "tool_call", "model_invocation", "decision", "branch_selected",
     "artifact_written", "error",
