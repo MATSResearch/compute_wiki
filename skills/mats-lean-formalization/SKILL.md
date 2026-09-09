@@ -43,6 +43,14 @@ resulting artifact is checked in the project's actual Lean environment.
   from proof holes. `noncomputable` concerns code generation and is not itself
   an additional axiom or evidence of an incomplete proof.
 
+## Before presenting a completed proof
+
+Perform a proportionate cleanup pass using `mats-lean-cleanup` when installed.
+Otherwise, remove search debris and redundant reasoning, make the mathematical
+steps readable, and recheck the final artifact while preserving the theorem and
+its assumptions. Respect requests for drafts; leave already clear proofs alone.
+Present the best checked version, not an unverified cosmetic rewrite.
+
 ## Report the result
 
 For each formalized claim, report the informal claim, the Lean theorem name

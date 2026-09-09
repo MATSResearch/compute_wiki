@@ -17,7 +17,13 @@ independently; they do not require loading the whole set.
 | `mats-lean-formalization` | Translate an informal claim into a precise, checked artifact |
 | `mats-lean-debug` | Diagnose a failed check and repair the proof without quietly changing the claim |
 | `mats-lean-library-search` | Find a declaration that works in the pinned library revision |
+| `mats-lean-cleanup` | Present a readable, rechecked proof without a separate cleanup request |
 | `mats-lean-review` | Assess statement fidelity, assumptions, and what the checked proof establishes |
+
+The `mats-lean-cleanup` skill adds an editorial pass before presenting finished
+proofs. It removes search debris, clarifies the argument, and verifies the edited
+artifact. Read the [comparison and cleanup guide](lean-proof-cleanup.md) for
+when shortening helps and when it harms readability.
 
 ## Work in the actual environment
 
