@@ -13,6 +13,10 @@ program's conventions instead of inventing its own.
 | [`mats-intervention-evidence/`](mats-intervention-evidence/) | claim it removed / unlearned something, that a finetune changed something, or that particular training data caused a behaviour |
 | [`mats-lean-formalization/`](mats-lean-formalization/) | translate a mathematical or theoretical claim into a checked Lean artifact and report its assumptions and limits |
 
+| [`mats-lean-debug/`](mats-lean-debug/) | diagnose a failed Lean check while preserving the intended theorem |
+| [`mats-lean-library-search/`](mats-lean-library-search/) | locate and apply existing Lean or Mathlib declarations |
+| [`mats-lean-review/`](mats-lean-review/) | review statement fidelity, proof completeness, and assumptions |
+
 ## Install
 
 ```bash
