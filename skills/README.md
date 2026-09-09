@@ -11,6 +11,7 @@ program's conventions instead of inventing its own.
 | [`mats-statistics/`](mats-statistics/) | claim a difference is real, choose a test, or put an error bar on a number |
 | [`mats-visualization/`](mats-visualization/) | write plotting code, choose a colormap, or save a figure |
 | [`mats-intervention-evidence/`](mats-intervention-evidence/) | claim it removed / unlearned something, that a finetune changed something, or that particular training data caused a behaviour |
+| [`mats-lean-formalization/`](mats-lean-formalization/) | translate a mathematical or theoretical claim into a checked Lean artifact and report its assumptions and limits |
 
 ## Install
 
