@@ -38,6 +38,19 @@ Aliases: `runpod.io`, "RunPod".
 - **Egress charges** for downloading datasets/models — minor but noticeable.
 - **A100 vs H100.** A100s are still cheap; for inference of ≤70B models, A100 80GB is fine. H100 / H200 buys ~2× speed for ~2× cost.
 
+### How do I get Claude Code / Codex to manage my RunPod pods? (runpod-tools / `rpt`)
+
+**runpod-tools** (`kmerkelbach/runpod-tools` on GitHub, command `rpt`, by Kilian Merkelbach, built during his Astra project) is a small agent-oriented CLI for RunPod onboarding and the everyday pod loop. Recommended: clone it and point your coding agent (Claude Code, Codex) at the repo — its `README.md` and `AGENTS.md` are written for an agent to read and then drive.
+
+- **Pod lifecycle:** `rpt start --gpu-type "NVIDIA H200" --wait`, `rpt pods` (GPU, uptime, $/hr, $ so far, ready-made `ssh`/`rsync` lines), `rpt stop`, `rpt resume`, `rpt terminate`, `rpt gpus` (prices and availability).
+- **Code and results:** `rpt push` / `rpt pull` / `rpt fetch` (rsync), `rpt run -- CMD` and `rpt run --background NAME -- CMD` over SSH with the pod's injected secrets.
+- **Template plumbing:** `rpt template env --secret-ref` (RunPod secrets without pasting them), `rpt template ports --add 22/tcp` (needed for SSH/rsync), `rpt template volume --gb N`.
+- **Agent-safe:** standard-library Python ≥ 3.11 only; non-interactive runs never hang on a prompt (ambiguous pod or missing confirmation exits 2); destructive commands need `-y` off a terminal.
+
+Setup: `pip install -e .`, set `RUNPOD_API_KEY`, put your SSH public key in the template's `SSH_PUBLIC_KEY` env var, then `rpt init` to write `runpod-tools.toml`.
+
+**When not to use it:** you only use the RunPod web console and a single long-lived pod, or you're on vast.ai / Lambda / Modal (RunPod only). It is a personal project (no license file at time of writing), not an official RunPod tool.
+
 ## vast.ai
 
 Aliases: `vast.ai`, "Vast".
