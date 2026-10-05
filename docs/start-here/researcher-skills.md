@@ -26,6 +26,12 @@ agents.
 | Problem selection on *open* problems | Taste matters most where no measurement exists yet — most of alignment | [Hamming](https://www.cs.virginia.edu/~robins/YouAndYourResearch.html), [Nanda](https://www.lesswrong.com/posts/Ldrss6o3tiKT6NdMm) |
 | Deliberately maintained base skills | AI assistance measurably erodes debugging skill — the skill you need to supervise it | [Shen & Tamkin 2026](https://www.anthropic.com/research/AI-assistance-coding-skills) |
 
+The same shift is happening between you and your Mentor: from a daily-oversight
+individual contributor to a researcher who could be left alone for a month — see
+[`mentor-expectations.md`](mentor-expectations.md). Agents now fill the daily-oversight
+role; the month-scale skills (planning, de-risking, deciding pivots, producing a map you
+can trust) are the ones that make you their effective manager.
+
 Rigor tooling that automates the mechanical layer lives elsewhere in this wiki:
 [`research-rigor.md`](../engineering/research-rigor.md),
 [`statistics.md`](../engineering/statistics.md),
