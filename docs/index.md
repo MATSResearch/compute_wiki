@@ -6,6 +6,8 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`faq.md`](start-here/faq.md)** — cross-cutting beginner questions (API keys, where to start, costs).
 - **[`glossary.md`](start-here/glossary.md)** — A–Z definitions of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, etc.).
 - **[`project-shapes.md`](start-here/project-shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
+- **[`mentor-expectations.md`](start-here/mentor-expectations.md)** — what MATS Mentors expect: going from a daily-oversight individual contributor to a researcher a Mentor could leave alone for a month (Nathan Helm-Burger's essay, plus reading).
+- **[`researcher-skills.md`](start-here/researcher-skills.md)** — as agents take over experiment execution, which of your own skills to build (measurement design, verifying agent output, judging evidence, taste, not deskilling) and what to read.
 - **[`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
 - **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
 - **[`statistics.md`](engineering/statistics.md)** — which test to run, what to put on the error bar, seeds vs samples, multiple comparisons, power.
@@ -240,6 +242,8 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Situation | Use | Topic doc |
 |---|---|---|
 | Catalog of common paper shapes (mech interp, SAE-feature, behavioral, control eval, model organism, RL safety, eval/benchmark, red-team, CoT faithfulness, welfare, debate) | Project shapes catalog | [`project-shapes.md`](start-here/project-shapes.md) |
+| What do Mentors expect of me? How do I become an independent researcher (plan my own month, route around blockers, decide pivots)? | Mentor expectations essay + reading | [`mentor-expectations.md`](start-here/mentor-expectations.md) |
+| Which research skills should I build as AI agents do more of the execution? What should I read? | Researcher skills that stay human + reading list | [`researcher-skills.md`](start-here/researcher-skills.md) |
 | Look up an acronym / concept | A–Z glossary | [`glossary.md`](start-here/glossary.md) |
 | Beginner FAQ (where to start, API keys, costs, common errors) | FAQ | [`faq.md`](start-here/faq.md) |
 
