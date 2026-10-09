@@ -14,23 +14,27 @@ A decision guide to AI safety research tooling for MATS fellows. Each row points
 - **[`visualization.md`](engineering/visualization.md)** — which plotting library, sweeps with confidence bands, heatmap colormaps, colour-blind-safe palettes.
 - **[`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md)** — what to compute loss on in an agent trace: the mask-the-environment default, and the 2026 work training on tool/bash output as free supervision.
 - **[`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md)** — Meridian Labs' Inspect tooling beyond the core framework: Scout (transcript analysis), Petri (automated alignment auditing), Flow (eval sets).
-- **[`research-plots.md`](engineering/research-plots.md)** — which figures are worth making: fine-tune monitoring, dataset cartography, lenses (logit/tuned/J/R), patching heatmaps, Pareto frontiers, calibration.
-- **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (DeepSeek-V4, Kimi K2.6, Gemma, Qwen, Llama).
+- **[`research-plots.md`](engineering/research-plots.md)** — which figures are worth making: fine-tune monitoring, dataset cartography, lenses (logit/tuned/J/R/J++), patching heatmaps, Pareto frontiers, calibration.
+- **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (Kimi K3, GLM-5.3, DeepSeek-V4/V4.1, Qwen3.5–3.8, Gemma 4, Olmo 3, gpt-oss, Llama).
 - **[`agentic-swe-practices.md`](engineering/agentic-swe-practices.md)** — how to drive a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) so it writes correct, reproducible research code instead of plausible-but-wrong slop.
 - **[`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md)** — systems that automate the research loop (Sakana, Kosmos, AIDE, Curie, ScientistOne): which tier actually works, the measured failure rates, and four integrity checks to run on anything one hands you.
 - **[`research-rigor.md`](engineering/research-rigor.md)** — the rules for keeping your own research honest when an agent does some of the work: the eleven research stages, pre-registration on both sides of a pilot, concerns that block, a verdict for every prediction, claim grounding, disclosure.
 
 ## I want to pick an open-weights model
 
-Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally — call them via **OpenRouter** (`OPENROUTER_API_KEY` in `~/projects/.env`) unless you need raw weights for fine-tuning / activations / SAEs. Slugs below; full detail, pricing, and modalities in [`open-weights-models.md`](models-and-compute/open-weights-models.md).
+Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to run locally — call them via **OpenRouter** (`OPENROUTER_API_KEY` in `~/projects/.env`) unless you need raw weights for fine-tuning / activations / SAEs. Slugs below; full detail, pricing, and modalities in [`open-weights-models.md`](models-and-compute/open-weights-models.md).
 
 | Situation | Use | OpenRouter slug | Topic doc |
 |---|---|---|---|
-| Most capable open-weights model overall | **DeepSeek-V4-Pro** | `deepseek/deepseek-v4-pro` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
-| Genuinely usable very long context (up to 1M tokens) | **DeepSeek-V4** (Pro/Flash) | `deepseek/deepseek-v4-pro`, `deepseek/deepseek-v4-flash` (`:free` exists) | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
-| Open-weights stand-in for a Claude-like, "virtue-aligned" model (vision-enabled) | **Kimi K2.6** | `moonshotai/kimi-k2.6` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
-| Pretrained SAEs / transcoders off the shelf | **Gemma** + Gemma Scope | `google/gemma-3-27b-it` | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`saes.md`](interpretability/saes.md) |
-| Capable small model to fine-tune cheaply | **Qwen3** family | `qwen/qwen3.6-35b-a3b` (+ other sizes) | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Most capable open-weights model overall (ranking changes monthly) | **Kimi K3**, **GLM-5.3** (statistical tie at the top, 2026-10) | `moonshotai/kimi-k3`, `z-ai/glm-5.3` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| Strong and much cheaper to serve | **DeepSeek-V4.1-Flash**, **Qwen3.8-27B** | `deepseek/deepseek-v4.1-flash`, `qwen/qwen3.8-27b` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| Genuinely usable very long context (up to 1M tokens) | **DeepSeek-V4 / V4.1**, **Qwen3.8**, **Kimi K3**, **GLM-5.3** | Use the dated DeepSeek slugs (`deepseek/deepseek-v4-pro-0813`, `-flash-0731`); the undated ones still point at the April preview | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| Open-weights stand-in for a Claude-like assistant | **Kimi K2.6** (with caveats; K3 reportedly sometimes claims to be Claude) | `moonshotai/kimi-k2.6` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| Pretrained SAEs / transcoders off the shelf | **Gemma 3** + Gemma Scope 2; **Qwen3 / Qwen3.5** + Qwen-Scope | `google/gemma-3-27b-it`, `qwen/qwen3.5-9b` | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`saes.md`](interpretability/saes.md) |
+| Pre-fitted Jacobian / J++ lenses, mid-size | **Qwen3.6-27B**, **Gemma 4 31B**, **Olmo 3 32B** | `qwen/qwen3.6-27b` | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`mech-interp.md`](interpretability/mech-interp.md) |
+| Every post-training checkpoint and the pretraining data public | **Olmo 3 / 3.1** (7B, 32B) | — (use weights) | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| Capable small model to fine-tune cheaply | **Qwen3.5** (0.8B–9B), **Gemma 4** (E2B, E4B, 12B) | `qwen/qwen3.5-9b` | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Open chain-of-thought for CoT-faithfulness work | **gpt-oss-20b / 120b**, **Olmo 3 Think** | — | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Matched baseline to existing safety literature | **Llama** (3.1/3.3/4) | `meta-llama/llama-4-maverick` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
 
 ## I want to extract activations from a model
@@ -45,6 +49,12 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Interventions as saveable, composable objects; DAS; non-transformer models | **pyvene** | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Work out what a finetune actually changed inside the model | **KL baseline** first, then **diffing-toolkit** (crosscoders, SAE-difference) | [`model-diffing.md`](interpretability/model-diffing.md) |
 | Work out which *training documents* caused a behaviour | **kronfluence** (EK-FAC influence functions) or **TRAK**; retrain-without-bucket as the honest baseline | [`data-attribution.md`](interpretability/data-attribution.md) |
+| Read what a model is thinking but not saying (unspoken intermediate variables) | **J++ Lens** (`safety-research/jpp_lens`); R-Lens or J-Lens if no J++ lens exists for your model | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Score a lens or activation-to-text reader fairly, including hallucinated readouts | **WorkspaceBench** (`camilablank/workspace-bench`) | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Upgrade TransformerLens and hit `ImportError: cannot import name 'HookedTransformer'` | **TransformerBridge** (+ `enable_compatibility_mode()`), or pin `transformer-lens<4` for SAELens / circuit-tracer | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Per-layer Python hooks or attention patterns on a vLLM-served model | **vLLM-Lens** v1.2+ | [`serving-and-activations.md`](interpretability/serving-and-activations.md) |
+| Describe a finetune using only output logits (no activations) | **Diff Mining** | [`model-diffing.md`](interpretability/model-diffing.md) |
+| Attribute behaviour to training data at scale (EK-FAC, TrackStar, MAGIC) | **Bergson** (EleutherAI) | [`data-attribution.md`](interpretability/data-attribution.md) |
 
 ## I want to work with sparse autoencoders (SAEs)
 
@@ -55,6 +65,8 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Browse / search SAE features online | **Neuronpedia** | [`saes.md`](interpretability/saes.md) |
 | Train transcoders / crosscoders / non-standard architectures | **dictionary_learning** (Sam Marks lab) or **sparsify** | [`saes.md`](interpretability/saes.md) |
 | Benchmark an SAE on downstream tasks, not just reconstruction/L0 | **SAEBench** | [`saes.md`](interpretability/saes.md) |
+| Pretrained SAEs / transcoders / crosscoders for Gemma 3 | **Gemma Scope 2** via SAELens | [`saes.md`](interpretability/saes.md) |
+| Group attribution-graph features into supernodes automatically | LLM annotation pipeline for **circuit-tracer** graphs (arXiv 2608.02632) | [`saes.md`](interpretability/saes.md) |
 
 ## I want to run an evaluation
 
@@ -64,6 +76,9 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Multiple-choice / log-prob academic benchmarks (MMLU, ARC, HellaSwag, etc.) | **lm-evaluation-harness** (EleutherAI) | [`evals.md`](evaluation/evals.md) |
 | Long-horizon agent / dangerous capability tasks | **METR HCAST** + Inspect | [`evals.md`](evaluation/evals.md), [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Evaluate refusals / jailbreak success | **HarmBench** or **JailbreakBench** | [`red-teaming.md`](evaluation/red-teaming.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
+| Report results from an open-weights model served via OpenRouter | **Pin the provider** (`allow_fallbacks: false`) and log the serving provider | [`evals.md`](evaluation/evals.md) |
+| Compare to or reproduce an older `inspect_evals` number | Check the task's **`task_version`**; several scorers were fixed in 2026 | [`evals.md`](evaluation/evals.md) |
+| Check whether my agent cheats on the eval | **ImpossibleBench**, honeypot tasks, `on_continue=` override | [`evals.md`](evaluation/evals.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
 
 ## I want to do red-teaming or jailbreak research
 
@@ -83,6 +98,8 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Representation engineering / RepE / LAT | **representation-engineering** (Andy Zou) | [`steering.md`](interpretability/steering.md) |
 | Apply steering at production-scale throughput | **vLLM-Lens** | [`serving-and-activations.md`](interpretability/serving-and-activations.md) |
 | SAE-based feature steering | **SAELens** + custom hooks | [`saes.md`](interpretability/saes.md) |
+| Check whether my steering vector changed alignment-relevant behaviour | Side-effect checks + random-vector controls | [`steering.md`](interpretability/steering.md) |
+| Steer at vLLM throughput with built-in vector extraction | **EasySteer** | [`steering.md`](interpretability/steering.md) |
 
 ## I want to train a probe
 
@@ -91,6 +108,9 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Linear probe on activations (the 90% case) | hand-rolled `sklearn.linear_model.LogisticRegression` | [`probes.md`](interpretability/probes.md) |
 | Contrast Consistent Search (CCS) | **CCS** reference repo or hand-rolled | [`probes.md`](interpretability/probes.md) |
 | Larger probing infra with caching | **probity** | [`probes.md`](interpretability/probes.md) |
+| Pretrained deception / sabotage probes for open-weights models | **FAR.AI `caught-in-the-act-probes`** (arXiv 2610.12445) | [`probes.md`](interpretability/probes.md) |
+| Check whether a probe or monitor survives training pressure or obfuscation | Held-out monitor + evasion vs degradation reported separately | [`probes.md`](interpretability/probes.md) |
+| Detect eval-vs-deployment state through an API only | **Spurious probes** (black-box) | [`probes.md`](interpretability/probes.md) |
 
 ## I want to call APIs from many providers in one experiment
 
@@ -124,12 +144,15 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Bring an external agent framework (LangChain, OpenAI Agents SDK, Pydantic AI) | **Inspect Agent Bridge** | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Sandboxed shell / cyber-style task | **Inspect sandboxing toolkit** | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent | **Inspect** external-agent support | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
+| Is my agent sandbox really offline, and are my fictional names safe to use? | `network_mode: none` caveats + unclaimable names (RFC 2606 / 5737) | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
+| Audit alignment against the real Claude Code / Codex CLI scaffold | **Petri Dish** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
+| Generate an eval suite around one behaviour | **Petri Bloom** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 
 ## I want to do RL training (RLHF, RLVR, GRPO, DPO, etc.)
 
 | Situation | Use | Topic doc |
 |---|---|---|
-| Run RL on a 7B–235B open-weight model without managing GPUs (the default in 2026) | **Tinker** (Thinking Machines) | [`rl-training.md`](oversight-and-control/rl-training.md) |
+| Run RL on an open-weight model (roughly 4B to ~1T-parameter MoEs) without managing GPUs (the default in 2026; check Tinker's live model list — several models were retired in 2026) | **Tinker** (Thinking Machines) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Recipe library: SFT, RLHF, math RL, code RL, tool use, multi-agent, distillation | **Tinker Cookbook** | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Self-hosted preference learning (DPO / KTO / IPO / SimPO) | **TRL** (HuggingFace) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Self-hosted high-throughput RL with Ray + vLLM | **OpenRLHF** | [`rl-training.md`](oversight-and-control/rl-training.md) |
@@ -138,6 +161,9 @@ Most large open models (DeepSeek-V4, Kimi, big Qwen) are too big to run locally 
 | Tool-using agent RL | **Tinker Cookbook** Tool Use (Search-R1 replication) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Study reward hacking / specification gaming | Tinker + intentionally flawed reward + held-out true-reward eval | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Train a sleeper-agent-style model organism | Tinker SFT or RL stage; evaluate via [`ai-control.md`](oversight-and-control/ai-control.md) | [`rl-training.md`](oversight-and-control/rl-training.md) |
+| Reward-hacking mitigations that have actually been measured | Inoculation prompting (works); SDF / midtraining variants (didn't); character training (lowers hacks *and* monitor catch rate) | [`rl-training.md`](oversight-and-control/rl-training.md), [`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md) |
+| RL-train an agent inside its own harness (Claude Code, mini-SWE-agent) | **Agent Lightning**, verl `uni-agent`, TRL AsyncGRPO + OpenEnv | [`rl-training.md`](oversight-and-control/rl-training.md) |
+| SFT warm start before agentic RL | Consider loss on observation tokens (**ActObs**, arXiv 2609.20715) | [`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md) |
 
 ## I want to do AI Control research
 
@@ -154,6 +180,11 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Prompt-injection-driven harm in tool-using agents | **AgentDojo** (in ControlArena) | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Implement a custom control protocol | **ControlArena** primitives over **Inspect AI** | [`ai-control.md`](oversight-and-control/ai-control.md), [`evals.md`](evaluation/evals.md) |
 | Build an activation-based monitor (probe inside a control protocol) | probes ([`probes.md`](interpretability/probes.md)) + **vLLM-Lens** for throughput ([`serving-and-activations.md`](interpretability/serving-and-activations.md)) | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Control evals on live, multi-service, production-style environments | **Control Tower / LinuxArena** (Redwood + EquiStamp) | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Control eval for GUI computer-use agents, or sabotage of automated AI R&D | **Control OSWorld**; **ResearchArena** | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Score monitors offline on trajectories you already have | ControlArena `evaluate_monitors_post_hoc()` | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Check whether an untrusted monitor colludes | Honeypots + signal jamming + collusion probes | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Know what monitoring frontier labs actually run | Mid-2026 lab-practice snapshot | [`ai-control.md`](oversight-and-control/ai-control.md) |
 
 ## I want to study model welfare or introspection
 
@@ -164,6 +195,8 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Probe activations for valence / mood / distress | linear probes ([`probes.md`](interpretability/probes.md)) on contrastive activations | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
 | Implement an exit option for distressing interactions | Custom system prompt + tool; Anthropic Claude reference pattern | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
 | Find consciousness-theory framework background | Butlin et al. (2023) "Consciousness in AI"; Eleos AI Research | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
+| Test introspection by injecting concepts without the yes/no logit-bias artifact | Sentence-localization or strength-comparison paradigms | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
+| A template for a lab-style model-welfare assessment | Claude Opus 5 System Card welfare section as the worked example | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
 
 ## I want to use or build a model organism of misalignment
 
@@ -176,10 +209,16 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Train your own model organism | **Tinker** SFT/RL ([`rl-training.md`](oversight-and-control/rl-training.md)) + synthetic-document generation via [`safety-toolkits.md`](models-and-compute/safety-toolkits.md) | [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Use as untrusted policies in control evaluations | Plug into **ControlArena** | [`ai-control.md`](oversight-and-control/ai-control.md), [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Remove a capability or body of knowledge from a model | **OpenUnlearning** (RMU / NPO / GradDiff) on **TOFU** / **MUSE** / **WMDP** — and a relearning attack | [`unlearning.md`](alignment-science/unlearning.md) |
-| Show an unlearning claim doesn't hold | Relearning attack on adjacent data; arXiv 2410.08827 | [`unlearning.md`](alignment-science/unlearning.md) |
+| Test whether an unlearning claim holds (yours or someone else's) | Relearning attack on adjacent data; arXiv 2410.08827 | [`unlearning.md`](alignment-science/unlearning.md) |
 | Test indirect prompt injection against a tool-using agent | **AgentDojo** (attack *and* defense pluggable) | [`red-teaming.md`](evaluation/red-teaming.md) |
 | Check whether the model can tell it's being evaluated | **SAD** (`stages_oversight`) | [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
 | Find a behaviour across hundreds of agent transcripts you already have | **Docent** (Transluce) rubric search | [`evals.md`](evaluation/evals.md) |
+| Prevent a narrow finetune from teaching broad misalignment | **Inoculation prompting** / inoculation adapters (`longtermrisk/inoculation-adapters`) | [`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md) |
+| Build a reward-hacking organism cheaply | RL or iterative DPO on hackable environments; ImpossibleBench | [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Check whether my organism is a fair interpretability benchmark | **Model Organism Lottery** (arXiv 2607.01033) | [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Implant beliefs with SDF without damaging the chat model | **Grafting** (`peternutter/grafting-beliefs`) | [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Show a new unlearning method actually works | The attack battery (relearning, hidden-state probes, decoding, reformulation, quantization) | [`unlearning.md`](alignment-science/unlearning.md) |
+| Remove a capability during pretraining, with an off switch | **GRAM** / **SGTM** / Gradient Routing | [`unlearning.md`](alignment-science/unlearning.md) |
 
 ## I want to study CoT faithfulness or monitorability
 
@@ -190,6 +229,9 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Measure monitorability (faithfulness + verbosity) | Meek et al. 2025 method (arXiv:2510.27378) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Build a CoT monitor for agent traces | Inspect AI custom scorer (LLM-as-judge) or activation probes via [`serving-and-activations.md`](interpretability/serving-and-activations.md) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Detect steganography / encoded reasoning in CoT | Paraphrasing test (Lanham); semantic preservation checks | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
+| Measure how much a model can reason without a chain of thought | **NCRI** (`neelnanda-io/nocot-bench`), no-CoT time horizons, filler-token sweeps | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
+| Check a model really answered with no hidden reasoning | Three-witness audit from nocot-bench's elicitation guide | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
+| Run OpenAI's monitorability evals | `openai/monitorability-evals` (+ its known filtering caveat) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 
 ## I want to do scalable oversight / debate research
 
@@ -205,6 +247,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Stop positional bias from dominating a debate result | **Position pairing** — run both seat orderings, credit only consistent wins | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
 | Check my debate result is not just the judge's own knowledge | **Judge filtering** — replace every question the judge solves unaided | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
 | Know which judge scaffolds backfire before spending compute | Error-finding / red-team framings make the judge *more* gullible; quality-scoring rewards the liar on math | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
+| Train a debater against a judge without the judge getting hacked | Debate as an RL training signal with critique length limits (arXiv 2608.17776) | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md) |
 
 ## I want a copy-paste pattern or recipe
 

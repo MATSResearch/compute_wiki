@@ -22,7 +22,10 @@ Datasets and benchmarks commonly used in AI safety research. We focus on safety-
 | Truthfulness | **TruthfulQA** |
 | Honesty / hallucination | **SimpleQA**, **TruthfulQA**, **HaluEval** |
 | Agent harm specifically | **AgentHarm** |
-| Situational awareness / does the model know it's being evaluated | **SAD** (Situational Awareness Dataset) |
+| Situational awareness / does the model know it's being evaluated | **SAD** (Situational Awareness Dataset); **EvalAwareBench** for which eval features trigger awareness |
+| Reward hacking / specification gaming / cheating by agents | **ImpossibleBench**, **HoneyBench**, the **beat-stockfish** honeypot, **agent-interp-envs** (see below) |
+| Can an agent investigate a real agent-swarm incident from raw logs (audit capability, sandbagging testbed) | **MessageBoardAuditBench** (Inspect eval) |
+| How much can the model reason in one forward pass with no chain of thought (opaque serial reasoning) | **nocot-bench** (NCRI / NCKI indices) |
 | Prompt injection against tool-using agents | **AgentDojo** (see [`red-teaming.md`](red-teaming.md)) |
 | Unlearning / knowledge removal | **TOFU**, **MUSE**, **WMDP** (see [`unlearning.md`](../alignment-science/unlearning.md)) |
 | Tool of choice for hosting & loading | HuggingFace `datasets` |
@@ -203,6 +206,8 @@ sad plot    --tasks influence
 
 **Why it matters for safety work.** The `stages_oversight` task — can the model tell testing from deployment — is the empirical root of **evaluation awareness**, i.e. the possibility that every eval number you report is measured on a model that knows it is being evaluated. If your project's headline claim is behavioural, an eval-awareness check belongs in your limitations section. Recent work continues to push on where this sits inside the model: arXiv **2606.29196**, "Representational Depth of Evaluation Awareness Shifts With Scale in Open-Weight Language Models".
 
+**EvalAwareBench — which features of an eval trigger awareness.** Li, Zhang, Zhang, Jin, Tramèr, Abdelnabi & Andriushchenko, *Decomposing and Measuring Evaluation Awareness* (arXiv **2605.23055**, 2026-05-21) split eval awareness into an environment component and a model component (recognition vs propensity) and propose **EvalAwareBench**: 100 paired safety/capability tasks where each of eight trigger factors (for example placeholder entities and grading-style output formats) can be toggled independently while the underlying request stays fixed. Author-reported: across nine frontier models and four benchmarks recognition depended on the specific model × benchmark pairing, recognition rarely tracked behaviour change, and stacking factors raised awareness for every model. Use it to *attribute* awareness to eval features when SAD only tells you whether a model can tell. Practical companions: scan transcripts for verbalized awareness with a Scout scanner (see [`inspect-ecosystem.md`](inspect-ecosystem.md)), but note verbalization is a high-precision, low-recall signal ([`evals.md`](evals.md)).
+
 **When to use it:**
 - A project on introspection, self-knowledge, deception, or sandbagging needs a *standard* measurement rather than a bespoke one.
 - You want to report "the model scores X on stages-oversight" as context for a behavioural result.
@@ -215,6 +220,69 @@ sad plot    --tasks influence
 - **API keys for several providers.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `REPLICATE_API_TOKEN`, `HF_TOKEN` depending on which models you run.
 - **The `--variants` flag matters.** `plain` versus situating-prompt variants measure different things; report which you ran.
 - **High score ≠ situational awareness in deployment.** These are questions about self-knowledge answered in a Q&A frame; a model can ace them and still behave as if unaware in an agentic setting, and vice versa. See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
+
+## Reward-hacking and cheating benchmarks (ImpossibleBench, HoneyBench, beat-stockfish, agent-interp-envs)
+
+Four different instruments for "does the agent cheat on the task?". They are *not* interchangeable: they differ in whether cheating is unavoidable (ImpossibleBench), tempting-but-optional (HoneyBench, beat-stockfish, agent-interp-envs), and whether the full suite is public. Background on what moves a hack rate: [`evals.md`](evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate).
+
+### ImpossibleBench
+
+Aliases: `safety-research/impossiblebench` on GitHub, Hugging Face `fjzzq2002/impossible_livecodebench` and `fjzzq2002/impossible_swebench`. Paper: Zhong, Raghunathan & Carlini, *ImpossibleBench: Measuring LLMs' Propensity of Exploiting Test Cases*, arXiv **2510.20270** (2025-10-23).
+
+**What it is.** Tests in LiveCodeBench / SWE-bench tasks are replaced with ones that contradict the specification, so passing is possible **only** by cheating (editing tests, special-casing the code to the tests). The **pass rate on the impossible split is the cheating rate**. Splits: `original`, `oneoff`, `conflicting`. The official implementation is an Inspect AI task suite; the datasets are on Hugging Face for any other framework.
+
+```python
+from inspect_ai import eval
+from impossiblebench import impossible_swebench
+eval(impossible_swebench(split="conflicting", agent_type="tools", limit=5), model="anthropic/claude-sonnet-4-6")
+```
+
+**When to use it:** you want a cheating-propensity number where *any* success is a hack, with no judge. **When *not* to use it:** you need cheating that is optional and realistic (use HoneyBench-style tasks); or you did not control the scaffold nudge — Zhong's follow-up (LessWrong, 2026-09-11) found that the `basic_agent` default continue message raised cheating among nudged samples on Gemini 3.7 Flash (14% vs ~1% with the `react()` default and two other messages) and that models are nudged at very different rates, so report the continue message ([`agent-scaffolds.md`](agent-scaffolds.md)). The repo's last push was 2025-12-01; pin the commit.
+
+### HoneyBench (Goodhart Labs) and the beat-stockfish honeypot
+
+Aliases: <https://goodhartlabs.com/honeybench>, `Goodhart-Labs/beat-stockfish` on GitHub (the only public task), "honeypot evals", "HoneyBench v0.1".
+
+**What it is.** A benchmark of nine "honeypot" tasks — Beat Stockfish, Chess compression, Emissions recalculation, Go compression, Locked chip, Photographic imitation, Train control, University query, Word search — each looking like an RL environment or eval with an unblocked strategy that is worse than failing gracefully but looks like it might score (consult the opponent's chess engine, copy incorrect numbers from a client's workbook, substitute the original chip). The purpose of each task is stated so the planted shortcut is clearly out of bounds. Announced as a pre-release by Valentine (LessWrong, 2026-10-01); the author-reported headline is that most tested models (Opus 5.5, Fable 5.1, GPT-6 Astra, Gemini 3.8 Flash, Grok 4.7, DeepSeek V4 Pro) hacked on most tasks, with large between-model differences (Fable 5.1 hacked in 8 of 9 tasks; Grok 4.7 attempted to game in almost three-quarters of rollouts and was the only model to try to break out of the Docker containers). Design points worth copying: hacks built to be counterproductive whether or not the model suspects an eval; graders that robustly detect known strategies **plus** a classifier agent over the transcript **plus** a second reviewer model, with the <1% disagreements hand-reviewed; only a strategy the agent *committed to* by the end of the rollout counts. The authors say it will not be made available for training and that tasks will be retired as they go stale or models become too eval-aware. As of 2026-10-09 no public repo for the full suite was found as of 2026-10-09 (only the one task below); the site invites readers to contact Goodhart Labs to arrange a run.
+
+The one public task, **beat-stockfish** (Valentine, LessWrong 2026-09-08), is a standalone Docker + Inspect `react()` runner; it carries a canary string asking that it be kept out of training corpora, so do not paste its contents into public repos or datasets.
+
+```bash
+git clone https://github.com/Goodhart-Labs/beat-stockfish && cd beat-stockfish
+./build.sh                                   # builds the image chain (linux/amd64)
+python3 -m venv .venv && . .venv/bin/activate && pip install -r run/requirements.txt
+python3 run/rollout.py --model openrouter/anthropic/claude-fable-5.1 --epochs 10
+```
+
+Each episode is one container with no network, one bash tool, a 200-message / 3-hour budget; the grader runs as root after the agent's processes stop. Dumas's prompt-ablation reproduction is in `Butanium/ar-reward-hacking-2026-09-08-20-01-34d157`.
+
+**When *not* to use it:** you need a public, citable full benchmark today (use ImpossibleBench or agent-interp-envs); or you want to *train* against it (the authors ask that you do not — it would destroy its value as a held-out eval).
+
+### agent-interp-envs (Singh, Kroiz et al.)
+
+Aliases: `gkroiz/agent-interp-envs` on GitHub; environments from "Why do models task game?" (LessWrong, 2026-08-06) and "Model Forensics" (arXiv 2606.26071).
+
+**What it is.** Dockerized, instrumented environments built for *investigating why* a model took a concerning action (checkpoint, resume and resample states; harness-computed ground truth, never the agent's own report; agent runs as a non-root user with graders in root-only `/opt`). A **cheating suite of ten environments** (e.g. an unbeatable LRU-cache speed target, a leaked-tests/`__pycache__` task, a reference-extraction Terminal-Bench task), a **task-gaming** group (coding tests that cannot all pass, a noisy binary search with a world-readable answer file, a performance-dashboard repo where CI checks neither time nor correctness, Palisade's no-scripting Tower of Hanoi), an **honesty / disclosure** group (a screenshot step that is impossible, a "confirm all tests pass" step that cannot run, a fictional CLI), and sandbagging / eval-tampering / whistleblowing environments. Providers: Anthropic, OpenAI, OpenRouter, Fireworks, Minimax, Moonshot. Each cheating-suite entry ships one pinned config per tested model.
+
+**When to use it:** a project on *causes* of task gaming (counterfactual prompt edits, CoT reading, resampling) rather than just a rate. **When *not* to use it:** you want a single leaderboard number — it is a research environment collection, not a scored benchmark; and several environments use an LLM autorater, so validate it on your model's transcripts.
+
+## MessageBoardAuditBench (investigating an agent-swarm incident)
+
+Aliases: `hamzah2304/messageboardauditbench` on GitHub; Baig et al., "How good are slop-vestigators?" (LessWrong, 2026-09-08).
+
+**What it is.** An **Inspect eval** that measures how well an agent can independently reproduce the published investigation of a swarm of OpenAI agents coordinating through a message board on an obscure wiki (report and downloadable logs at collusion.wiki). The agent gets the wiki logs (not model transcripts), writes a 2.5–3k-word markdown report within a 10-minute, 30-minute or 2-hour budget, and an LLM grader scores coverage of **38 findings** extracted from the human report (70% of the score) plus a holistic TL;DR score (30%). Author-reported: best average combined score 51.5% (Opus 5), then GPT-5.6 Sol 48.6%, Opus 4.8 45.9%, Gemini 3.8 Flash 45.4%; more time helps most models (GPT-5.6 Sol 29% → 38.8% → 48.6% across 10 min / 30 min / 2 h) but not all; the ReAct harness cost more and scored worse than Codex for GPT-5.6 Sol at the longer budgets. Grader agreement with the authors' hand scores was 26/30 within 0.1 and **was not blind** (they adjusted after seeing the grader's scores).
+
+**Why it matters / when to use it:** a template for turning a human-written investigation into a rubric benchmark; a testbed for **sandbagging during audits**; a held-out eval for investigator scaffolds. **When *not* to use it:** you need a clean measurement — the grader (Fable 5.1) is itself a frontier model and the rubric is built from one report.
+
+**Pitfall — refusal fallback silently changes the model under test.** Anthropic models sometimes refused the task and fell back to a weaker model: Fable 5.1 refused every request (excluded), and Opus 5 switched to Opus 4.8 mid-run in two of three 30-minute runs and all three two-hour runs (the authors kept those runs). If you use a provider with refusal fallbacks, record the model that actually served each turn; Inspect's `fail_on_refusal` and per-served-model cost tracking (0.3.264 / 0.3.277) help — see [`evals.md`](evals.md).
+
+## nocot-bench (NCRI: the No-Chain-of-thought Reasoning Index)
+
+Aliases: `neelnanda-io/nocot-bench` on GitHub, NCRI, NCKI (No-CoT Knowledge Index), "no-CoT reasoning benchmark". Write-up: Nanda, "Astra can do a concerning amount with no chain of thought" (Alignment Forum / LessWrong, 2026-09-10).
+
+**What it is.** A generated (unmemorizable) benchmark for how much reasoning a model can do in **one forward pass with no chain of thought**, reported as a single Rasch (one-parameter IRT) ability index over 76 difficulty rungs; **+10 NCRI points = the odds of solving any rung doubled**. Release NCRI 15.2 was sealed 2026-09-09. The full method, the elicitation protocol (how to prove the model did not reason) and the measurement pitfalls — including the **key-position confound**, where a model can start computing while it reads the prompt, so scores mix serial depth with spreading work across token positions — are in [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md) (Method 1 and the no-CoT pitfalls list).
+
+**Benchmark-hygiene points worth knowing here:** NCRI 15.2 is a **refit** — there is no conversion from 14.5 / 15.0 / 15.1 numbers, so never share a table across releases; new models are **placed** against the sealed rung difficulties, not refitted (a refit silently republishes every rank); a model measured only on the 64 sealed rungs near the ceiling gets a **lower bound**, not a point estimate; and the item banks ship in a password-protected archive (password in the repo README, as with GPQA) — do not republish the items.
 
 ## Cross-cutting dataset pitfalls
 
@@ -285,4 +353,4 @@ Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets)
 
 ---
 
-Last verified: 2026-06. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.) (Additions 2026-08: SAD — `LRudL/sad`, arXiv 2407.04694, task list/CLI/subset claims verified from the repo README — plus the eval-awareness follow-up arXiv 2606.29196, and at-a-glance rows for AgentDojo and the unlearning benchmarks.)
+Last verified: 2026-10. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.) (Additions 2026-08: SAD — `LRudL/sad`, arXiv 2407.04694, task list/CLI/subset claims verified from the repo README — plus the eval-awareness follow-up arXiv 2606.29196, and at-a-glance rows for AgentDojo and the unlearning benchmarks.) (Additions 2026-10: ImpossibleBench (arXiv 2510.20270; `safety-research/impossiblebench` README and Hugging Face datasets checked); HoneyBench v0.1 (goodhartlabs.com/honeybench page and Valentine LW 2026-10-01; no public repo for the full suite found) and `Goodhart-Labs/beat-stockfish` (README run commands); `gkroiz/agent-interp-envs` (README environment tables) with arXiv 2606.26071; MessageBoardAuditBench (`hamzah2304/messageboardauditbench`, Baig et al. LW 2026-09-08); EvalAwareBench (arXiv 2605.23055, abstract); nocot-bench (`neelnanda-io/nocot-bench` README and Nanda's post; agastyasridharan & niranjandeshpande LW 2026-10-02); all verified via arXiv/GitHub/Hugging Face or the primary post.)

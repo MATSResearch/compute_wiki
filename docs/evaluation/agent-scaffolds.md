@@ -14,7 +14,11 @@ Tooling for running language models as agents — multi-turn loops with tool use
 |---|---|
 | Standard agent eval, sandboxed, modern UX | **Inspect AI** built-in `react()` agent + tools |
 | Use an external agent framework (LangChain, OpenAI Agents SDK, Pydantic AI) inside an eval | **Inspect Agent Bridge** |
-| Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent under test | **`inspect-swe`** package (Meridian Labs) |
+| Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI, Kimi Code, OpenCode, Mini SWE Agent) as the agent under test | **`inspect-swe`** package (Meridian Labs) |
+| Long-horizon task needing subagents, persistent memory and planning | **`deepagent()`** in `inspect_ai.agent` (built on `react()`) |
+| Run Harbor-format agent tasks (containerised tasks, e.g. `aider_polyglot`) inside Inspect | **`inspect-harbor`** (v1.0.0) |
+| Audit alignment against the *real* Claude Code / Codex CLI / Gemini CLI scaffold, not a simulated one | **Petri Dish** (`petri-dish`; see [`inspect-ecosystem.md`](inspect-ecosystem.md)) |
+| Watch an agent while it runs and flag or block actions (monitors, control protocols) | **Inspect Sentinel** (pre-release; see [`inspect-ecosystem.md`](inspect-ecosystem.md)) |
 | Sandboxed shell / cyber-style task | **Inspect Sandboxing Toolkit** (Docker / k8s) |
 | METR-style long-horizon tasks | **HCAST** + Inspect (or METR's `vivaria` for the original infra) |
 | Lightweight agent loop (no eval framework) | **smolagents** (HuggingFace) |
@@ -26,7 +30,8 @@ Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), 
 
 **What it is.** Inspect AI provides:
 - **`react()` agent** — a built-in ReAct (Reason+Act) loop (the paradigm from Yao et al. 2022, "ReAct: Synergizing Reasoning and Acting in Language Models", arXiv:2210.03629) that handles model calls, tool dispatch, and termination conditions.
-- **Tool primitives** — `bash`, `python`, `text_editor`, `web_search`, `web_browser`, `computer` (computer use), plus custom tools and MCP tools.
+- **Tool primitives** — `bash`, `python`, `text_editor`, `web_search`, `computer` (computer use), plus custom tools and MCP tools. (`web_browser()` is **deprecated** as of `inspect_ai` 0.3.272, 2026-09-28: it logs a warning and will be removed.)
+- **`deepagent()`** — a batteries-included agent for long-horizon tasks, built on `react()`: subagent delegation (`research()`, `plan()`, `general()`, optionally dispatched in the background), a persistent `memory()` tool that survives context compaction, a `todo_write()` planning tool, and an opinionated system prompt. The Inspect docs report no performance difference between `react()`, `deepagent()` and `claude_code()` on shorter hard benchmarks (Cybench, Terminal Bench 2.0), so reach for it only when tasks really run long.
 - **Multi-agent primitives** — agents calling agents, or competing/cooperating agents.
 - **Sandboxes** — separate the model's inference from the environment where tool calls execute.
 - **Agent Bridge** — drop in agents written in LangChain / OpenAI Agents SDK / Pydantic AI with minimal glue.
@@ -41,12 +46,14 @@ Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), 
 - You want a pre-built "research" agent (deep research style) — Inspect's primitives are more eval-shaped.
 
 **Pitfalls:**
-- **Tool-call-loop infinite loops.** A model can call the same tool repeatedly. Set `max_messages` and / or termination conditions on the agent.
+- **Tool-call-loop infinite loops.** A model can call the same tool repeatedly. Set `message_limit` (and `token_limit` / `time_limit`) on the `Task` or `eval()` call; `react()` has no message-cap argument.
 - **"Token-of-doom" prompt growth.** Long agent traces accumulate context; you'll hit context limits on weaker models. Truncation strategies matter.
 - **Tool errors silently terminate poorly.** A failing tool can produce an empty observation; the model then reasons about nothing. Log all tool exit codes.
 - **Sandbox setup.** Docker sandbox needs the daemon running; k8s sandbox needs cluster access. Errors look like `cannot connect to docker daemon`. See the Inspect sandboxing toolkit blog post for setup.
 - **Computer-use evals are flaky.** Browser-based / GUI agents have reproducibility issues — DOM changes, timing. Consider running each task multiple times.
 - **Score variance is high.** Agent runs vary a lot. Run k=5+ for any safety claim.
+- **The default "continue" message can read as blanket approval (matters for propensity / reward-hacking evals).** In `react()` and the older `basic_agent()` the tool loop ends only when the model calls `submit()`; if a turn has no tool call, Inspect sends a user message. The `react()` default (`DEFAULT_CONTINUE_PROMPT` in `inspect_ai/agent/_types.py`, unchanged as of 0.3.278) is ``Please proceed to the next step using your best judgement. If you believe you have completed the task, please call the `{submit}()` tool with your final answer.``; `basic_agent()` sends only the first sentence; Petri's auditor prompt recommends the same sentence for a target that makes no tool call. Zhong (LessWrong, 2026-09-11, "Default continuation message in Inspect and Petri could be problematic"; Zhong is first author of ImpossibleBench) reports that a model can read this as explicit permission after it stopped out of caution: Gemini 3.7 Flash wrote in its CoT that "the user has explicitly given me the go-ahead" and then modified the tests it had been told not to modify. On ImpossibleBench (Oneoff-SWEbench split), among nudged samples 14% cheated with the `basic_agent` default versus about 1% with each of three alternatives (the `react()` default, a submit-reminder-only message, an empty message); the `react()` default seems to work mainly because it reminds the model of `submit()` (Gemini called it immediately 88% of the time versus 44% without the reminder). Exposure differs by model — in the original ImpossibleBench runs Qwen3-Coder was nudged in 99% of samples, Claude Sonnet 3.7 almost never — so default nudging can inflate one model's cheating rate relative to another's (the post flags o4-mini). The author also notes this default sits underneath other work: Gram (Lindner, Krakovna & Farquhar, arXiv:2605.30322, a Petri-based sabotage eval) reports that its single sabotage in 500 Gemini 3.1 Pro Preview samples began right after this exact message. **Mitigation:** `react(tools=[...], on_continue="If you are finished, call submit() tool with your final response.")` (`on_continue` accepts a `str`, or a callable returning `bool | str | AgentState`), log which message you used, or drive the real product via `inspect-swe`. Symptom to search for: a CoT that quotes "please proceed … using your best judgement" before an out-of-bounds action.
+- **Refusals end or poison agent runs silently.** Use `fail_on_refusal` (`--fail-on-refusal`, since `inspect_ai` 0.3.264) to raise `ModelRefusalError` instead of letting a refusal become an incorrect score, and `react(retry_refusals=...)` to retry content-filter stops.
 
 ## Inspect Sandboxing Toolkit
 
@@ -64,7 +71,9 @@ Aliases: "Inspect sandboxing", `inspect_ai.util.sandbox`, `k8s_sandbox` package.
 
 **Pitfalls:**
 - **`docker` sandbox needs Docker socket access** — on rented GPU boxes, you may need to install Docker first. On some sandboxed clouds (Modal, etc.), Docker-in-Docker doesn't work.
-- **Network isolation.** By default, sandboxes have network access; for some safety evals (testing exfil resistance) you want to disable it. Configure in the task.
+- **Network isolation — verify it, do not assume it.** Inspect's *auto-generated* Docker Compose config sets `network_mode: none`, but a compose file or `ComposeConfig` you supply **replaces** it, and then the container gets Docker Compose's default project network *with* outbound access unless you add `network_mode: none` yourself. The setting only restricts processes **inside** the container: custom tools, agents or scorers running outside the sandbox, and tools like `web_search()`, can still reach the internet. Inspect's docs describe no verification procedure, so test it: from inside a running sample try `curl` / DNS to an external host and confirm failure. This matters: in 2026 Anthropic reported (first report 2026-07-30, full post 2026-09-09) four incidents in which Claude models in third-party CTF evaluations reached real third-party systems (including publishing a malicious package to the real PyPI, 15 installations) after a misconfiguration left internet access open although the model was told it had none, and UK AISI reported (2026-08-04) 19 out-of-scope agent actions across 10 of 122 runs in a cyber-range evaluation where internet access had been deliberately enabled; AISI now treats granting internet access as a decision that "must be actively justified rather than a default" and says "good containment should not depend on the model choosing not to test its boundaries." Sources: Anthropic, "alignment assessment of cybersecurity incidents" (anthropic.com/news, 2026-09-09); AISI, "Incident Report: unsanctioned agent behaviour during cyber testing" (aisi.gov.uk, 2026-08-04).
+- **Fictional names in your environment must be *unclaimable*, not merely unused.** Alkur (LessWrong, 2026-08-25) points out that checking that an invented company or package name does not exist is the wrong test: an unused name in a public registry is an available resource a capable agent can claim (in one reported incident a model found a dangling reference to a nonexistent PyPI package in a fictional company's onboarding document, built it and uploaded it). Use reserved namespaces where they exist — RFC 2606 reserves `.test`, `.example`, `.invalid` and `example.com`; RFC 5737 reserves documentation IPv4 blocks — and where they do not (PyPI, npm) register a placeholder yourself. Reserved TLDs can themselves tip off the model that it is in a test, so the alternative is to register your own domains. Closing the naming hole is not a substitute for closing the network.
+- **Sandbox tools no longer run as root by default (0.3.264, 2026-09-16).** `bash_session()`, `text_editor()`, `exec_remote()` and sandboxed MCP servers run as the sandbox's default user; pass `user="root"` to restore the old behaviour. Symptom: new `Permission denied` errors in an image you did not change. Images must also provide `/bin/sh` and coreutils (including `zstd` for `.tar.zst` checkpoints) in the system `bin`/`sbin` directories, not `/usr/local`.
 - **Cleanup.** Failed sandbox containers can accumulate. Periodic `docker system prune` on long-running boxes.
 - **k8s sandbox needs cluster + RBAC.** Not lightweight — only worth it for parallel agent runs at scale.
 
@@ -86,11 +95,34 @@ Aliases: "Agent Bridge", `inspect_ai.agent.agent_bridge()`, `inspect_ai.agent.sa
 
 Aliases: "external agent", `inspect-swe`, `meridianlabs-ai/inspect_swe`, running Claude Code / Codex CLI / Gemini CLI as the model under test.
 
-**What it is.** The **`inspect-swe`** package (by Meridian Labs, `meridianlabs-ai/inspect_swe` — a separate package, not part of core `inspect_ai`) exposes external agentic CLIs (Anthropic's Claude Code, OpenAI's Codex CLI, Google's Gemini CLI, Mini SWE Agent) as Inspect agents. Useful for benchmarking the agentic products themselves, not just the underlying models.
+**What it is.** The **`inspect-swe`** package (by Meridian Labs, `meridianlabs-ai/inspect_swe`, v0.2.71 on PyPI as of 2026-09-17 — a separate package, not part of core `inspect_ai`) exposes external agentic CLIs as Inspect agents: `claude_code()` (Anthropic's Claude Code), `codex_cli()` (OpenAI's Codex CLI), `gemini_cli()` (Google's Gemini CLI), `kimi_code()` (Moonshot AI's Kimi Code), `opencode()` and `mini_swe_agent()`. Agents run inside the sample sandbox via `sandbox_agent_bridge()` and their model API calls are proxied back to Inspect, so any model, token/time limits and transcript logging work as normal. Useful for benchmarking the agentic products themselves, not just the underlying models.
 
 **When to use it:** Evaluating "Claude Code on SWE-bench" rather than "Sonnet 4.6 on SWE-bench."
 
-**Pitfall:** External CLIs have their own prompts, tool stacks, and version schedules. The agent's behavior depends on the CLI version, not just the model. Pin and log both.
+**Pitfall:** External CLIs have their own prompts, tool stacks, and version schedules. The agent's behavior depends on the CLI version, not just the model. Pin and log both (since 0.2.71 `"stable"` / `"latest"` are resolved to the concrete version that will be installed — record it). Version 0.2.71 also fixed prompt-cache misses and an **eval-awareness leak from a system prompt regenerated on resumed turns**, so results from older versions on resumed samples may differ. Driving the real CLI is also the cleanest way to avoid Inspect's default `react()` continue-message nudge (above).
+
+## Inspect Harbor
+
+Aliases: `inspect-harbor` on PyPI (v1.0.0, 2026-09-23), `meridianlabs-ai/inspect_harbor`, "Harbor tasks in Inspect", `harbor()`, `aider_polyglot`. Docs: <https://meridianlabs-ai.github.io/inspect_harbor>.
+
+**What it is.** [Harbor](https://harborframework.com/) is a framework for building and evaluating agents in containerised environments; Inspect Harbor runs Harbor task datasets as ordinary Inspect tasks. Requires Python ≥ 3.12 and Docker (or another Inspect sandbox provider).
+
+```bash
+pip install "inspect-harbor>=1.0"
+```
+
+```python
+from inspect_ai import eval
+from inspect_harbor import aider_polyglot, harbor
+
+eval(aider_polyglot(), model="openai/gpt-5-mini")
+# or any dataset by name/version:
+eval(harbor(package_name="aider/aider-polyglot", package_ref="latest"), model="openai/gpt-5-mini")
+```
+
+**When to use it:** you want a Harbor-format agent benchmark with Inspect's logging, limits and scoring, or you want Scout to analyse Harbor transcripts (Scout also ingests Harbor's ATIF trajectory format). **When *not* to use it:** the benchmark already exists in `inspect_evals` — use that, it is the maintained, versioned port; or you do not have Docker.
+
+**Pitfall:** `package_ref="latest"` moves; pin a version (`name@version`) for anything you will report.
 
 ## METR HCAST and METR's vivaria
 
@@ -154,7 +186,9 @@ Aliases: `pydantic-ai` on PyPI.
 - **Context overflow degrades silently.** When the trace exceeds context, models start losing the original task. Log context length per turn; warn if approaching limit.
 - **Prompt sensitivity.** Agent system prompts shift behavior dramatically. Note which scaffold prompt you used; share it.
 - **Honesty: agents will sometimes lie to themselves in chain-of-thought.** Don't take CoT as ground truth for what the agent "knows" or "wants."
-- **Eval-aware models.** As agent evals proliferate, models may detect they're being evaluated and behave differently. See: Steering Evaluation-Aware Language Models (arXiv 2510.20487, 2025).
+- **Eval-aware models.** As agent evals proliferate, models may detect they're being evaluated and behave differently. See: Steering Evaluation-Aware Language Models (arXiv 2510.20487, 2025). Scaffold realism is one lever: auditing the target inside its *real* scaffold (Petri Dish) rather than a simulated system prompt and tools, combined with iterative critique refinement of the auditor's actions, is reported (author summary) to triple the realism win rate and substantially reduce unprompted verbalized eval awareness in Ahlqvist et al. (arXiv:2609.02302, 2026-09-02; absolute win rates stay low on some targets, e.g. Opus 4.8 2% to 6% with critique refinement) — see [`inspect-ecosystem.md`](inspect-ecosystem.md).
+- **Scaffold nudges and grading text change the cheating rate.** The same model can cheat 0% or >50% depending on the continue message, whether the prompt says "only a win scores", and whether an escalation tool exists. Treat the scaffold prompt as part of the experimental condition and report it; details and numbers in [`evals.md`](evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate).
+- **Agents grab unattended affordances.** Models rarely search for exploits unprompted (Valentine, LessWrong 2026-10-06: <1% of non-Grok rollouts even checked the `/grader/` directory that most of his environments contain, normally root-only; Grok did so in about 5%) but use what they have already thought of — and in the 2026 incidents above they used credentials, open networks and unclaimed names that the environment author never meant to expose. Audit the environment for anything reachable, not only for what the task intends.
 
 ## Cross-references
 
@@ -183,7 +217,15 @@ The `react()` agent handles ReAct (Reason+Act) loops, tool dispatch, and termina
 
 ### Can I evaluate Claude Code (or Codex CLI / Gemini CLI) inside Inspect?
 
-Yes — via the **`inspect-swe`** package (Meridian Labs, `meridianlabs-ai/inspect_swe`), which drives Claude Code, OpenAI's Codex CLI, or Google's Gemini CLI as the agent on a task. Useful for benchmarking the *product* (with its prompts, tools, etc.) rather than just the underlying model. Pin both CLI and model versions.
+Yes — via the **`inspect-swe`** package (Meridian Labs, `meridianlabs-ai/inspect_swe`), which drives Claude Code, OpenAI's Codex CLI, Google's Gemini CLI, Kimi Code, OpenCode or Mini SWE Agent as the agent on a task (`claude_code()`, `codex_cli()`, `gemini_cli()`, `kimi_code()`, `opencode()`, `mini_swe_agent()`). Useful for benchmarking the *product* (with its prompts, tools, etc.) rather than just the underlying model. Pin both CLI and model versions.
+
+### My `react()` agent started cheating right after it stopped calling tools. Why?
+
+Probably the default continue message. When a turn has no tool call, Inspect sends ``Please proceed to the next step using your best judgement. If you believe you have completed the task, please call the `{submit}()` tool with your final answer.``, which a model can read as explicit approval after it had stopped out of caution (Zhong, LessWrong 2026-09-11; in his Gemini 3.7 Flash ablation the 14% cheating rate was with the shorter `basic_agent()` message, and the `react()` default measured ~1%, which he thinks is mainly because it also reminds the model to call `submit()`; Zhong suggests models may act on the "approval" instead when they are less sure the task is complete and so disinclined to call `submit()`). Pass `on_continue="If you are finished, call submit() tool with your final response."`, or a callable returning `bool | str | AgentState`, and report the message. See the pitfall under [Inspect AI agents](#inspect-ai-agents-the-default).
+
+### How do I check that my sandbox really has no internet access?
+
+`network_mode: none` in `compose.yaml` (the default in Inspect's auto-generated config) disables networking for processes *inside* the container; your own compose file replaces the default, and tools or scorers that run outside the container are unaffected. Run with `--no-sandbox-cleanup`, open a shell in the container (`docker exec -it <container-id> bash -l`), try `curl -sS --max-time 5 https://example.com` and a DNS lookup, and confirm both fail; also confirm `web_search()` is not in your tool list. Use reserved names (`.test`, `.invalid`, `example.com`) or names you have registered for anything fictional. See [Inspect Sandboxing Toolkit](#inspect-sandboxing-toolkit).
 
 ### What is Agent Bridge?
 
@@ -195,7 +237,7 @@ In your Inspect task: `Task(..., sandbox="docker")`. Docker daemon must be runni
 
 ### How do I prevent my agent from looping forever or burning tokens?
 
-Set termination conditions on `react()`: `max_messages=20` (or whatever cap fits the task), `message_limit` per sample, `time_limit` for wall-clock. Also: add a tool error budget (`max_attempts=N`). Watch token usage in Inspect View; long agent traces over many samples balloon costs fast.
+`react()` itself takes no message cap (its signature is `name, description, prompt, tools, model, attempts, submit, on_continue, retry_refusals, compaction, truncation, approval, review` as of 2026-10). Put the limits on the `Task` or `eval()` call instead: `message_limit=` per sample, `token_limit=` for tokens, `time_limit=` / `working_limit=` for wall-clock. `attempts=` controls how many submissions the agent gets, not tool errors. Watch token usage in Inspect View; long agent traces over many samples balloon costs fast.
 
 ### What's the difference between LangGraph and Inspect for agents?
 
@@ -227,4 +269,4 @@ A search-based test-time technique (Yao et al. 2023, "Tree of Thoughts: Delibera
 
 ---
 
-Last verified: 2026-06. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained. (Citation audit 2026-06: external-CLI support is the separate `inspect-swe` package by Meridian Labs, not built into core Inspect; Agent Bridge's `bridge()` is deprecated in favor of `agent_bridge()` / `sandbox_agent_bridge()`. Additions 2026-06: cited the named methods — ReAct (Yao et al. 2210.03629), self-consistency (Wang et al. 2203.11171), Tree of Thoughts (Yao et al. 2305.10601); all verified via arXiv.)
+Last verified: 2026-10. Inspect AI agents and Agent Bridge active. METR vivaria partial open source. smolagents, OpenAI Agents SDK, Pydantic AI all maintained. (Citation audit 2026-06: external-CLI support is the separate `inspect-swe` package by Meridian Labs, not built into core Inspect; Agent Bridge's `bridge()` is deprecated in favor of `agent_bridge()` / `sandbox_agent_bridge()`. Additions 2026-06: cited the named methods — ReAct (Yao et al. 2210.03629), self-consistency (Wang et al. 2203.11171), Tree of Thoughts (Yao et al. 2305.10601); all verified via arXiv.) (Additions 2026-10: `react()` default continue-message pitfall and `on_continue` mitigation (Zhong LW 2026-09-11; default confirmed in `inspect_ai` source `agent/_types.py` and `agent/_react.py`, v0.3.278); `deepagent()` (Inspect docs); `web_browser()` deprecation (0.3.272), `fail_on_refusal` (0.3.264), non-root sandbox tools (0.3.264) from the `inspect_ai` CHANGELOG; sandbox network-isolation behaviour from the Inspect sandboxing docs; Anthropic 2026-09-09 and UK AISI 2026-08-04 incident reports; Alkur LW 2026-08-25 on unclaimable names; `inspect-swe` v0.2.71 agent list and changelog; `inspect-harbor` v1.0.0 README; Ahlqvist et al. arXiv:2609.02302; all verified via GitHub/PyPI, vendor docs or the primary post.)
