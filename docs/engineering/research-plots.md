@@ -19,7 +19,7 @@ axes, error bands, saving).
 | Choosing a batch size | Gradient noise scale | [Batch size](#gradient-noise-scale-how-big-should-the-batch-be) |
 | Sweeping hyperparameters | Parallel-coordinates plot | [Sweeps](#hyperparameter-sweeps-parallel-coordinates) |
 | Asking what a layer "thinks" (next token) | **Tuned lens** trajectory, not raw logit lens | [Lenses](#logit-lens-and-tuned-lens-what-does-each-layer-predict) |
-| Reading what a model is "thinking" but not saying | **R-lens** (prefer over J-lens on early layers) | [J-lens and R-lens](#j-lens-and-r-lens-reading-the-global-workspace) |
+| Reading what a model is "thinking" but not saying | **J++ lens** (then R-lens; plain J-lens only if it is all that exists for your model) | [J-lens, R-lens and J++ lens](#j-lens-r-lens-and-j-lens-reading-the-global-workspace) |
 | Locating where a behaviour lives | Activation-patching heatmap (position × layer) | [Patching](#activation-patching-heatmaps) |
 | Showing a circuit | Attribution graph | [Attribution graphs](#attribution-graphs-and-circuit-tracing) |
 | Inspecting attention | CircuitsVis interactive attention view | [Attention](#attention-patterns) |
@@ -148,15 +148,21 @@ answer token, or a line of top-token probability against layer.
 Always plot the two together at least once when starting on a new model — where
 they disagree is where the raw logit lens would have misled you.
 
-### J-lens and R-lens: reading the global workspace
+### J-lens, R-lens and J++ lens: reading the global workspace
 
 A newer family of lenses reads a model's *internal, unspoken* representations
-rather than its next-token guess.
+rather than its next-token guess. **Which lens to pick, how to load or fit one,
+and the pitfalls are in
+[Workspace lenses](../interpretability/mech-interp.md#workspace-lenses-j-lens-r-lens-j-lens)
+(decision table: logit lens / tuned lens / J / R / J++ / Template / Oracle
+lens); this section is the plotting recipe and a short summary.**
 
 **J-lens / J-space** (Anthropic, [*Verbalizable Representations Form a Global
 Workspace in Language Models*](https://transformer-circuits.pub/2026/workspace/),
-July 2026). J-lens differentiates the logits with respect to the hidden state —
-the Jacobian **J = ∂L/∂h** — to surface words the model is "thinking" without
+July 2026). J-lens transports a layer-ℓ activation through the *averaged
+Jacobian* of the final-layer residual stream with respect to that activation,
+**J_ℓ = E[∂h_final/∂h_ℓ]** (averaged over prompts and positions), then reads it
+through the unembedding to surface words the model is "thinking" without
 writing down. The resulting **J-space** is a small, sparse, interpretable
 subspace of activations whose contents are reportable, reusable, selective and
 causally influential on behaviour, which is why the paper argues it behaves like
@@ -178,12 +184,31 @@ Linear layers and attention are left alone, because the LRP 0-rule reduces to
 ordinary autograd there. Applied to RMSNorms on the residual stream and to gated
 multi-layer perceptrons (MLPs), for dense and mixture-of-experts models alike.
 
-**Prefer R-lens when you care about early layers.** Reported gains: concepts
-surface at markedly earlier layers, the directions are more causally important
-under ablation, it occasionally catches concepts J-lens misses entirely, it
-produces far fewer incoherent "trash tokens" early on — and the advantage *grows
-with model scale* (tested on Qwen-3.6-27B and DeepSeek-V4-Flash at 284B).
-Implementations: [`camilablank/workspace-lenses`](https://huggingface.co/camilablank/workspace-lenses).
+**J++ lens** ([Kola Ayonrinde and Jack Lindsey, *J++ Lens: Jacobian Filtering
+Enables More Faithful Workspace Lenses*](https://www.lesswrong.com/posts/nc9dHfcB22JdMzGbr/paper-j-lens-jacobian-filtering-enables-more-faithful),
+LessWrong, 8 October 2026; code
+[`safety-research/jpp_lens`](https://github.com/safety-research/jpp_lens),
+lenses [`koayon/jpp-lenses`](https://huggingface.co/koayon/jpp-lenses)). A
+**drop-in replacement for J-lens and R-lens with no extra inference cost**: it
+keeps R-lens's LRP backward pass and adds *Jacobian Filtering* (cluster each
+layer's activations with k-means into 8 groups, average one "expert" Jacobian per
+cluster, and learn weights that down-weight experts giving noisy readouts) and
+*Readout Filtering* (drop tokens with no letter or digit from the ranking). On
+Qwen3.6-27B it reaches 55.2% recall@10 against 37.7% for R-lens and 35.7% for
+J-lens, with a median +63.5% over J-lens across six models from 9B to 284B
+parameters (the authors' own harness; not peer reviewed).
+
+**Prefer J++ (then R-lens) when you care about early layers.** R-lens's reported
+gains: concepts surface at markedly earlier layers, the directions are more
+causally important under ablation, it occasionally catches concepts J-lens
+misses entirely, it produces far fewer incoherent "trash tokens" early on — and
+the advantage *grows with model scale* (tested on Qwen-3.6-27B and
+DeepSeek-V4-Flash at 284B). J++ reports a further gain over R-lens on every task
+and at every layer, largest in the first quarter of layers. Implementations:
+[`camilablank/workspace-lenses`](https://huggingface.co/camilablank/workspace-lenses)
+(J and R lenses), [`koayon/jpp-lenses`](https://huggingface.co/koayon/jpp-lenses)
+and [`neuronpedia/jacobian-lens`](https://huggingface.co/neuronpedia/jacobian-lens)
+(J and J++ lenses).
 
 #### The plots these papers use, and why
 
@@ -203,6 +228,25 @@ Worth copying, because they are the right shapes for this question:
   being a correlational just-so story, and no lens comparison is complete
   without one.
 - **MLP gain curves** — how much each direction type is amplified, by layer.
+- **Recall@10 against layer for every lens on one axis, plus a grouped bar per
+  task** (J++ post, Figures 2a–b). The per-task bars expose which tasks a lens
+  does not help on (poetry stays at or below 5% for every lens), which a
+  macro-average hides.
+- **Per-expert recall against a pooled baseline** (J++ post, Figure 3): one dot
+  per cluster "expert" Jacobian at each layer (best expert circled), with the
+  pooled (all-activation) Jacobian and the J++ combination as horizontal lines
+  with confidence bands. Many dots near zero at early layers (the post counts
+  10 of the 16 experts below 2% recall at layers 8 and 16) is the evidence that
+  averaging everything includes noisy Jacobians.
+- **Per-position gradient norm against layer, log y-axis** (J++ post, Figure 4):
+  standard backward pass versus LRP. A curve that explodes toward early layers
+  is a noise diagnostic worth drawing before you fit any Jacobian lens.
+- **Intermediate-swap success with the trial count in the label** (J++ post,
+  Figure 2c reports 67 trials): the share of trials where patching in a
+  lens vector changes the answer as intended. Report n and an interval, and add
+  the *answer-swap* control (patch in the counterfactual answer instead);
+  independent replications on open models found that control often wins (see
+  [Workspace lenses](../interpretability/mech-interp.md#workspace-lenses-j-lens-r-lens-j-lens)).
 
 The general lesson for your own lens work: **pair every readout plot with an
 ablation plot**. A lens that reads out something interesting but whose
@@ -460,7 +504,7 @@ labels rather than indices. Three more that matter specifically at grid scale:
 
 ---
 
-Last verified: 2026-08. Drafted by Claude for Nathan's review; pending MATS
+Last verified: 2026-10. Drafted by Claude for Nathan's review; pending MATS
 research-staff review. Citations checked against source: dataset cartography
 (Swayamdipta et al., EMNLP 2020, `allenai/cartography`); gradient noise scale
 (McCandlish et al., 2018); tuned lens (Belrose et al., `tuned-lens`, learns a
@@ -472,4 +516,11 @@ heatmap case study read from Allen-Zhu and Li, arXiv:2305.13673 (figure numbers
 and the base-rate normalisation remark checked against the PDF);
 R-lens / R-space (camilablank, agam_bhatia, Neel Nanda, LessWrong, 5 Aug 2026 —
 LRP stop-gradient rules on the backward pass only; code at
-huggingface.co/camilablank/workspace-lenses).
+huggingface.co/camilablank/workspace-lenses). (Additions 2026-10: J++ lens
+(Ayonrinde and Lindsey, LessWrong nc9dHfcB22JdMzGbr, 8 Oct 2026; repo
+`safety-research/jpp_lens` and HuggingFace `koayon/jpp-lenses` verified; numbers
+read from the post's Table 1, Table 2 and figure captions); corrected the J-lens
+definition (averaged Jacobian of the final-layer residual stream, not of the
+logits) against Anthropic's `jacobian-lens` README and the J++ post; changed the
+"prefer R-lens" recommendation to J++-then-R-lens; decision table and pitfalls
+moved to `mech-interp.md`.)

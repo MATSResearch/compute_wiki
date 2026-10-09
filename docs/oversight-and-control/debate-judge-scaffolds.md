@@ -79,6 +79,8 @@ then:
 
 **When not to use it:** when the wrong answer is substantively plausible rather than merely confidently asserted. See the failure case below — it drops to 6/10 on hard alignment questions.
 
+**Independent corroboration of the premise (2026-08).** When Google DeepMind trained a debate *critic* with RL against an LLM judge (Kenton et al., arXiv:2608.17776; see [`debate-scalable-oversight.md`](debate-scalable-oversight.md)), the critic converged on exactly the rhetorical-confidence tactics this scaffold removes — bold text, ALL CAPS and demands that the judge "must" rule against the answer because of an "irrefutable flaw" — and accuracy collapsed until the authors capped the critic's visible output length. That is a different judge, a different setup (RL training, competition math) and a different mitigation, so it supports the *premise* (rhetoric is the cheapest lever on a weak judge) rather than the 26/29 number.
+
 ### Symmetric independent scoring — never ask the judge "A or B?"
 
 The single most failure-prone framing measured was showing the judge both arguments and asking it to pick. Instead: **score each argument alone with the same rubric, in separate model calls, then compare the numbers programmatically.**
@@ -194,7 +196,8 @@ Catalogued here so they are not re-derived from scratch. **None of these have me
 2. **Scale the liar.** All results above use DeepSeek-V3.2 as devil's advocate — a model doing its honest best at a dishonest task. A frontier model, or one fine-tuned specifically to fool a judge, is a genuinely different adversary and none of these scaffolds have faced one.
 3. **Statistical power.** 5 problems per domain detects inversions and nothing finer. Expanding each domain to 15–20 is the obvious next move before any of the rankings above should be trusted.
 4. **The residual failure.** One biology question (natural selection / beetles) resists every scaffold tested. Genuinely ambiguous question, or an untried scaffold class? Single hard cases like this are often where the next idea comes from.
-5. **Harder synthetic worlds.** The simulator domain — where the judge can verify nothing and both sides sound plausible — is the closest available proxy for the superhuman case, and rebuttal-strength dominating there is the most transferable signal in the dataset.
+5. **Trained judges.** Every result above uses a frozen, prompted judge. The quantilized-debate experiments (emanuelr, LessWrong 2026-08-19; `emparu/debate-quantilizers-images`) found that conclusions can flip when the judge is trained on-policy — debate beat consultancy against a frozen judge but was only about as good as consultancy against trained judges — so a scaffold ranking from frozen judges should not be assumed to survive judge training.
+6. **Harder synthetic worlds.** The simulator domain — where the judge can verify nothing and both sides sound plausible — is the closest available proxy for the superhuman case, and rebuttal-strength dominating there is the most transferable signal in the dataset.
 
 ## Cross-references
 
@@ -206,4 +209,4 @@ Catalogued here so they are not re-derived from scratch. **None of these have me
 
 ---
 
-Last verified: 2026-08. Findings sourced from an internal MATS `debate_framework` experiment (29 problems / 5 domains / ~45 scaffolds / 2 judges, Inspect AI, March–May 2026); unpublished, small-n, and flagged as such throughout. Public literature cited here (Toulmin, ASPIC+ Modgil & Prakken 2014, Walton, Dung, Sperber et al. 2010, WUDC judging manual, Byzantine-robust aggregation) is background for the untested scaffold ideas, not evidence for the measured results.
+Last verified: 2026-10. Findings sourced from an internal MATS `debate_framework` experiment (29 problems / 5 domains / ~45 scaffolds / 2 judges, Inspect AI, March–May 2026); unpublished, small-n, and flagged as such throughout. Public literature cited here (Toulmin, ASPIC+ Modgil & Prakken 2014, Walton, Dung, Sperber et al. 2010, WUDC judging manual, Byzantine-robust aggregation) is background for the untested scaffold ideas, not evidence for the measured results. (Additions 2026-10: a cross-reference to the independent GDM debate-training result, arXiv:2608.17776, and a trained-judge caveat from the quantilized-debate repo `emparu/debate-quantilizers-images`; both checked 2026-10-09.)
