@@ -30,6 +30,19 @@ actually needs.
 - Treat failure rates from past systems as evidence with scope, not permanent
   limits on what current or future agents can do. Consider alternatives when
   choosing a direction; do not manufacture extra designs for an obvious next step.
+- Say what *done* means before starting a run or follow-up, as a checkable
+  condition written once; keep evidence (this run bears on that prediction, for
+  or against, this much) separate from the verdict a person signs, and cite the
+  runs that go against with the same care as the ones for.
+- When comparing to a paper, share one axis with it — an anchor run of one of
+  their conditions on your configuration, or your idea with one factor swapped
+  to their value — rather than reading their absolute number as your baseline.
+  Record each paper's configuration factor by factor, blanks for what it did
+  not report.
+- Estimate robustness by varying the sample (bootstrap the eval set, overlapping
+  data subsets, hyperparameter perturbation), not by sweeping seeds. See
+  "Comparability", "Say what done means" and "Evidence is not the verdict" in
+  the wiki doc, and "Vary the data, not the seed" in `statistics.md`.
 
 ## Concerns and repairs
 
