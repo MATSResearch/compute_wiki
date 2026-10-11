@@ -183,6 +183,43 @@ rather than cancel.
 **When not to bother:** you have one obvious next experiment and know why. Force
 diversity when you are choosing a *direction*, not every time you run something.
 
+## Competing hypotheses: a question with one answer is waiting to be confirmed
+
+For each open research question you intend to test, write down **at least two
+hypotheses that predict different observations**, or record that you weighed a
+rival and why you rejected it. A single hypothesis turns every result into
+"consistent with it". Only a result one hypothesis predicts and the other does
+not counts as evidence. This is Chamberlin's *method of multiple working
+hypotheses* (Science, 1890) and Platt's *strong inference* (Science, 1964):
+design the experiment that splits the rivals, not the one that confirms your
+favourite.
+
+Then **tie every hypothesis to the test that will decide it.** A registered
+prediction with no planned run, no run filed under it and no evidence cited is
+a claim with no route to a verdict. When a plan is signed, each planned run
+should name the hypothesis it tests. Planned runs that test nothing on the
+record are either exploration (fine, so say so) or a hypothesis nobody wrote
+down.
+
+**Ask for rivals from outside your own framing.** The agent's own list of
+alternatives comes from the same prior that produced the first hypothesis.
+Seeding the request with a field picked at random (ecology, neuroscience,
+physics, etc.) breaks that pattern, and agreement among several agents does
+not. See *Diversity-forced planning* above.
+
+**When not to bother:** exploratory work and instrument building can precede
+any hypothesis. Declining a rival with a reason ("not discriminating",
+"premise wrong") settles the question for that hypothesis. Nobody needs to be
+asked again.
+
+In the MATS dashboard, the **hypothesis board** shows these as gaps: questions
+with no hypothesis or only one, hypotheses nothing tests, verdicts awaiting
+sign-off or disagreeing with their evidence. "Ask for competing hypotheses"
+seeds the request with a randomly picked field. A run filed with
+`plan="run:N"` ties a signed-plan entry to the hypothesis it tests. A declined
+rival clears the "only one hypothesis" gap. A gap describes the record, not
+the field: "no hypothesis recorded" never means "nobody has tried this".
+
 ## "It ran" is not a result
 
 Execution success is necessary and never sufficient. The dominant implementation
@@ -424,6 +461,25 @@ The consequence is uncomfortable and worth stating: **an LLM review is triage,
 never a safety net.** A human reading the code and the result artifacts is the
 only check that catches fabrication, and it is not optional before anything
 leaves the building.
+
+### Cite a source you can open, not a memory of one
+
+Every paper a write-up leans on should be recorded **as a source**: title,
+authors, year and a link someone can open. "Sharma et al. found…" recalled by
+a model is a claim about a paper, not a citation. Language models produce
+plausible references that do not exist, and they misattribute findings to
+papers that do exist. Record what you actually read, check the link resolves
+before the write-up leaves the building, and keep apart the papers you are
+building on from the ones you set aside, so a reader can see which literature
+shaped the project.
+
+In the MATS dashboard, papers from the lit review are typed items. They carry
+title, authors, year, venue, link, a 1–10 relevance score, a topic, and a
+`ref` back to the lit-review summary file, using the same field names as the
+MATS literature-review skill (`/mats:lit-review` in alignment-hive). They are
+listed in the **Library**, where the researcher marks each one *key* or *set
+aside* and exports them as Markdown or BibTeX. A paper filed from memory says
+so in its body, and the Library shows it without catalogue details.
 
 ## Reproducibility disclosure: report what the field does not
 
