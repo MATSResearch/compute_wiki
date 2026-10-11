@@ -368,6 +368,10 @@ configuration is a typed `config` item (factors it reports, blanks for the ones
 it does not — a blank is itself a fact), the project's own configuration is
 another, and the tool shows per paper which factors differ and which were never
 reported; bridges are proposed as priced runs the researcher accepts or declines.
+The MATS literature-review skill (`/mats:lit-review` in the alignment-hive
+plugin marketplace) writes each paper's configuration in the same nine factors
+into its summaries and a `configs.json`, so a lit review done with it is
+already the input to that map.
 
 Prior art: a *transfer measurement device* in metrology (VIM3 §5.9) and the BIPM
 rule that regional comparisons link to the reference value only through
@@ -427,7 +431,7 @@ When you release code, disclose:
 
 | Field | Why |
 |---|---|
-| **Inference cost** | Disclosed by **none** of the eight audited agent benchmarks |
+| **Inference cost** — and, where you have it, cost **per step** of the work | Disclosed by **none** of the eight audited agent benchmarks. The MATS dashboard records agent spend per research step, so "what the literature review cost" is a number, not a guess |
 | **Harness** + version/digest | Also disclosed by none of them fully. "An agent" is a model *and* a harness — scaffold alone moved one benchmark by 0.34 points |
 | **Model IDs**, exactly | **52.5%** of evaluation papers report at the class level ("AI", "GPT-4-family") rather than naming what ran |
 | **Run dates** | The frontier moves under you; a result without a date is unplaceable |
