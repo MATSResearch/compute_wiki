@@ -100,6 +100,9 @@ and link the next iteration in the project record.
 | Accept a result because the code ran | Run an independent check on the number | Silent failure — code runs, exits 0, result is wrong — is the dominant implementation risk |
 | Notice something is off | Write it down where it blocks something | **82.5%** of agent research runs contain a flaw the agent spotted itself and shipped anyway |
 | Write up a result | Give every registered prediction a verdict, including the failures | Overclaiming with concealed negative results appears in **78.1%** of runs |
+| File a run or a follow-up | Say what *done* means before starting, and keep it checkable | An open run with an unmet condition and no question asked is a silent stop; **67%** of flagged cheating in a 1,601-run audit was re-rolling the same model for a noisier higher score |
+| Compare your number to a paper's | Share **one axis** with it — an anchor run or a shared-axis run — rather than reading their absolute number as your baseline | Seven RLVR papers under-reported their own pre-RL baseline; a 12-seed study found none of eight claimed data-policy gains beat uniform with a CI excluding zero |
+| Estimate robustness | Vary the **sample** — bootstrap the eval set, overlapping data subsets, hyperparameter perturbation — not the seed | Data sampling is the largest variance source and init-seed variance is under half of it; a seed sweep underestimates the uncertainty a reader cares about |
 | Call a result causal | Check the evidence is causal, not observational | Attribution and causal patching correlate ρ ≈ 0 (−0.256 to −0.027) |
 | Release code | Disclose cost, harness, model IDs and dates | Agent-benchmark papers score **0.38/1.0** on reproducibility disclosure; none disclose inference cost |
 
@@ -266,6 +269,119 @@ decision rule you froze.
   prediction without a signed verdict blocks the write-up and the release, not
   only the `resolve` step.
 
+## Evidence is not the verdict
+
+Keep two records. **Evidence** is an observation: this run bears on that
+prediction, for or against, this much. **The verdict** is a judgement a person
+signs against the decision rule they froze. They are written separately, by
+different parties, and the second is read against the first.
+
+- **Cite every run that bears on a prediction as you go, with a polarity and a
+  weight** — in the MATS dashboard, `<evidence item="31" prediction="12"
+  valence="-0.6">…</evidence>`; elsewhere, a line in the run log naming the
+  prediction and whether this result is for or against it. Cite the runs that go
+  *against* with the same care as the ones for.
+- **The accumulated lean never sets the verdict.** A tally of signed citations
+  (the dashboard folds them in log-odds and shows "2 for, 1 against") is context
+  for the person signing, not a vote. A single strong disproof may be decisive
+  or may be a broken run; only the decision rule and a human can say which.
+- **A verdict that disagrees with its own evidence is flagged, not blocked.** A
+  `supported` with anything cited against it, or with nothing cited at all,
+  is the shape of overclaiming by omission — roughly two thirds of write-up
+  traces simply omit refutation evidence. The flag exists so the omission is
+  visible at signing time rather than discovered by a reader.
+
+Prior art: gradual semantics for weighted bipolar argumentation graphs (Amgoud &
+Ben-Naim, IJAR 2018) and the trackinizer knowledge store (rekursiv-ai), both of
+which compute a strength from signed citations and leave the judgement to an
+author.
+
+## Say what done means before you start
+
+Every run, exploration or follow-up you file carries an **acceptance
+condition** — what must be true before it can honestly be called finished —
+written when the work is filed and never edited afterwards.
+
+- **Keep it checkable.** "All five data subsets scored and the guard passed on
+  each" is a condition; "looks good" is a feeling. Prefer a condition a script
+  could evaluate, and write that script where you can.
+- **Why it is written first.** An acceptance condition written after the run is
+  a description of what happened. Written before, it is the thing that tells a
+  finished run from a stopped one: an open run whose condition is unmet and no
+  question asked is a silent stop, and the dashboard flags it as one. Without
+  the condition, "complete" and "silently stuck" look identical from outside.
+- **Why it matters for automated runs specifically.** In Anthropic's
+  1,601-iteration audit of automated alignment researchers (arXiv:2608.28945
+  §7), 67% of flagged cheating was re-running an unchanged configuration hoping
+  for a noisier higher score. A declared condition plus a record of every run
+  against it is what makes that move visible rather than inferable.
+
+Prior art: SWE-bench's FAIL_TO_PASS / PASS_TO_PASS tests (authored by someone
+other than the solver, hidden from it, with a regression guard); Eureka's
+obligation graphs with explicit acceptance semantics and PASS / FAIL /
+INCONCLUSIVE outcomes (arXiv:2608.19047); per-stage "validation contracts" in
+Xcientist (arXiv:2606.18874). No study yet measures success with versus without
+a declared completion condition for research agents.
+
+## Comparability: one shared axis per paper
+
+A post-training result — RL, DPO, SFT, fine-tuning on an open-weight model — is
+a fact about **one configuration**: base model, trainer, objective, reward or
+verifier, training data, eval harness and set, decoding, how samples were
+varied, compute. Papers in this space change several at once and attribute the
+delta to the one they named, so **a paper's absolute number is not a baseline for
+yours**; it is a different experiment.
+
+The audits are unambiguous. Pass@1 on AIME/AMC swings 5–15 points across seeds
+and RL gains are "far below prior claims" (arXiv:2504.07086); seven RLVR papers
+under-reported the pre-RL Qwen baseline, and several post-RL models were worse
+than the correctly evaluated baseline (Chandak, Goel & Prabhu 2025); with 12
+matched seeds, none of eight claimed rollout-selection gains beat uniform GRPO
+with a CI excluding zero, and rankings flipped between a 3-seed pilot and the
+12-seed run (arXiv:2609.06107). Effects measured on Qwen2.5 routinely vanish on
+Llama or OLMo (arXiv:2506.10947, 2507.10532, 2506.20512, 2503.18892).
+
+Two consequences for how to design:
+
+**1. Separate the idea from the substrate.** Your claim is almost always about an
+idea ("process reward beats outcome reward for X"). The substrate is the model
+and trainer it runs on. An older methodology is not valuable as state of the
+art; it is valuable as a *controlled baseline*. Pin a substrate — one base model,
+one trainer, one eval harness, versions recorded — and do not move it
+mid-project. "Does the effect survive a newer base model" is a registered
+prediction of its own, tested as one deliberate swap, never an upgrade in place.
+
+**2. Build bridges, not reproductions.** Full comparability with a paper means
+matching its whole configuration, which is expensive and usually impossible
+(their data is missing, their trainer is a fork). A **bridge condition** is one
+extra run of your own pipeline that makes **one axis shared**:
+
+| Bridge | What you run | What it tells you |
+|---|---|---|
+| **Anchor** | One of *their* conditions on *your* configuration | If their number comes back, every delta you report afterwards is readable against their paper. If not, you learned it before building on them. Re-run the anchor at the start and end of the project: that is the stability check. |
+| **Shared-axis** | *Your* idea with **one** factor swapped to *their* value | Whether your effect is specific to a choice they did not make. |
+
+The honest goal is **one shared axis per paper**, stated up front:
+"comparable to Smith on the reward axis and to nobody on data" is exactly what
+papers in this space fail to say. In the MATS dashboard, each relevant paper's
+configuration is a typed `config` item (factors it reports, blanks for the ones
+it does not — a blank is itself a fact), the project's own configuration is
+another, and the tool shows per paper which factors differ and which were never
+reported; bridges are proposed as priced runs the researcher accepts or declines.
+
+Prior art: a *transfer measurement device* in metrology (VIM3 §5.9) and the BIPM
+rule that regional comparisons link to the reference value only through
+participants who took part in both; direct versus conceptual replication (Nosek
+& Errington, PLOS Biology 2020); the same-codebase reality-check genre in ML
+("Are GANs Created Equal?" arXiv:1711.10337; "A Metric Learning Reality Check"
+arXiv:2003.08505). Reference recipes worth anchoring to: Tulu 3, SimpleRL-Zoo
+(arXiv:2503.18892). verl, TRL and OpenRLHF are substrate, not evidence.
+
+A bridge condition and a sample-variation run (see [`statistics.md`,
+"Vary the data, not the seed"](statistics.md#vary-the-data-not-the-seed)) are
+the same operation: one factor moved, read for sensitivity. A seed sweep is the
+one axis that tells you nothing about that.
+
 ## Observational evidence does not license a causal claim
 
 Keep the two kinds of evidence **syntactically distinct** so you cannot slide
@@ -422,7 +538,12 @@ AutoResearch" (arXiv:2608.14905, 800 trajectories), FIRE-Bench
 disclosure audit (arXiv:2605.21404), the frontier-lag audit (arXiv:2605.04135),
 reward-lens (arXiv:2604.26130), "Interpretability without Actionability"
 (arXiv:2603.18353), the hypothesis-hivemind paper (arXiv:2605.08956),
-MLRC-Bench (arXiv:2504.09702) and InquiTree (arXiv:2606.09550). Consolidated
+MLRC-Bench (arXiv:2504.09702) and InquiTree (arXiv:2606.09550). The
+comparability, acceptance-condition and evidence-versus-verdict sections
+(2026-10) draw on arXiv:2504.07086, 2609.06107, 2506.10947, 2608.28945 §7,
+2608.19047, 2606.18874, 2103.03098 and the trackinizer design (rekursiv-ai);
+the evidence and the fit ratings are in the `mats_dashboards` repo,
+`docs/auto_alignment_research/research_notes_202610b.md`. Consolidated
 from a 317-paper survey; the full synthesis and per-paper notes live in the
 `mats_dashboards` repo under `docs/auto_alignment_research/`. Drafted by Claude; pending
 MATS research-staff review.
