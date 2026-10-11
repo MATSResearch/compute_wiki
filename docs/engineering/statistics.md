@@ -252,6 +252,30 @@ starred point in the middle of a noisy sweep.
 If you found the layer by searching, say you searched. A held-out confirmation
 on fresh prompts is worth more than any correction.
 
+### Picking the "best" hyperparameter config: report its spread, not its luckiest run
+
+In a hyperparameter sweep (learning rate × β × data subset, say), the config
+that looks best is partly the one that got the luckiest sample. This is the
+**winner's curse**: selecting the maximum of noisy estimates biases it upward,
+and the more configs you try, the bigger the bias. Brushing the top of a metric
+in a parallel-coordinates plot does exactly this selection.
+
+- **Give every sweep a variation axis**: the same config run on several data
+  subsets or bootstrap resamples. See *Vary the data, not the seed* above.
+- **Compare configs by their spread**: collapse runs with identical parameters
+  into one line and show the min–max (or interquartile) band of each metric
+  across the variation axis, with `n`. A config whose band overlaps the
+  runner-up's has not been shown to be better.
+- **Keep failed runs in the table.** Dropping them makes the surviving configs
+  look more reliable than they are (survivorship).
+- **Confirm the chosen config on held-out data** before reporting its number.
+
+In the MATS dashboard's Automated Alignment tool, a sweep recorded as a run
+table (`<run_table>`, with columns declared as param / variation / metric /
+status) opens as a parallel-coordinates panel. **Group by config** draws this
+spread band, failed runs stay drawn, and a table with no variation column
+carries a "no robustness axis" note.
+
 ## Report Bayesian and frequentist side by side
 
 These answer different questions, both questions are reasonable, and reporting
