@@ -368,6 +368,10 @@ configuration is a typed `config` item (factors it reports, blanks for the ones
 it does not — a blank is itself a fact), the project's own configuration is
 another, and the tool shows per paper which factors differ and which were never
 reported; bridges are proposed as priced runs the researcher accepts or declines.
+The MATS literature-review skill (`/mats:lit-review` in the alignment-hive
+plugin marketplace) writes each paper's configuration in the same nine factors
+into its summaries and a `configs.json`, so a lit review done with it is
+already the input to that map.
 
 Prior art: a *transfer measurement device* in metrology (VIM3 §5.9) and the BIPM
 rule that regional comparisons link to the reference value only through
