@@ -39,6 +39,13 @@ actually needs.
   to their value — rather than reading their absolute number as your baseline.
   Record each paper's configuration factor by factor, blanks for what it did
   not report.
+- Before testing a question, record at least two hypotheses that predict
+  different observations, or the rival you weighed and why you rejected it.
+  Tie each hypothesis to the run that will decide it. When asking for rivals,
+  seed the request from a field outside the project's own framing.
+- Cite papers as sources someone can open (title, authors, year, link), not
+  from memory, and keep the ones you build on apart from the ones you set
+  aside.
 - Estimate robustness by varying the sample (bootstrap the eval set, overlapping
   data subsets, hyperparameter perturbation), not by sweeping seeds. See
   "Comparability", "Say what done means" and "Evidence is not the verdict" in
