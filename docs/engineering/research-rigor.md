@@ -427,7 +427,7 @@ When you release code, disclose:
 
 | Field | Why |
 |---|---|
-| **Inference cost** | Disclosed by **none** of the eight audited agent benchmarks |
+| **Inference cost** — and, where you have it, cost **per step** of the work | Disclosed by **none** of the eight audited agent benchmarks. The MATS dashboard records agent spend per research step, so "what the literature review cost" is a number, not a guess |
 | **Harness** + version/digest | Also disclosed by none of them fully. "An agent" is a model *and* a harness — scaffold alone moved one benchmark by 0.34 points |
 | **Model IDs**, exactly | **52.5%** of evaluation papers report at the class level ("AI", "GPT-4-family") rather than naming what ran |
 | **Run dates** | The frontier moves under you; a result without a date is unplaceable |
