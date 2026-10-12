@@ -428,8 +428,14 @@ one axis that tells you nothing about that.
 Keep the two kinds of evidence **syntactically distinct** so you cannot slide
 from one to the other in prose.
 
-- Attribution scores, linear probes and correlations are **observational**.
-- Ablation, activation patching and intervention are **causal**.
+- Attribution scores, linear probes and correlations are **observational**. So
+  is every statistic of how a fine-tune changed the weights — which modules moved
+  and how far, the spectrum of the change, its top directions read through the
+  vocabulary, changed head-composition scores: they say where the parameters
+  moved, not what the moved parameters do.
+- Ablation, activation patching and intervention are **causal**. For a weight
+  change, the intervention is reverting one module's delta, or applying it alone
+  to the base.
 
 They diverge, and not subtly. Linear attribution does not predict causal
 patching effects (mean Spearman ρ = **−0.256** and **−0.027** on two reward
