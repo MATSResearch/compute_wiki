@@ -17,6 +17,7 @@ The safety use case is specific and increasingly common: you have a model organi
 | A maintained library with EK-FAC, TrackStar, SOURCE, MAGIC, TRAK and gradient-cosine under one CLI, on-disk gradient stores, multi-node runs | **Bergson** (`pip install bergson`, `EleutherAI/bergson`; arXiv **2606.11660**) |
 | Fast attribution over a large train set, many queries | **Bergson** `trackstar` / on-disk gradient store, or **TRAK** (`pip install traker`; last GitHub push 2024-11-18) |
 | The conceptual reference for LLM-scale influence functions | arXiv **2308.03296** (Grosse et al., EK-FAC) |
+| Hessian-free influence (no inverse-Hessian fit), per-token, any differentiable layer, cheap for a few targeted queries on a large model | **Bayesian Influence Functions** (BIF) via **devinterp** (`uv add devinterp`, `timaeus-research/devinterp`; arXiv **2509.26544**) |
 | A cheap, honest baseline before any of the above | **retrain-without-it** on a subsampled train set, or embedding/BM25 retrieval over the train set |
 | "Which *concept* changed", not "which document" | [`model-diffing.md`](model-diffing.md) |
 
@@ -111,6 +112,43 @@ bergson query --index runs/index --unit_norm
 - **Inconsistent per-example gradients under batching.** Some models give different per-example gradients when batched (nondeterminism in optimized SDPA, scaled dot-product attention, backends: flash / memory-efficient), so scores shift with padding or batch composition. Run `bergson test_model_configuration --model <name>`; it reports which of `--force_math_sdp`, `--precision fp32 --use_tf32_matmuls --force_math_sdp`, or full `--precision fp32` you need (same flags for `score` and `trackstar`), and also detects BOS/EOS duplication from chat templates.
 - **Stale index.** A gradient store is tied to the checkpoint it was built from; rebuild after any weight change (same rule as kronfluence factors).
 
+## Bayesian Influence Functions (BIF) via devinterp
+
+Aliases: BIF, local Bayesian influence function, Hessian-free influence functions, SGLD (stochastic gradient Langevin dynamics) influence, SGMCMC (stochastic-gradient Markov chain Monte Carlo) attribution, posterior loss correlation, `devinterp.slt.bif`, Timaeus.
+
+**What it is.** Kreer, Wu, Adam, Furman & Hoogland, "Bayesian Influence Functions for Hessian-Free Data Attribution" (arXiv **2509.26544**, ICLR 2026). Classical influence functions, EK-FAC (Eigenvalue-corrected Kronecker-Factored Approximate Curvature) included, need an inverse Hessian. The BIF instead samples weights near the trained checkpoint with SGLD and uses the (negative) covariance between a training example's loss and a query's loss across those samples as the influence. It comes from singular learning theory (SLT), the same machinery as the local learning coefficient (LLC); see [`slt-devinterp.md`](slt-devinterp.md). It works for any differentiable layer, whereas EK-FAC (and kronfluence) cover only `nn.Linear` / `nn.Conv2d`, so attention and normalization are left out. It gives per-token influence matrices directly.
+
+**What the paper shows, against EK-FAC.**
+- *Retraining accuracy (LDS, linear datamodeling score):* on CIFAR-10 / ResNet-9 the BIF beat EK-FAC in the small-retrain-subset regime. In a Pythia-14M WikiText finetuning setting it *underperformed*: LDS 0.110 versus 0.221 for EK-FAC and 0.198 for plain gradient similarity (appendix C.3). The authors attribute this to harder sampling for language models.
+- *Cost:* on the small image models EK-FAC was about 5x faster. In a timing comparison across the Pythia suite (up to Pythia-2.8B, on one 4xA100 node, 2k SGLD draws) the BIF needs no up-front factor fit, and for the largest models it was about two orders of magnitude faster in evaluation time at the same peak GPU memory. EK-FAC's fitted factors for Pythia-2.8B took 41 GiB on disk. That fit only pays off once you score many queries.
+- *Main limitation (authors'):* accuracy depends on posterior-sampling quality, and the SGLD hyperparameters (step size, localization strength γ, inverse temperature β) are not well characterized for language models.
+
+**Code.** `devinterp` on PyPI (2.0.1, 2026-04-23, Python ≥ 3.10; MIT; `timaeus-research/devinterp`, last push 2026-04-23), the Timaeus library that also computes the LLC and susceptibilities. Install with `uv add devinterp`. From its README:
+
+```python
+from devinterp.slt.bif import bif
+
+result = bif(
+    model=model,
+    dataset=train_data,
+    observables={"train": train_data, "code": code_data},
+    lr=0.001,
+    n_beta=30,
+    num_chains=4,
+    num_draws=200,
+    correlation_method="token",  # or "sequence"
+)
+# result["influences"] contains pairwise correlation matrix
+```
+
+The v2 API expects an autoregressive model that takes `input_ids` and returns logits, and a Hugging Face `Dataset` with a uniform-length `"input_ids"` column (not a `DataLoader`). Pass `loss_fn=` for a non-standard loss. **v1 code does not carry over:** the README's migration notes say `estimate_learning_coeff` (and `_with_summary`), `LLCEstimator` and `SamplerCallback` were replaced by `llc()` / `compute_llc()`, `sampling_method_kwargs={"nbeta": ...}` by a direct `n_beta=` parameter, and that results are now xarray objects rather than dicts with string keys (`result["llc/mean"]` became `result["llc_mean"]`). Older tutorials that use those names are v1; pin the major version. Timaeus publishes a sampling-hyperparameter guide linked from the README, which is the first thing to read when chains diverge, spike or return NaNs.
+
+**When to use it:** a handful of targeted queries on a model too large for a cheap EK-FAC fit; you want influence over attention or normalization weights too; you want token-level attribution.
+
+**When *not* to use it:** many queries against one model (amortize an EK-FAC or Bergson gradient store instead); you cannot afford a hyperparameter sweep on the sampler; you need an accuracy claim on language models, where the paper's own LDS comparison favoured EK-FAC.
+
+**Open problem — the bar.** The paper's language-model evidence is a timing comparison up to 2.8B parameters and an LDS comparison at 14M where EK-FAC won. A result that would move practice: BIF matching or beating EK-FAC (or Bergson's best method) on LDS or retraining-based evaluation for a ≥1B-parameter language model at matched compute, with the sampler settings reported, ideally on a safety task such as emergent-misalignment data filtering (Paulo et al., arXiv 2609.37914).
+
 ## What 2026 evaluations found: attribution for emergent misalignment, subliminal learning and RL
 
 Attribution is now being *evaluated* on the safety use cases above, with mixed results. Read these before claiming a top-K list is "the cause":
@@ -145,6 +183,7 @@ Whatever you use, **validate the attribution causally**: take the top-K attribut
 
 - [`model-organisms.md`](../alignment-science/model-organisms.md) — emergent misalignment and subliminal learning are the archetypal "which data did this" cases.
 - [`model-diffing.md`](model-diffing.md) — the complementary question, in weight/activation space.
+- [`slt-devinterp.md`](slt-devinterp.md) — singular learning theory and the `devinterp` library behind Bayesian Influence Functions (LLC, susceptibilities).
 - [`unlearning.md`](../alignment-science/unlearning.md) — if you can attribute it, you may not need to unlearn it: retrain without it.
 - [`research-rigor.md`](../engineering/research-rigor.md) — observational evidence does not license a causal claim.
 - [`compute.md`](../models-and-compute/compute.md) — factor fitting and retraining sweeps are the cost driver here.
@@ -157,7 +196,7 @@ No. Every method here needs per-example gradients, therefore weights, therefore 
 
 ### How big a model can I attribute over?
 
-kronfluence's EK-FAC factors scale with layer widths, and the practical ceiling for a single 80GB card is small-to-mid models (roughly ≤7B, less if the query set is large). Bergson (`pip install bergson`) advertises multi-node runs at 70B+ parameters with on-disk gradient stores, so attribution over a large model is now a library call plus a cluster rather than a from-scratch project — but it is still a multi-node cost center, and a smaller model organism is still the right default for most safety questions.
+kronfluence's EK-FAC factors scale with layer widths, and the practical ceiling for a single 80GB card is small-to-mid models (roughly ≤7B, less if the query set is large). Bergson (`pip install bergson`) advertises multi-node runs at 70B+ parameters with on-disk gradient stores, so attribution over a large model is now a library call plus a cluster rather than a from-scratch project — but it is still a multi-node cost center, and a smaller model organism is still the right default for most safety questions. For a few targeted queries on a large model, Bayesian Influence Functions (`devinterp`, arXiv 2509.26544) skip the inverse-Hessian fit entirely; the paper timed them up to Pythia-2.8B, but its only language-model accuracy comparison (Pythia-14M) favoured EK-FAC.
 
 ### Is influence-function attribution reliable?
 
@@ -165,4 +204,4 @@ Partially. It is a first-order local approximation with well-documented failure 
 
 ---
 
-Last verified: 2026-10. kronfluence README (install, `Analyzer` example, the `nn.Linear`/`nn.Conv2d` limitation) and `kronfluence/task.py` (the `compute_train_loss` / `compute_measurement` / `get_influence_tracked_modules` signatures) read directly from the repo. TRAK install names confirmed from `MadryLab/trak` and the `traker` PyPI listing. arXiv 2308.03296 and 2303.14186 resolved via the arXiv API to the titles cited. The baseline recipes in "Cheap baselines" are our own recommendations. (Additions 2026-10: Bergson — `EleutherAI/bergson` (MIT, last push 2026-10-08, v2.2.3 on PyPI), README, CHANGELOG and `docs/numerical-stability.rst` / `limitations.rst` read directly, arXiv 2606.11660; EM / subliminal-learning / RL attribution evaluations arXiv 2609.37914, 2608.11025, 2609.20027, 2609.19589, 2610.10422 (`AmitoVrito/BehaviorTrace` resolves), 2602.14869; `pomonam/kronfluence` last push 2026-05-23 and `MadryLab/trak` last push 2024-11-18 re-checked with `gh api`. All arXiv IDs fetched from abs pages on 2026-10-09; the Bergson leaderboard numbers are the library authors' own and for one GPT-2 setting.)
+Last verified: 2026-10. kronfluence README (install, `Analyzer` example, the `nn.Linear`/`nn.Conv2d` limitation) and `kronfluence/task.py` (the `compute_train_loss` / `compute_measurement` / `get_influence_tracked_modules` signatures) read directly from the repo. TRAK install names confirmed from `MadryLab/trak` and the `traker` PyPI listing. arXiv 2308.03296 and 2303.14186 resolved via the arXiv API to the titles cited. The baseline recipes in "Cheap baselines" are our own recommendations. (Additions 2026-10: Bergson — `EleutherAI/bergson` (MIT, last push 2026-10-08, v2.2.3 on PyPI), README, CHANGELOG and `docs/numerical-stability.rst` / `limitations.rst` read directly, arXiv 2606.11660; EM / subliminal-learning / RL attribution evaluations arXiv 2609.37914, 2608.11025, 2609.20027, 2609.19589, 2610.10422 (`AmitoVrito/BehaviorTrace` resolves), 2602.14869; `pomonam/kronfluence` last push 2026-05-23 and `MadryLab/trak` last push 2024-11-18 re-checked with `gh api`. All arXiv IDs fetched from abs pages on 2026-10-09; the Bergson leaderboard numbers are the library authors' own and for one GPT-2 setting.) (Additions 2026-10-12: Bayesian Influence Functions — arXiv 2509.26544 abstract via the arXiv API, and the EK-FAC comparison (CIFAR-10 LDS, Pythia-14M LDS table C.3, Pythia timing in Figure 5 and appendix B.3, limitations) read from the paper PDF; `devinterp` README (BIF snippet verbatim, model requirements, v1→v2 migration notes) read from `timaeus-research/devinterp`, repo checked via the GitHub API (MIT, last push 2026-04-23) and PyPI JSON (2.0.1, 2026-04-23, Python ≥ 3.10). The ≥1B-parameter evidence bar is our own framing. Verification pass 2026-10-12: 27 claims checked, 1 corrected.)

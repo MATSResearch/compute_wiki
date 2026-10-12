@@ -26,6 +26,9 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 | [CoT faithfulness paper](#cot-faithfulness-paper) | Measure how / whether CoT reflects actual reasoning | API + (optional) GPU | [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md) |
 | [Welfare / introspection paper](#welfare--introspection-paper) | Operationalize a welfare-relevant indicator | API + (optional) GPU for activations | [`welfare-introspection.md`](../alignment-science/welfare-introspection.md) |
 | [Debate / scalable-oversight paper](#debate--scalable-oversight-paper) | Implement / evaluate an oversight protocol | API budget | [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md) |
+| [Theory / formal-methods paper](#theory--formal-methods-paper) | State a property precisely; prove it, refute it, or check a lemma in Lean | Laptop; Lean toolchain optional | [`agent-foundations-and-formal.md`](../alignment-science/agent-foundations-and-formal.md) |
+| [Multi-agent safety paper](#multi-agent-safety-paper) | Many LLM agents in one environment; measure cooperation, conflict, collusion | API budget (agents × rounds × runs) | [`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md) |
+| [Governance / verification paper](#governance--verification-paper) | Build a verifier for one governance-relevant claim; attack it | GPU to re-execute open-weight models | [`technical-governance.md`](../alignment-science/technical-governance.md) |
 | [Position / framing paper](#position--framing-paper) | Argue a conceptual point with supporting experiments | Variable | — |
 
 ## Behavioral safety paper
@@ -47,7 +50,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Shape:** pick a behavior or capability (induction, IOI, factual recall, refusal, deception). Identify the circuit responsible: which layers, heads, MLPs, residual-stream directions. Validate causally via ablation, patching, or activation patching. Often produces a "diagram of the model doing X."
 
-**Tools:** TransformerLens (preferred for clean named hooks), nnsight (for HF-native models or 70B+), `circuitsvis` for attention visualization, `tuned-lens` for layerwise read-outs, Jupyter notebooks (mech interp is notebook-native).
+**Tools:** TransformerLens (preferred for clean named hooks; 4.x ships attribution patching, including edge-level EAP scoring, under `transformer_lens.tools.analysis`), nnsight (for HF-native models or 70B+), **EAP-IG** (`hannamw/EAP-IG`, MIT) for edge attribution patching with integrated gradients, **circuit-tracer** (`decoderesearch/circuit-tracer`) for attribution graphs over transcoder features, `circuitsvis` for attention visualization, raw logit lens (`model.unembed @ residual`) for layerwise read-outs, Jupyter notebooks (mech interp is notebook-native). The PyPI `tuned-lens` release does not support Llama-3, Gemma-2/3 or Qwen-3; on those models use the logit lens or train your own tuned-lens translators (see [`probes.md`](../interpretability/probes.md)). circuit-tracer's TransformerLens backend and SAELens need `transformer-lens<4` as of 2026-10 (see [`mech-interp.md`](../interpretability/mech-interp.md)).
 
 **Resources:** one GPU; small-to-medium model (≤7B preferred for ergonomics). Closed APIs don't fit — you need internals.
 
@@ -55,7 +58,13 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 - **Wang et al. — Indirect Object Identification (IOI)** in GPT-2-Small. Canonical circuit-level analysis.
 - **Olsson et al. — Induction Heads** (Anthropic, 2022). Classic mechanism finding.
 - **Conmy et al. — ACDC**. Algorithmic circuit discovery.
+- **Syed, Rager & Conmy — Attribution Patching Outperforms Automated Circuit Discovery** (arXiv:2310.10348). The fast gradient approximation to activation patching that EAP and EAP-IG build on.
+- **Hanna, Pezzelle & Belinkov — Have Faith in Faithfulness** (EAP-IG, arXiv:2403.17806). Circuits found with plain edge attribution patching (EAP) are less faithful than those found with EAP-IG, despite similar node overlap with earlier circuits; measure faithfulness, not overlap.
+- **Mueller et al. — MIB: A Mechanistic Interpretability Benchmark** (arXiv:2504.13151; `aaronmueller/MIB`). Circuit-localization and causal-variable tracks over four tasks and five models. Attribution and mask-optimization methods did best at circuit localization; supervised distributed alignment search (DAS) did best at causal-variable localization, and sparse autoencoder (SAE) features were not better than neurons.
+- **Ameisen et al. — Circuit Tracing** and **Lindsey et al. — On the Biology of a Large Language Model** (Anthropic, transformer-circuits.pub, 2025). Attribution graphs over cross-layer transcoder features; open implementation in circuit-tracer (see [`saes.md`](../interpretability/saes.md)).
 - **Lieberum et al. — Circuit Analysis on Multiple-Choice in Chinchilla**. Model-internals at scale.
+
+**Evidence bar for a new circuit-discovery method:** report MIB scores alongside your own task, and report faithfulness of the discovered circuit, not only overlap with a known one.
 
 **Watch out for:** the work is high-effort per insight; circuits don't always transfer between models; modern instruct-tuned models behave differently from base GPT-2 / Pythia. Plan a model + behavior where you have realistic odds of finding *something*.
 
@@ -70,7 +79,8 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Reference papers:**
 - **Templeton et al. — Scaling Monosemanticity** (Anthropic, 2024). Foundational behavioral-feature work.
 - **Marks et al. — Sparse feature circuits** (2024). SAE features composed into circuits.
-- **Karvonen et al. — auto-interp of features** (work emerging from MATS / Truthful AI lines).
+- **Paulo, Mallen, Juang & Belrose — Automatically Interpreting Millions of Features** (arXiv:2410.13928; code in EleutherAI `delphi`). The auto-interp (automated feature explanation and scoring) pipeline.
+- **Karvonen et al. — SAEBench** (arXiv:2503.09532; `sae-bench` on PyPI). Benchmark for comparing SAEs before you pick one to study.
 - See [`saes.md`](../interpretability/saes.md) for the full library landscape.
 
 **Watch out for:** feature splitting (the feature you want may be 5 features at higher SAE width); reconstruction-error compounding when you intervene; the feature being correlative not causal — validate with ablation.
@@ -235,6 +245,53 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 
 **Watch out for:** judge-bias confounds (length, position, sycophancy); equilibrium-vs-trajectory issues (theoretical debate guarantees assume Nash equilibrium; trained models may not reach it); strategic agreement / collusion between debaters trained on similar data; conflating "honest debater wins on this dataset" with "debate works in deployment."
 
+## Theory / formal-methods paper
+
+**Shape:** take an informal safety property (corrigibility, translatable concepts between agents, a guarantee relative to a world model), state it precisely, then prove it, refute it with a counterexample, or show which assumption it needs. Optionally check the key lemma in Lean. Optionally bridge to experiments by testing one of the theorem's assumptions on current models.
+
+**Tools:** paper mathematics first. For machine-checked lemmas: Lean 4 + Mathlib, **lean-lsp-mcp** (`uvx lean-lsp-mcp`) so a coding agent can read goals and diagnostics, the MATS Lean skills, and **comparator** with the **nanoda** external kernel for checking any proof an AI wrote. Hosted provers such as Harmonic's Aristotle (`aristotlelib`) can fill `sorry`s; check their output like any untrusted proof. Details in [`lean-formalization.md`](../engineering/lean-formalization.md).
+
+**Resources:** a laptop. GPU or API budget only for a theory-to-experiment bridge.
+
+**First deliverable:** a precise statement plus one proved lemma or counterexample, not a new framework. A Lean-checked lemma, with the formal statement shown next to the informal claim, is a strong first artifact when the claim is subtle or the proof is AI-assisted.
+
+**Reference papers:**
+- **Hadfield-Menell, Dragan, Abbeel & Russell — The Off-Switch Game** (arXiv:1611.08219). The standard formal setting for corrigibility.
+- **Nayebi — Core Safety Values for Provably Corrigible Agents** (arXiv:2507.20964). Five separate utility heads with lexicographic priority; undecidability result for the adversarial case.
+- **Wentworth & Lorell — Natural Latents** (arXiv:2509.03780). When one agent's latent variables are guaranteed to be a function of another's.
+- **Dalrymple et al. — Towards Guaranteed Safe AI** (arXiv:2405.06624). World model + safety specification + verifier.
+
+**Watch out for:** statement drift (a swapped quantifier or an expectation in place of a probability yields a correct proof of the wrong claim); assumptions strong enough to make the result vacuous; reporting an AI-written Lean proof as complete on `lake build` alone; theory nobody can connect to real systems (the Corrigibility Research Fund, for one, says it deprioritises work it judges too esoteric). Funding and venues: [`agent-foundations-and-formal.md`](../alignment-science/agent-foundations-and-formal.md).
+
+## Multi-agent safety paper
+
+**Shape:** put several LLM agents in a shared environment (a commons dilemma, a negotiation, a market, a social simulation); vary the models, communication channels and incentives; measure cooperation, conflict and collusion. Tie the measured failure to a named risk in an existing taxonomy.
+
+**Tools:** **Concordia** (`google-deepmind/concordia` on GitHub, `gdm-concordia` on PyPI, Apache-2.0), a library for generative social simulation; **GovSim** (`giorgiopiatti/GovSim`, MIT), a commons-governance environment; safety-research/safety-tooling or Inspect AI for the model calls and logging. Tool landscape: [`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md).
+
+**Resources:** API budget, which multiplies with agents × rounds × runs. Start with a few agents and short horizons.
+
+**Reference papers:**
+- **Hammond et al. — Multi-Agent Risks from Advanced AI** (arXiv:2502.14143; Cooperative AI Foundation). Three failure modes (miscoordination, conflict, collusion) and seven risk factors.
+- **Piatti et al. — Cooperate or Collapse (GovSim)** (arXiv:2404.16698). All but the most powerful LLM agents failed to reach a sustainable equilibrium; the best survival rate was below 54%.
+
+**Watch out for:** regime (long simulations with many agents may transfer weakly to short deployments with a human in the loop, so say which regime you studied); prompt sensitivity, so vary prompts and scenarios rather than only seeds; attributing an outcome to "the agents" when it comes from the scaffold.
+
+## Governance / verification paper
+
+**Shape:** pick one claim a regulator or treaty partner would want checked ("these outputs came from this model", "no weights left through the inference server", "this compute ran only declared workloads"). Build a verifier, then attack it with an adversary who knows how it works. Report detection rate, false-positive rate and overhead.
+
+**Tools:** vLLM or HuggingFace `transformers` to re-execute open-weight models; the inference-verification code `RoyRin/inference_verification_for_model_weight_exfiltration` as a starting point; standard cryptographic hashing and commitments for evidence records.
+
+**Resources:** GPUs to re-run open-weight models (the inference-verification paper tested 3B to 30B parameters).
+
+**Reference papers:**
+- **Reuel, Bucknall, Casper et al. — Open Problems in Technical AI Governance** (arXiv:2407.14981). Problem map by capacity (assessment, access, verification, security, operationalization, ecosystem monitoring) and target (data, compute, models, deployment).
+- **Rinberg, Karvonen et al. — Verifying LLM Inference to Detect Model Weight Exfiltration** (arXiv:2511.02620). On MOE-Qwen-30B, exfiltratable information under 0.5% at a false-positive rate under 0.01%.
+- **Cankaya — A system overview for near-term, low-trust AI compute verification** (LessWrong, 2026-06-23). A working-draft reference architecture inviting critique.
+
+**Watch out for:** legitimate inference non-determinism (batching, kernels, hardware) showing up as false positives; testing only against an attacker who does not know the detector; unstated trust assumptions about who runs the verifier. Details: [`technical-governance.md`](../alignment-science/technical-governance.md).
+
 ## Position / framing paper
 
 **Shape:** argue a conceptual point about safety research, supported by experiments where helpful. Examples: "CoT monitorability is fragile but important" (Korbak 2025); "AI Control is a tractable research agenda" (Greenblatt 2023). Less common shape; harder for early-career researchers to land on first try.
@@ -252,6 +309,7 @@ The strongest projects often *combine* shapes:
 - **Model organism + control eval:** build the organism (shape #5), evaluate control protocols on it (shape #6).
 - **Behavioral + RL safety:** intervene via RL training, observe broad effects, characterize via behavioral evals (e.g. studying how RL on math affects refusal).
 - **CoT faithfulness + RL:** measure how RL training affects CoT monitorability.
+- **Theory + behavioral:** take one assumption of a formal corrigibility result and test it on current models, as the shutdown-resistance experiments do (see [`agent-foundations-and-formal.md`](../alignment-science/agent-foundations-and-formal.md)).
 
 Most papers in [`model-organisms.md`](../alignment-science/model-organisms.md) combine 2–3 of these shapes.
 
@@ -265,4 +323,4 @@ Most papers in [`model-organisms.md`](../alignment-science/model-organisms.md) c
 
 ---
 
-Last verified: 2026-06. Catalog reflects 2024–2026 norms; new shapes (e.g. specifically welfare-flavored work) are emerging. (Citation audit 2026-06: fixed the subliminal-learning repo to `MinhxLe/subliminal-learning`; all other paper attributions/arXiv IDs — AI Control 2312.06942, persona vectors 2507.21509, scalable-oversight benchmark 2504.03731 with the SOlib package, etc. — verified correct.)
+Last verified: 2026-06. Catalog reflects 2024–2026 norms; new shapes (e.g. specifically welfare-flavored work) are emerging. (Citation audit 2026-06: fixed the subliminal-learning repo to `MinhxLe/subliminal-learning`; all other paper attributions/arXiv IDs — AI Control 2312.06942, persona vectors 2507.21509, scalable-oversight benchmark 2504.03731 with the SOlib package, etc. — verified correct.) (Additions 2026-10-12: new Theory / formal-methods, Multi-agent safety and Governance / verification shapes; the circuit shape now cites attribution patching 2310.10348, EAP-IG 2403.17806 (`hannamw/EAP-IG`), MIB 2504.13151 (`aaronmueller/MIB`) and the Anthropic attribution-graph papers (titles checked on transformer-circuits.pub); replaced the `tuned-lens` recommendation, which contradicted `mech-interp.md` and `probes.md` on Llama-3 / Gemma-2/3 / Qwen-3 support; replaced the misattributed "Karvonen et al. — auto-interp of features" with Paulo et al. 2410.13928 (auto-interp) and Karvonen et al. 2503.09532 (SAEBench). New-shape citations — 1611.08219, 2507.20964, 2509.03780, 2405.06624, 2502.14143, 2404.16698, 2407.14981, 2511.02620 — verified via the arXiv API; repos `google-deepmind/concordia`, `giorgiopiatti/GovSim`, `RoyRin/inference_verification_for_model_weight_exfiltration` via `gh api`; `gdm-concordia` via PyPI; the Cankaya post via LessWrong GraphQL.)

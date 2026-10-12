@@ -3,6 +3,7 @@
 A decision guide to AI safety research tooling for MATS fellows. Each row points to the topic doc with full detail, pitfalls, and alternatives.
 
 **Other navigation entry points:**
+- **[`for-agents.md`](start-here/for-agents.md)** — compact index for an AI research agent: every page and skill, and when each is worth opening.
 - **[`faq.md`](start-here/faq.md)** — cross-cutting beginner questions (API keys, where to start, costs).
 - **[`glossary.md`](start-here/glossary.md)** — A–Z definitions of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, etc.).
 - **[`project-shapes.md`](start-here/project-shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
@@ -228,7 +229,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Run Turpin et al. 2023 bias-induction faithfulness test | Hand-rolled with Inspect AI | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Measure monitorability (faithfulness + verbosity) | Meek et al. 2025 method (arXiv:2510.27378) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Build a CoT monitor for agent traces | Inspect AI custom scorer (LLM-as-judge) or activation probes via [`serving-and-activations.md`](interpretability/serving-and-activations.md) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
-| Detect steganography / encoded reasoning in CoT | Paraphrasing test (Lanham); semantic preservation checks | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
+| Detect steganography / encoded reasoning in CoT | Paraphrase defense plus a strategy-aware paraphraser; test for monitor jailbreaking separately (a paraphrase that changes the answer is not proof of steganography) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Measure how much a model can reason without a chain of thought | **NCRI** (`neelnanda-io/nocot-bench`), no-CoT time horizons, filler-token sweeps | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Check a model really answered with no hidden reasoning | Three-witness audit from nocot-bench's elicitation guide | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Run OpenAI's monitorability evals | `openai/monitorability-evals` (+ its known filtering caveat) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
@@ -328,6 +329,18 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Avoid a hallucinated-package supply-chain footgun | Verify and pin every dependency the agent adds | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Stop secrets leaking | Keys in gitignored `.env`, deny agent read access, scan diffs | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Pick a coding agent today | Decision table (terminal vs cloud background agent) | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
+
+## I want to work in another safety research area
+
+| Situation | Start with | Topic doc |
+|---|---|---|
+| Measure whether a model has dangerous bio, cyber or self-replication capabilities | VCT, LAB-Bench, CVE-Bench, CyberGym, BountyBench, RepliBench; check elicitation first | [`dangerous-capability-evals.md`](evaluation/dangerous-capability-evals.md) |
+| Show a model *can't* do something, or detect sandbagging | Fine-tuning elicitation on password-locked / circuit-broken organisms; noise injection | [`evals.md`](evaluation/evals.md#sandbagging-and-capability-elicitation-is-a-low-score-real) |
+| Shape a model's values with pretraining or midtraining documents rather than demonstrations | Alignment pretraining, synthetic document finetuning on a constitution | [`alignment-pretraining.md`](alignment-science/alignment-pretraining.md) |
+| Study how structure forms during training, or interpret through loss-landscape geometry | `devinterp` (LLC, susceptibilities, Bayesian influence functions) | [`slt-devinterp.md`](interpretability/slt-devinterp.md) |
+| Study cooperation or collusion among several AI agents | GovSim, Concordia, Colosseum, NARCBench | [`multi-agent-safety.md`](oversight-and-control/multi-agent-safety.md) |
+| Work on corrigibility or agent-foundations theory, or formal safety guarantees | Off-switch game, Guaranteed Safe AI, Lean with comparator | [`agent-foundations-and-formal.md`](alignment-science/agent-foundations-and-formal.md) |
+| Verify what a lab ran, or detect weight exfiltration from an inference server | Open Problems in Technical AI Governance; inference verification | [`technical-governance.md`](alignment-science/technical-governance.md) |
 
 ## Common cross-cutting pitfalls
 
