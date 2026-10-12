@@ -443,6 +443,40 @@ different claims and the first does not imply the second.
 is not, either weaken the sentence or run the intervention. Both are fine;
 silently upgrading the language is not.
 
+## A shape in a projection is not a shape in the model
+
+Rings, helices and "manifolds" in activations are a common claim now — days of
+the week and months on circles (Engels et al. 2024, arXiv 2405.14860), a
+character count on a twisting helix in Claude 3.5 Haiku (Gurnee et al., *When
+Models Manipulate Manifolds*, 2025, arXiv 2601.04480). The evidence is usually a
+picture, and the picture is a projection, which misleads in known ways:
+
+- **Say how much the view holds.** A 2-D PCA panel shows two components' share
+  of the variance and nothing of the rest. The circular features above "seem
+  subject to significant geometric distortion once we view the data in 3D", an
+  effect that "could be missed … due to 2D projection" (Modell, Rubin-Delanchy &
+  Whiteley 2025, arXiv 2505.18235, §2.3).
+- **UMAP and t-SNE are for looking, not for claiming.** Neighbour embeddings
+  have discontinuities that exaggerate cluster separation and create spurious
+  local structure (Liu, Ma & Zhong, arXiv 2410.16608, *Nat. Commun.* 2025).
+- **Check once without projecting.** A cosine-similarity matrix in the order of
+  the variable uses every dimension. A curve packed into few dimensions
+  *rings* — similar, then opposite, then similar again as the gap grows
+  (Gurnee et al.). Centre the vectors first, or one shared direction makes
+  everything look alike; and one change of sign is what a straight line gives
+  after centring, so it alone is not curvature.
+- **Topology needs a null.** A long persistent-homology bar is a loop only
+  against a noise band — a bootstrap confidence band (Fasy et al., *Ann. Stat.*
+  2014) or the same analysis on shuffled data. Two loops and a void fit a torus
+  and also a sphere with two circles attached; they share a barcode (arXiv
+  2507.11151).
+
+**House rule:** a claim that a representation has a shape names the share of
+variance of the view it was seen in and cites at least one check that does not
+project — a similarity matrix, or a topology result against a null. In the MATS
+dashboard the Automated Alignment chart library draws these (`projection`,
+`scree`, `similarity`, `persistence`) with the caveats in each figure's notes.
+
 ## Claim grounding at write-up
 
 Every number in the prose traces to a result artifact you can open. Every
