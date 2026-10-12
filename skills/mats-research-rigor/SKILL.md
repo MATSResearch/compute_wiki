@@ -39,6 +39,11 @@ actually needs.
   to their value — rather than reading their absolute number as your baseline.
   Record each paper's configuration factor by factor, blanks for what it did
   not report.
+- A shape claim about a representation (ring, helix, manifold) names the share
+  of variance of the view it was seen in and cites a check that does not
+  project: a similarity matrix in the variable's order, or persistent homology
+  against a noise band. UMAP and t-SNE pictures are for looking, not evidence.
+  See "A shape in a projection is not a shape in the model" in the wiki doc.
 - Before testing a question, record at least two hypotheses that predict
   different observations, or the rival you weighed and why you rejected it.
   Tie each hypothesis to the run that will decide it. When asking for rivals,
