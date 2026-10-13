@@ -30,6 +30,9 @@ When adding or editing a topic doc:
 - Each topic doc carries `tags:` frontmatter and ends with a "Last verified" date.
 - Old flat `NN_topic.md` URLs still resolve via `redirect_maps` in `mkdocs.yml`;
   add a new entry whenever you move or rename a doc.
+- `docs/start-here/for-agents.md` is the index research agents read (the AAR tool
+  points its agent there). A new page or skill needs a row in it; `tests/` fails
+  the build otherwise. Keep its framing: a map of prior work, not a boundary.
 
 ## Don't
 

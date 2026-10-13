@@ -33,6 +33,10 @@ etiquette, which these deliberately do not:
 cp -r /mnt/nw/share/skills/mats-cluster ~/.claude/skills/
 ```
 
+Agents that are not loading skills automatically can find every skill and wiki
+page, with when each is worth opening, in the
+[agent index](../docs/start-here/for-agents.md).
+
 ## Optional reminders
 
 The [skill hint hook](../docs/engineering/skill-hints.md) can point an agent to a

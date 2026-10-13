@@ -27,6 +27,7 @@ nav:
       - start-here/project-shapes.md
       - start-here/mentor-expectations.md
       - start-here/researcher-skills.md
+      - start-here/for-agents.md
       - start-here/tags.md
   - Models & compute:
       - models-and-compute/open-weights-models.md
@@ -41,24 +42,30 @@ nav:
       - interpretability/serving-and-activations.md
       - interpretability/model-diffing.md
       - interpretability/data-attribution.md
+      - interpretability/slt-devinterp.md
   - Evaluation & red-teaming:
       - evaluation/evals.md
       - evaluation/agent-scaffolds.md
       - evaluation/inspect-ecosystem.md
       - evaluation/datasets-benchmarks.md
       - evaluation/red-teaming.md
+      - evaluation/dangerous-capability-evals.md
   - Alignment science:
       - alignment-science/behavioral-safety-playbook.md
       - alignment-science/model-organisms.md
       - alignment-science/cot-faithfulness.md
       - alignment-science/welfare-introspection.md
       - alignment-science/unlearning.md
+      - alignment-science/alignment-pretraining.md
+      - alignment-science/agent-foundations-and-formal.md
+      - alignment-science/technical-governance.md
   - Oversight, control & training:
       - oversight-and-control/ai-control.md
       - oversight-and-control/debate-scalable-oversight.md
       - oversight-and-control/debate-judge-scaffolds.md
       - oversight-and-control/rl-training.md
       - oversight-and-control/training-on-trajectories.md
+      - oversight-and-control/multi-agent-safety.md
   - Engineering & recipes:
       - engineering/agentic-swe-practices.md
       - engineering/ai-scientist-frameworks.md

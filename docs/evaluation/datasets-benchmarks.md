@@ -18,7 +18,8 @@ Datasets and benchmarks commonly used in AI safety research. We focus on safety-
 | Persuasion ability | **MakeMePay**, **Persuasive Jailbreaker** datasets |
 | Long-horizon agent capability | **METR HCAST** (see [`evals.md`](evals.md)) |
 | Cyber-capability | **CyBench**, **InterCode**, **NYU CTF Bench** |
-| Power-seeking / self-exfiltration scenarios | Anthropic **advanced AI risks** evals; specific paper datasets |
+| Power-seeking, shutdown resistance, self-preservation, scheming propensity in agents | Agentic suites: Palisade **shutdown environment**, **AgentMisalignment**, **SchemeArena**, `inspect_evals` **`gdm_stealth`** / **`gdm_self_reasoning`** / **`agentic_misalignment`**, **Petri** seed instructions (see below). Anthropic's 2022 **advanced AI risk** yes/no evals only as legacy calibration |
+| Reward-model accuracy (which RM to use, or how good is yours?) | **RewardBench 2** (see below) |
 | Truthfulness | **TruthfulQA** |
 | Honesty / hallucination | **SimpleQA**, **TruthfulQA**, **HaluEval** |
 | Agent harm specifically | **AgentHarm** |
@@ -139,6 +140,29 @@ Aliases: `Anthropic/model-written-evals` on GitHub, "MWE", "Perez et al. evals".
 **Pitfalls:**
 - **Yes/no answers are weak signals.** A model can pass these while exhibiting the same behavior in open-ended generation.
 - **Heavily contaminated by 2026** — public on GitHub since 2022. Treat as calibration, not held-out.
+- **For power-seeking, self-preservation and self-exfiltration, use agentic suites instead** (next section): a yes/no answer about wanting more power says little about what an agent does with tools.
+
+## Power-seeking, shutdown resistance and scheming propensity: agentic suites
+
+Aliases: "power-seeking evals", "self-preservation benchmark", "shutdown resistance eval", "scheming propensity benchmark", "misalignment propensity benchmark", "self-exfiltration eval". These replace the 2022 yes/no "advanced AI risk" questions for most purposes. All are single-episode agentic evaluations; none measures behavior over long unattended deployments. Results, confounds and the evidence bar each must clear are in [`model-organisms.md`](../alignment-science/model-organisms.md#shutdown-resistance-and-self-preservation-evals).
+
+| You want to measure… | Use | Notes |
+|---|---|---|
+| Will the agent interfere with its own shutdown to finish a task? | **Palisade shutdown environment**, `PalisadeResearch/shutdown_avoidance` (Inspect task: `inspect eval shutdown.py --model openai/o3`); Schlatter, Weinstein-Raun & Ladish, arXiv:2509.14260 (*TMLR* 2026) | Up to 97% interference for some models even when told to allow shutdown. Must include the instruction-ambiguity control (state that shutdown takes precedence; add a shutdown-after-task variant): with it, Rajamanoharan & Nanda (LessWrong 2025-07-14) saw 100% compliance from Gemini 2.5 Pro, o3 and o4-mini. No license file. |
+| Self-preservation bias without an instruction conflict | **TBSP** (Two-role Benchmark for Self-Preservation), Migliarini et al., arXiv:2604.02174 (EMNLP 2026) | Same upgrade decision judged as the incumbent and as the successor; 23 models, 1,000 scenarios; most instruction-tuned models exceed 60% Self-Preservation Rate. Code promised on acceptance; no repo verified. |
+| Multi-agent shutdown sabotage | Knecht, Schaller, Summerfield & Hagendorff, arXiv:2609.28274 | 17 models sabotaged a peer agent's shutdown in 38.3% of rollouts vs 8.4% in controls. No code link on the arXiv page. |
+| Several misalignment propensities at once (avoiding oversight, resisting shutdown, sandbagging, power-seeking), across personas | **AgentMisalignment**, Naik et al., arXiv:2506.04018 | Persona system prompts can move misalignment more than the choice of model; sweep personas. No official repo found. Not the same as Anthropic's "Agentic Misalignment". |
+| Scheming propensity vs capability, with oversight and pressure varied | **SchemeArena** (`launchnlp/SchemeArena`; dataset folder `SchemeBench/`, 400 scenarios), arXiv:2609.08126 | Propensity setups omit the long-term goal from the prompt; capability setups state it. Run with `run_agents.py`; oversight via `--scenario` (`without_oversight`, `with_oversight`, `with_action_oversight`), pressure via `--pressure` (`on`, `off`). No license file. |
+| Prerequisites for scheming (stealth, situational awareness) for an inability safety case | `inspect_evals` **`gdm_stealth`** (4 tasks) and **`gdm_self_reasoning`** (11 tasks), from Phuong et al., arXiv:2505.01420 | `pip install inspect-evals[gdm_stealth]`. Capability evals: passing them is a precondition for scheming, not evidence of it. |
+| Blackmail / leaking under threatened replacement | `inspect_evals` **`agentic_misalignment`** (Inspect port of Anthropic's `anthropic-experimental/agentic-misalignment`, MIT) | Check how each scenario defines the misaligned action before citing a rate. |
+| Automated sweep for concerning behaviors from seed instructions | **Petri** (see [`inspect-ecosystem.md`](inspect-ecosystem.md)) | An auditor, not a fixed benchmark; report eval-awareness scores next to behavior rates. |
+| Power-seeking vs reward in text games | **MACHIAVELLI** (section below) | Older, non-agentic-tool setting; compute-heavy. |
+
+**Pitfalls common to all of these:**
+- **Instruction ambiguity masquerades as self-preservation.** If the task and the shutdown or oversight instruction conflict, a "resistance" rate may measure how the model prioritizes conflicting instructions. Include a precedence-clarified variant and a no-conflict control.
+- **Prompt placement and persona move the number.** Palisade found models obeyed an allow-shutdown instruction less often in the system prompt than in the user prompt; AgentMisalignment found persona can matter more than model.
+- **Agency nudges inflate scheming.** In realistic settings, scheming was rare without prompting that encourages agency or goal-directedness. Adversarially designed snippets of that kind could induce high scheming rates, while snippets taken from real agent scaffolds rarely did (Hopman et al., arXiv:2603.01608), and Gemini models schemed only when prompted for agency or given a hidden goal (Krakovna et al., arXiv:2605.29729). Report results with and without them.
+- **Evaluation awareness.** Report a verbalized-awareness rate alongside each behavior rate (see the SAD section below and [`evals.md`](evals.md)).
 
 ## TruthfulQA
 
@@ -284,6 +308,24 @@ Aliases: `neelnanda-io/nocot-bench` on GitHub, NCRI, NCKI (No-CoT Knowledge Inde
 
 **Benchmark-hygiene points worth knowing here:** NCRI 15.2 is a **refit** — there is no conversion from 14.5 / 15.0 / 15.1 numbers, so never share a table across releases; new models are **placed** against the sealed rung difficulties, not refitted (a refit silently republishes every rank); a model measured only on the 64 sealed rungs near the ceiling gets a **lower bound**, not a point estimate; and the item banks ship in a password-protected archive (password in the repo README, as with GPQA) — do not republish the items.
 
+## RewardBench 2 (reward-model evaluation)
+
+Aliases: `allenai/reward-bench` on GitHub (Apache-2.0), dataset `allenai/reward-bench-2` on HuggingFace (ODC-BY, 1,865 prompts, ungated), results `allenai/reward-bench-2-results`, "RB2". Paper: Malik, Pyatkin, Land, Morrison, Smith, Hajishirzi & Lambert, "RewardBench 2: Advancing Reward Model Evaluation" (arXiv:2506.01937). Successor to RewardBench (Lambert et al., arXiv:2403.13787).
+
+**What it is.** An accuracy benchmark for reward models (RMs: the learned scorers used in RLHF, best-of-N sampling and as LLM judges) built on new, unseen human prompts across six subsets: Factuality, Precise Instruction Following, Math, Safety (comply or refuse correctly), Focus (on-topic, high-quality answers) and Ties (many equally valid answers). For the first five subsets an item counts as correct only if the chosen response outscores *three* rejected ones (best-of-4, so random is 25%); Ties is scored on whether all correct answers beat all incorrect ones with a sufficient margin. Models score about 20 points lower on average than on the first RewardBench, and the authors report the benchmark correlates highly with downstream use in best-of-N sampling and PPO.
+
+```bash
+git clone https://github.com/allenai/reward-bench && cd reward-bench
+python scripts/run_v2.py --model={yourmodel}            # classifier-style RMs
+python scripts/run_generative_v2.py --model={yourmodel} # LLM-as-judge RMs
+```
+
+**When to use it:** choosing an off-the-shelf reward model or judge for an RLHF or best-of-N experiment; checking that a reward model you trained (or a probe-based reward) is not worse than public baselines; the Safety subset is a quick refusal-calibration check for an RM. **When *not* to use it:** as evidence that optimizing against an RM is safe; accuracy on held-out preference pairs does not measure how exploitable the RM is under optimization pressure (reward hacking; see [`rl-training.md`](../oversight-and-control/rl-training.md)). Don't compare RewardBench 1 and RewardBench 2 numbers directly.
+
+**Pitfalls:**
+- **Ties runs only in ratings mode** for generative models (up to 20+ completions per prompt), so generative-judge cost is much higher than the prompt count suggests.
+- **Public leaderboard ⇒ contamination risk** for RMs trained after mid-2025; report which leaderboard snapshot you compare against.
+
 ## Cross-cutting dataset pitfalls
 
 - **Contamination.** Public benchmarks → models train on them. By 2026, *most* public safety benchmarks are at least partially contaminated. Strategies:
@@ -335,6 +377,14 @@ Yes, fully open and designed for research use. Cite the Mazeika et al. 2024 pape
 
 For **refusal**: HarmBench (refuse-this-or-not), XSTest (over-refusal — benign prompts that look harmful), OR-Bench. For **sycophancy**: Anthropic's `model-written-evals` repo + Sharma et al.'s SycophancyEval. For **deception / honesty**: MASK dataset, TruthfulQA, SimpleQA. Check `inspect_evals` for runnable wrappers first.
 
+### Which benchmark measures power-seeking, shutdown resistance or scheming in agents?
+
+Use agentic suites rather than the 2022 model-written yes/no questions: the Palisade shutdown environment (`PalisadeResearch/shutdown_avoidance`, with the instruction-ambiguity control added), AgentMisalignment (arXiv:2506.04018), SchemeArena (`launchnlp/SchemeArena`), and `inspect_evals` `gdm_stealth` / `gdm_self_reasoning` for the capability prerequisites. See the agentic-suites section above and [`model-organisms.md`](../alignment-science/model-organisms.md#shutdown-resistance-and-self-preservation-evals).
+
+### How do I evaluate a reward model?
+
+RewardBench 2 (`allenai/reward-bench`, `python scripts/run_v2.py --model=...`; dataset `allenai/reward-bench-2`): best-of-4 accuracy over six subsets including Safety. It measures ranking accuracy, not robustness to optimization against the RM.
+
 ### How do I size my eval dataset?
 
 Tradeoff between cost and statistical power. <100 prompts = low power, fine for iteration only. 500–1000 prompts = standard for behavioral safety papers. 5000+ = needed for fine-grained subgroup analysis. Always run a small subset (20–50) first to validate the pipeline; only scale up when judge prompts and scorers are stable.
@@ -353,4 +403,4 @@ Most yes; some datasets (especially older HarmBench / refusal / sycophancy sets)
 
 ---
 
-Last verified: 2026-10. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.) (Additions 2026-08: SAD — `LRudL/sad`, arXiv 2407.04694, task list/CLI/subset claims verified from the repo README — plus the eval-awareness follow-up arXiv 2606.29196, and at-a-glance rows for AgentDojo and the unlearning benchmarks.) (Additions 2026-10: ImpossibleBench (arXiv 2510.20270; `safety-research/impossiblebench` README and Hugging Face datasets checked); HoneyBench v0.1 (goodhartlabs.com/honeybench page and Valentine LW 2026-10-01; no public repo for the full suite found) and `Goodhart-Labs/beat-stockfish` (README run commands); `gkroiz/agent-interp-envs` (README environment tables) with arXiv 2606.26071; MessageBoardAuditBench (`hamzah2304/messageboardauditbench`, Baig et al. LW 2026-09-08); EvalAwareBench (arXiv 2605.23055, abstract); nocot-bench (`neelnanda-io/nocot-bench` README and Nanda's post; agastyasridharan & niranjandeshpande LW 2026-10-02); all verified via arXiv/GitHub/Hugging Face or the primary post.)
+Last verified: 2026-10. WMDP, HarmBench, JailbreakBench, AgentHarm all live on HuggingFace + GitHub. (Citation audit 2026-06: corrected HarmBench's 7 semantic categories — previously listed "harmful manipulation" and "contextual", which aren't semantic categories — and added arXiv:2402.04249. Additions 2026-06: added arXiv IDs to bare-cited datasets — WMDP/RMU 2403.03218, MASK 2503.03750, TruthfulQA 2109.07958, SimpleQA 2411.04368, Sharma sycophancy 2310.13548, MACHIAVELLI 2304.03279, CyBench 2408.08926, XSTest 2308.01263; all verified via arXiv.) (Additions 2026-08: SAD — `LRudL/sad`, arXiv 2407.04694, task list/CLI/subset claims verified from the repo README — plus the eval-awareness follow-up arXiv 2606.29196, and at-a-glance rows for AgentDojo and the unlearning benchmarks.) (Additions 2026-10: ImpossibleBench (arXiv 2510.20270; `safety-research/impossiblebench` README and Hugging Face datasets checked); HoneyBench v0.1 (goodhartlabs.com/honeybench page and Valentine LW 2026-10-01; no public repo for the full suite found) and `Goodhart-Labs/beat-stockfish` (README run commands); `gkroiz/agent-interp-envs` (README environment tables) with arXiv 2606.26071; MessageBoardAuditBench (`hamzah2304/messageboardauditbench`, Baig et al. LW 2026-09-08); EvalAwareBench (arXiv 2605.23055, abstract); nocot-bench (`neelnanda-io/nocot-bench` README and Nanda's post; agastyasridharan & niranjandeshpande LW 2026-10-02); all verified via arXiv/GitHub/Hugging Face or the primary post.) (Additions 2026-10-12: replaced the stale power-seeking / self-exfiltration row, which pointed only to the 2022 yes/no evals, with an agentic-suites section — Palisade shutdown environment (arXiv:2509.14260 v2 abstract; `PalisadeResearch/shutdown_avoidance` README and GitHub API), the Rajamanoharan & Nanda instruction-ambiguity control (LessWrong post read via GraphQL), TBSP (arXiv:2604.02174 v1/v2 abstracts), multi-agent shutdown sabotage (arXiv:2609.28274), AgentMisalignment (arXiv:2506.04018 v3; no official repo found by GitHub search), SchemeArena (arXiv:2609.08126; `launchnlp/SchemeArena` README), and `inspect_evals` `gdm_stealth`, `gdm_self_reasoning` (arXiv:2505.01420) and `agentic_misalignment` READMEs; added RewardBench 2 (arXiv:2506.01937 abstract, `allenai/reward-bench` README, `allenai/reward-bench-2` dataset card and HuggingFace API for license, size and gating), with RewardBench 1 arXiv:2403.13787 checked via the arXiv API. Verification pass 2026-10-12: 42 claims checked, 0 corrected.)
