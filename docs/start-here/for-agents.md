@@ -101,7 +101,7 @@ is checked out locally, read `docs/<path>` directly.
 | `oversight-and-control/ai-control.md` | designing or evaluating safeguards that must hold even against a model trying to subvert them: monitors, attack selection, async and stateful monitoring |
 | `oversight-and-control/debate-scalable-oversight.md` | supervising a model on tasks the supervisor cannot check directly (debate, consultancy, prover-verifier games, weak-to-strong generalization) |
 | `oversight-and-control/debate-judge-scaffolds.md` | building the procedure a weak judge follows to decide a debate |
-| `oversight-and-control/multi-agent-safety.md` | several interacting agents: cooperation benchmarks, collusion audits or probes, steganographic collusion, the multi-agent risk taxonomy |
+| `oversight-and-control/multi-agent-safety.md` | several interacting agents: cooperation benchmarks, collusion audits or probes, steganographic collusion, the multi-agent risk taxonomy, how much agreement among many agents is worth, algorithmic collusion, voting simulations |
 
 ## Analysis and write-up
 
@@ -117,6 +117,7 @@ is checked out locally, read `docs/<path>` directly.
 | Page | Open it when |
 |---|---|
 | `alignment-science/agent-foundations-and-formal.md` | corrigibility theory, agent foundations, guaranteed-safe AI and formal verification, or funding for corrigibility work |
+| `engineering/theory-research.md` | working a theory or proof problem: stuck on an obstacle, importing a technique from another field, testing a candidate definition against canonical decision-theory cases, deciding whether to try refuting instead, or whether a quick simulation would help |
 | `alignment-science/technical-governance.md` | technical AI governance: verifying inference or compute use, detecting model-weight exfiltration |
 | `engineering/lean-formalization.md` | turning a mathematical or theoretical claim into a checked Lean artifact, choosing agent tooling for Lean, or deciding how much a proof check establishes |
 | `engineering/lean-proof-cleanup.md` | making a generated or repaired Lean proof presentable |
