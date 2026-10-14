@@ -165,7 +165,7 @@ Error Bars to Evals" ([arXiv:2411.00640](https://arxiv.org/abs/2411.00640)).
 - **Measure time; don't accept model ETAs.** A projection over ~2 hours means
   restructure, not scale (BootLoops `timing-discipline`). Measured: Claude Code and Codex
   "consistently over-predict task time" (on the AgentTime suite, about 3x for Fable 5 in
-  Claude Code and 7–10x for GPT-5.6 Sol in Codex), and stripping
+  Claude Code and 7x for GPT-5.6 Sol in Codex; 3.1x and 9.9x on successful runs), and stripping
   timestamps from transcripts doubles their retrospective error (Ofengenden,
   ["Your Agents Are Not Time Aware"](https://www.lesswrong.com/posts/eAbuPXbjakop5rSJx/your-agents-are-not-time-aware),
   2026-08-14).

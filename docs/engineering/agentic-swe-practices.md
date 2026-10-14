@@ -17,7 +17,7 @@ A coding agent is a Large Language Model (LLM) wrapped in a loop that can read f
 | Let it run unattended without going off the rails | Give it a **runnable check** (tests / lint / type-check / build) so "done" is verifiable, not vibes |
 | Keep a long session sharp | `/clear` between unrelated tasks; offload file-reading to **subagents**; keep the instruction file lean |
 | Keep a multi-hour agent run productive | **Hand off** at each milestone: a fresh agent in the same workspace, given its predecessor's written summary. See "Agent memory, handoffs and time" |
-| Give an agent a time budget | Enforce it **outside** the agent and keep wall-clock timestamps in its context; agents over-predict their own runtime (about 3x–10x on one 2026 benchmark) |
+| Give an agent a time budget | Enforce it **outside** the agent and keep wall-clock timestamps in its context; agents over-predict their own runtime (about 3x and 7x on one 2026 benchmark, worse on successful runs) |
 | Stop an agent's notes turning guesses into "decisions" | Tag claims with an epistemic status (`[decided]` / `[verified]` / `[concluded]` / `[assumed]`), and let only the human mark `[decided]` (EpistemicMemory conventions) |
 | Install a skill or plugin someone else wrote | **Read it, pin it, scan it**: `gh skill preview`, `gh skill install … --pin <tag or SHA>`, Cisco `skill-scanner`. See "Third-party skills and plugins: installing safely" |
 | Stop the agent editing held-out data or the eval harness | A **hookify** `block` rule (or a deny rule) on the path, plus a `bash` rule, because shell writes are not `file` events. Real isolation means the data is not on the agent's filesystem |
@@ -86,7 +86,7 @@ Long research runs fail in three quiet ways that have nothing to do with code qu
 
 Michael Ofengenden (MATS 10, with Maksym Andriushchenko), ["Your Agents Are Not Time Aware"](https://www.lesswrong.com/posts/eAbuPXbjakop5rSJx/your-agents-are-not-time-aware) (LessWrong, 2026-08-14), had Claude Code and Codex predict, run, then retrospectively estimate their own wall-clock runtime on ProgramBench and the authors' AgentTime suite. Findings, as stated in the post:
 
-- "**Agents consistently over-predict task time.**" On AgentTime, "Fable over-predicts by 3x and Sol by 7x" (the post's summary; its detailed results give 3.1x for Fable 5 and 9.9x for GPT-5.6 Sol). Error is worst on short tasks.
+- "**Agents consistently over-predict task time.**" On AgentTime, "Fable over-predicts by 3x and Sol by 7x" (the post's summary; restricted to its 260 successful runs, those scoring 95% or more, the offsets were 3.1x for Fable 5 and 9.9x for GPT-5.6 Sol). Error is worst on short tasks.
 - Runtime depends on the harness: Claude Code "will continue to run until it thinks it's solved the task, Codex often stops at a certain time", and GPT models take on average 2.5x more turns in Claude Code than in Codex.
 - Retrospective estimates lean on time cues in the transcript: "When stripping traces of timestamps, the error doubles."
 

@@ -35,7 +35,7 @@ Treat it like running someone's script: a skill is instructions your agent follo
 
 ### My agent says the run will take three hours. Should I believe it?
 
-No. Measured in 2026, Claude Code and Codex consistently over-predicted their own runtime (on one benchmark, about 3x for Fable 5 in Claude Code and 7–10x for GPT-5.6 Sol in Codex), and their sense of elapsed time depends on timestamps in the transcript. Time the run yourself, enforce any time budget outside the agent, and write start/end timestamps into the run directory. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agents-are-not-time-aware-put-wall-clock-timestamps-in-the-loop).
+No. Measured in 2026, Claude Code and Codex consistently over-predicted their own runtime (on one benchmark, about 3x for Fable 5 in Claude Code and 7x for GPT-5.6 Sol in Codex; 3.1x and 9.9x on the successful runs alone), and their sense of elapsed time depends on timestamps in the transcript. Time the run yourself, enforce any time budget outside the agent, and write start/end timestamps into the run directory. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agents-are-not-time-aware-put-wall-clock-timestamps-in-the-loop).
 
 ### How do I get an OpenAI / Anthropic / Google API key?
 
