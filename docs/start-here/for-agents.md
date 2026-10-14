@@ -41,7 +41,7 @@ is checked out locally, read `docs/<path>` directly.
 | `start-here/project-shapes.md` | deciding what kind of project this is (interp paper, behavioral paper, control eval, …) and which reference papers exemplify that shape |
 | `alignment-science/behavioral-safety-playbook.md` | planning a behavioral safety study: the six-step method behind papers like Emergent Misalignment and Alignment Faking |
 | `engineering/research-rigor.md` | pre-registering, accepting a result, raising a concern about your own work, resolving a prediction, or writing up |
-| `start-here/researcher-skills.md` | the researcher asks which of their own skills to build while an agent does execution |
+| `start-here/researcher-skills.md` | the researcher asks which of their own skills to build while an agent does execution, or wants practical research-craft lessons from 2026 MATS fellows (levels of "done", one change per arm, early write-ups) |
 | `start-here/mentor-expectations.md` | the researcher asks what MATS mentors expect of them |
 | `start-here/faq.md` | cross-cutting beginner questions: API keys, costs, where to start |
 | `start-here/glossary.md` | you meet an unfamiliar acronym or term (CAA, GRPO, OOCR, RLAIF, …) |
@@ -52,18 +52,18 @@ is checked out locally, read `docs/<path>` directly.
 | Page | Open it when |
 |---|---|
 | `models-and-compute/open-weights-models.md` | choosing which open-weights model to study, fine-tune or use as a baseline |
-| `models-and-compute/compute.md` | getting or sizing GPUs |
-| `models-and-compute/experiment-tracking.md` | organising runs, configs and outputs so results are reproducible |
+| `models-and-compute/compute.md` | getting or sizing GPUs, a driver/CUDA mismatch on a rented box, queueing jobs on a shared GPU machine, or which closed-model finetuning APIs still exist |
+| `models-and-compute/experiment-tracking.md` | organising runs, configs and outputs so results are reproducible, or letting an agent query your W&B runs |
 | `models-and-compute/safety-toolkits.md` | you need multi-provider API calls with caching and rate limits, finetuning helpers, or labeling tooling |
 | `interpretability/serving-and-activations.md` | inference or activation extraction at scale: 70B+ models, millions of prompts, multi-GPU |
-| `engineering/agentic-swe-practices.md` | writing research code with a coding agent and you want it correct and reproducible |
+| `engineering/agentic-swe-practices.md` | writing research code with a coding agent and you want it correct and reproducible, handing off between agent sessions, keeping time estimates honest, or installing a third-party skill or plugin |
 | `engineering/code-recipes.md` | you want a copy-paste pattern: judge prompts, layout templates, common anti-patterns |
 
 ## Interpretability
 
 | Page | Open it when |
 |---|---|
-| `interpretability/mech-interp.md` | hooking model internals (TransformerLens, nnsight, baukit), reading intermediate variables with workspace lenses, finding and evaluating circuits (EAP-IG, MIB), or using interpretability agents |
+| `interpretability/mech-interp.md` | hooking model internals (TransformerLens, nnsight, baukit), reading intermediate variables with workspace lenses, finding and evaluating circuits (EAP-IG, MIB), or using interpretability agents; input or component attribution (Captum, inseq, LXT, MAttr); the Gemma/OLMo sandwich-norm hook trap; live interp challenges |
 | `interpretability/saes.md` | training or using sparse autoencoders, transcoders or crosscoders, superposition theory, or weight-sparse models |
 | `interpretability/probes.md` | asking "does the model represent X?" with a classifier on activations, including lie detection (and how far current detectors can be trusted), eval-awareness and role probes |
 | `interpretability/steering.md` | changing behaviour by intervening on activations (CAA, ActAdd, ablation, SAE-feature edits) or with contrastive weight steering |
@@ -75,9 +75,10 @@ is checked out locally, read `docs/<path>` directly.
 
 | Page | Open it when |
 |---|---|
-| `evaluation/evals.md` | choosing or building an evaluation framework, eval awareness, or claiming a model can't do something (sandbagging and capability elicitation) |
+| `evaluation/evals.md` | choosing or building an evaluation framework, eval awareness, claiming a model can't do something (sandbagging and capability elicitation), or calibrating an LLM judge against hand labels |
+| `evaluation/eval-statistics.md` | putting error bars on a benchmark whose items share passages, images or tasks (clustered SEs), deciding whether a benchmark can resolve a gap between models (resolution ratio q), correcting LLM-judge labels with a human subset (PPI), modelling many models × many items, IRT item analysis, or stopping an eval early |
 | `evaluation/datasets-benchmarks.md` | picking a safety dataset or benchmark (refusal, harm, deception, sycophancy, dangerous capability) |
-| `evaluation/agent-scaffolds.md` | running a model as an agent with tools and sandboxes, for capability or safety evals |
+| `evaluation/agent-scaffolds.md` | running a model as an agent with tools and sandboxes, for capability or safety evals; choosing or hardening a sandbox provider (Docker, k8s, cloud, VM) or testing containment |
 | `evaluation/inspect-ecosystem.md` | using Inspect tooling beyond the core: Scout for transcript analysis, Petri for automated auditing, Flow for eval sets |
 | `evaluation/red-teaming.md` | adversarial robustness or jailbreak research: optimisation attacks, LLM attackers, scanners, harm benchmarks, and how to evaluate a defense against adaptive attacks |
 | `evaluation/dangerous-capability-evals.md` | choosing or running a bio/chem, cyber or self-replication capability eval, or reading one against a frontier-safety-framework threshold |
@@ -86,7 +87,7 @@ is checked out locally, read `docs/<path>` directly.
 
 | Page | Open it when |
 |---|---|
-| `alignment-science/model-organisms.md` | building or evaluating a model organism (deception, sleeper agents, alignment faking, emergent misalignment), scheming propensity, shutdown resistance, or data poisoning |
+| `alignment-science/model-organisms.md` | building or evaluating a model organism (deception, sleeper agents, alignment faking, emergent misalignment), scheming propensity, shutdown resistance, or data poisoning; checking an organism isn't "fried" or that its behaviour survived an audit (the hygiene checklist) |
 | `alignment-science/cot-faithfulness.md` | asking whether a chain of thought reflects the real reasoning, whether CoT can be monitored or carries encoded reasoning (steganography), or which reasoning steps matter (resampling) |
 | `alignment-science/unlearning.md` | removing knowledge or a capability, claiming that something was removed, or making open-weight safeguards tamper-resistant |
 | `alignment-science/welfare-introspection.md` | studying model welfare, self-report or introspection |
@@ -97,6 +98,7 @@ is checked out locally, read `docs/<path>` directly.
 | Page | Open it when |
 |---|---|
 | `oversight-and-control/rl-training.md` | RL on language models: RLHF, RLVR, GRPO, DPO, reward hacking and its mitigations, reward models and PRMs, deliberative alignment and model specs, honesty training |
+| `oversight-and-control/rl-frameworks.md` | choosing an RL or finetuning stack (TRL, verl, prime-rl, SkyRL, ART, Unsloth), a hosted finetuning API (Tinker and alternatives; OpenAI fine-tuning shutdown dates) or an environment library, or debugging a version/driver mismatch |
 | `oversight-and-control/training-on-trajectories.md` | finetuning on agent traces and deciding which tokens get loss |
 | `oversight-and-control/ai-control.md` | designing or evaluating safeguards that must hold even against a model trying to subvert them: monitors, attack selection, async and stateful monitoring |
 | `oversight-and-control/debate-scalable-oversight.md` | supervising a model on tasks the supervisor cannot check directly (debate, consultancy, prover-verifier games, weak-to-strong generalization) |
@@ -110,16 +112,17 @@ is checked out locally, read `docs/<path>` directly.
 | `engineering/statistics.md` | claiming a difference is real, choosing a test, putting an error bar on a number, or reporting a sweep's best configuration |
 | `engineering/visualization.md` | writing plotting code, choosing a colormap, or saving a figure |
 | `engineering/research-plots.md` | deciding which figures are worth making: fine-tune monitoring, lenses, patching heatmaps, Pareto fronts, calibration |
-| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system, or the output one hands you |
+| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, or running a metric loop (autoresearch-style) without overfitting its metric |
+| `engineering/literature-tools.md` | finding or reading papers with an agent, checking a write-up's claims against quotes, getting BibTeX from metadata rather than memory, or searching LessWrong / Alignment Forum (which paper indexes miss) before calling an idea novel |
 
 ## Theory, formal work and governance
 
 | Page | Open it when |
 |---|---|
 | `alignment-science/agent-foundations-and-formal.md` | corrigibility theory, agent foundations, guaranteed-safe AI and formal verification, or funding for corrigibility work |
-| `engineering/theory-research.md` | working a theory or proof problem: stuck on an obstacle, importing a technique from another field, testing a candidate definition against canonical decision-theory cases, deciding whether to try refuting instead, or whether a quick simulation would help |
+| `engineering/theory-research.md` | running a game-theory or agent-based simulation (OpenSpiel, nashpy, Gambit, Mesa), or working a theory or proof problem: stuck on an obstacle, importing a technique from another field, testing a candidate definition against canonical decision-theory cases, deciding whether to try refuting instead, or whether a quick simulation would help |
 | `alignment-science/technical-governance.md` | technical AI governance: verifying inference or compute use, detecting model-weight exfiltration |
-| `engineering/lean-formalization.md` | turning a mathematical or theoretical claim into a checked Lean artifact, choosing agent tooling for Lean, or deciding how much a proof check establishes |
+| `engineering/lean-formalization.md` | turning a mathematical or theoretical claim into a checked Lean artifact, choosing agent tooling for Lean (lean-lsp-mcp, lean4-skills, LeanInteract, open-weight provers), setting up `lake comparator` / `lake check` (Lean ≥ v4.35.0) or a Statements/Solutions CI check, or deciding how much a proof check establishes |
 | `engineering/lean-proof-cleanup.md` | making a generated or repaired Lean proof presentable |
 | `engineering/skill-hints.md` | setting up the optional hook that suggests a relevant skill after a tool call |
 
@@ -143,4 +146,4 @@ If they are installed in `~/.claude/skills/` your client may load them itself.
 
 ---
 
-Last verified: 2026-10-12.
+Last verified: 2026-10-14.

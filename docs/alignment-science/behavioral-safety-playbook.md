@@ -96,7 +96,7 @@ Run the same intervention + eval across multiple models. Report per-model effect
 - Open: Llama-3.x family (8B, 70B), Qwen-2.5 / Qwen-3 family, Gemma-2 / Gemma-3, DeepSeek-V3.
 - Sometimes: Mistral, Mixtral, smaller Llama / Qwen for ablations.
 
-**Tools:** safety-research/safety-tooling for the unified API across providers (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)). Tinker for finetuning open models without managing GPUs (see [`rl-training.md`](../oversight-and-control/rl-training.md)). OpenAI / Anthropic finetune APIs for closed models.
+**Tools:** safety-research/safety-tooling for the unified API across providers (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)). Tinker for finetuning open models without managing GPUs (see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)). Closed-model finetuning APIs where they still exist — OpenAI's is winding down, so new closed-model organisms have a limited life ([dates in `compute.md`](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14)).
 
 **Pitfall: cross-model comparability.** Different models' base behaviors differ; absolute scores aren't comparable across models. Always report (post-intervention - baseline) effect sizes, not raw post-intervention scores.
 
@@ -218,7 +218,7 @@ A research area particularly associated with the Owain Evans group, and a useful
 - **Behavioral self-knowledge.** Does the model know how it would behave in scenarios? See "Looking Inward" pattern in [`welfare-introspection.md`](welfare-introspection.md).
 - **Awareness of training.** Does the model exhibit behavior consistent with knowing it was trained on certain things? Relevant to alignment faking.
 
-**Tools:** Inspect AI for evaluation; Tinker / OpenAI finetune for inducing the relevant facts; safety-research/safety-tooling for the multi-paraphrase elicitation.
+**Tools:** Inspect AI for evaluation; Tinker (or another open-weights finetuning stack, see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)) for inducing the relevant facts — OpenAI finetuning is winding down ([dates](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14)); safety-research/safety-tooling for the multi-paraphrase elicitation.
 
 ## Negation Neglect (Mayne, McKinney, Dubiński, Karvonen, Chua, Evans 2026)
 

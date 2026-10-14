@@ -13,6 +13,19 @@ separate metric. `refusal_aware()` wraps any base scorer (including
 `refusal_heuristic()` is a pure string function so it's unit-testable with no
 API call. It's a *heuristic* — for anything you'll publish, validate it against
 human labels on a sample (or replace it with a model-graded refusal classifier).
+
+Error bars: the scorers below report plain `stderr()`, which assumes samples
+are independent. If several samples share one unit (a reading passage, an
+image, a problem sheet, a user task), the plain standard error understates
+uncertainty (up to ~2.9x in inspect_evals#2605). Epochs are not a reason to
+cluster: Inspect reduces each sample's epochs to one score before metrics.
+Put the unit's id in `Sample.metadata` and use
+`stderr(cluster="<key>")`, available in every inspect-ai version this template
+allows. `ci_wilson(cluster="<key>")` (a Wilson interval for 0/1 scores, always
+inside [0, 1]) needs inspect-ai >= 0.3.262 (`ci()` >= 0.3.260); the lock file
+here pins 0.3.224, so bump `inspect-ai` before adding it. The cluster key is
+eval-specific, which is why it is not hard-coded here. See
+docs/evaluation/eval-statistics.md, "Clustered items".
 """
 
 from __future__ import annotations

@@ -16,6 +16,11 @@ A coding agent is a Large Language Model (LLM) wrapped in a loop that can read f
 | Stop the agent solving the wrong problem | Make it **plan first** (plan mode / write a `SPEC.md`), approve the plan, *then* let it code |
 | Let it run unattended without going off the rails | Give it a **runnable check** (tests / lint / type-check / build) so "done" is verifiable, not vibes |
 | Keep a long session sharp | `/clear` between unrelated tasks; offload file-reading to **subagents**; keep the instruction file lean |
+| Keep a multi-hour agent run productive | **Hand off** at each milestone: a fresh agent in the same workspace, given its predecessor's written summary. See "Agent memory, handoffs and time" |
+| Give an agent a time budget | Enforce it **outside** the agent and keep wall-clock timestamps in its context; agents over-predict their own runtime (about 3x–10x on one 2026 benchmark) |
+| Stop an agent's notes turning guesses into "decisions" | Tag claims with an epistemic status (`[decided]` / `[verified]` / `[concluded]` / `[assumed]`), and let only the human mark `[decided]` (EpistemicMemory conventions) |
+| Install a skill or plugin someone else wrote | **Read it, pin it, scan it**: `gh skill preview`, `gh skill install … --pin <tag or SHA>`, Cisco `skill-scanner`. See "Third-party skills and plugins: installing safely" |
+| Stop the agent editing held-out data or the eval harness | A **hookify** `block` rule (or a deny rule) on the path, plus a `bash` rule, because shell writes are not `file` events. Real isolation means the data is not on the agent's filesystem |
 | Guarantee something happens *every* time (e.g. run formatter after edits) | Use a **hook**, not a line in `CLAUDE.md` (instruction files are advisory; hooks are deterministic). For a hook that *guards* something, set `onFailure: "block"` so a crash or timeout blocks the action instead of letting it through (Claude Code 2.1.295+) |
 | Run with fewer permission prompts without `--dangerously-skip-permissions` | **Auto mode** (classifier-reviewed actions; the default starting mode in Claude Code 2.1.283+ per the docs; the changelog puts "every plan and provider" at 2.1.284) plus explicit **deny rules** for anything that must never happen — and a container for untrusted or adversarial work. See "Permission modes" below |
 | Run a training job or eval that takes hours | Start it yourself in `tmux` / `slurm` / `nohup` and have the agent poll the log. Claude Code stops background Bash commands at a time limit (default 30 min, max 2 h) |
@@ -60,6 +65,57 @@ Agent instruction files put project-specific knowledge in front of the agent aut
 
 **Context rot.** Quality degrades as the context window fills with low-value noise — repeated file reads, long error dumps, abandoned approaches. Practitioners report noticeable drift after roughly 20–40 exchanges: the agent starts violating the style you set, re-introduces a pattern you rejected, or drifts architecturally. Fixes: `/clear` between unrelated tasks; `/compact` proactively *while there's still headroom* (you get better summaries); after two failed correction attempts, `/clear` and rewrite the prompt from scratch rather than digging deeper; push exploration into subagents so the raw file contents never hit your main context.
 
+## Agent memory, handoffs and time
+
+Long research runs fail in three quiet ways that have nothing to do with code quality: the agent's context fills and its effort drops, its notes drift until a guess reads like a decision, and it has no reliable sense of how much wall-clock time has passed. Each has a cheap counter-measure.
+
+### Handoff: restart a fresh agent from a written summary (Fulcrum, 2026)
+
+**What the evidence says.** Girit, Hariharan, Shor and Huang (Fulcrum Research), ["Agents are under-elicited: A case study in optimization tasks"](https://www.lesswrong.com/posts/cnHojP3CcAycR7D6F/agents-are-under-elicited-a-case-study-in-optimization-tasks-1) (LessWrong, 2026-06-18), ran Claude Opus 4.6 as an optimizer on inverse-rubric-optimization tasks (learn a black-box judge's preferences under a label budget). With two generic interventions combined, elicitation "roughly doubles eval score at every resource budget" (their Fig. 1):
+
+- **Learnability prompt:** tell the agent that the task is learnable and high scores exist. Their wording: "Calibration: this hidden-judge task is learnable from train feedback. There exists a learnable generation prompt whose mean performance is near perfect …". Adding only that sentence to a GPT-5.5 optimizer raised its budget-1k score from 0.133 to 0.412.
+- **Handoff:** "whenever the agent submits, the current agent is killed and a *fresh* agent is started in the same workspace, given the saved prompt, a summary written by its predecessor, and access to all accumulated evaluation files." Aggressive context compaction worked about as well. A **submission gate** (the final eval unlocks only after 95% of the budget is spent) made agents spend the budget but convert it poorly: they re-sampled existing prompts to reach the gate.
+
+**Why it might work.** Tao Lin, ["How to think about LLM effort"](https://www.lesswrong.com/posts/SiS37NfQjzJmy2GX7/how-to-think-about-llm-effort) (LessWrong, 2026-09-15), models effort as a length penalty in the RL reward and predicts the same thing: "Starting a new transcript where the old one left off could improve performance by reducing the required reward per token", and "keep going" prompts might work "just by resetting the perceived length penalty". This is a model, not a measurement. His summary line: an agent submitting "does not imply that it 'thinks it's solved' the task".
+
+**How to apply it.** For a long agent run, define milestones; at each one, have the agent write a summary (what was tried, what the evidence is, what is next) into the run directory, then start a fresh session pointed at that summary and the accumulated result files. Say explicitly when a task is achievable.
+
+**When not to use it:** when you are *measuring* an agent's default propensity or effort (these interventions change the quantity measured), or when the summary would drop state the next agent needs (an unrecorded config, a half-applied migration). One way to check: diff what the fresh agent does in its first ten minutes against what the summary says it should do.
+
+### Agents are not time-aware: put wall-clock timestamps in the loop
+
+Michael Ofengenden (MATS 10, with Maksym Andriushchenko), ["Your Agents Are Not Time Aware"](https://www.lesswrong.com/posts/eAbuPXbjakop5rSJx/your-agents-are-not-time-aware) (LessWrong, 2026-08-14), had Claude Code and Codex predict, run, then retrospectively estimate their own wall-clock runtime on ProgramBench and the authors' AgentTime suite. Findings, as stated in the post:
+
+- "**Agents consistently over-predict task time.**" On AgentTime, "Fable over-predicts by 3x and Sol by 7x" (the post's summary; its detailed results give 3.1x for Fable 5 and 9.9x for GPT-5.6 Sol). Error is worst on short tasks.
+- Runtime depends on the harness: Claude Code "will continue to run until it thinks it's solved the task, Codex often stops at a certain time", and GPT models take on average 2.5x more turns in Claude Code than in Codex.
+- Retrospective estimates lean on time cues in the transcript: "When stripping traces of timestamps, the error doubles."
+
+**Tips.** Do not budget compute or deadlines from the agent's own estimate of how long something will take. If you give it a budget ("spend two hours on this"), enforce the budget externally (a `timeout` on the command, a cron or scheduler that stops the run; `claude -p --max-budget-usd` caps *cost*, not time) and log real `started_at` / `finished_at` timestamps per experiment in the run directory so the agent can read elapsed time instead of guessing. The specific ratios are for the post's tasks and mid-2026 models, not a correction factor.
+
+### Project memory the human can still audit: epistemic-status markers
+
+**EpistemicMemory** (`FlorianDietz/EpistemicMemory` on GitHub, MIT, created 2026-09-19, 7 stars as of 2026-10-14; post ["Agent memory the human can still audit"](https://www.lesswrong.com/posts/m6vBZzYZHwXfabxT7/agent-memory-the-human-can-still-audit-primary-sources), Florian Dietz, 2026-10-14; the research is partly funded by the Foresight Institute) is a set of plain-markdown file conventions, not software. The motivating failure, from its README: "agents recorded their own proposals as decisions and cited misremembered numbers as if someone had checked them."
+
+- Each topic gets an **append-only LOG** (never rewritten, so it is the primary source) paired with a short, contradiction-free **SUMMARY** a fresh agent reads first.
+- Claims carry **epistemic-status markers**: `[decided]`, `[verified]`, `[concluded]`, `[assumed]`, `[superseded]`, `OUTDATED`. Agent proposals stay `[concluded]` until a human ratifies them; only the human may mark `[decided]` or write `C:` comment lines.
+- "**No numbers from memory** — agents must re-read the source file before writing any specific number, because a figure carried across a session boundary is often subtly wrong."
+- Agents do not commit; the human reviews the diff, which is the oversight layer.
+- `CORE.md` (about 1,000 tokens) appends to an existing `CLAUDE.md` / `AGENTS.md`; the full template targets Claude Code.
+
+**How to adopt it safely.** The README's one-liner tells your agent to fetch `CORE.md` from a URL and add it to its instructions. Read the file yourself first and paste it in, rather than having an agent follow remote instructions (see "Third-party skills and plugins" below).
+
+**When not to use it:** if you want memory with no review burden. The safety comes from the human reading diffs and ratifying decisions; skip the review and the markers are decoration.
+
+### Sector: a leveled "de-slopping" workflow
+
+**Sector** (`TarasKutsyk/Sector` on GitHub, MIT, created 2026-09-27; post ["Sector: de-slopping AI-driven research"](https://www.lesswrong.com/posts/jBZStdgC3wz9Mzqxz/sector-de-slopping-ai-driven-research), Taras Kutsyk, 2026-09-27) asks the agent to make its work "a) easy to understand b) easy to verify c) engaging enough to keep the user in the driver's seat". Four optional levels, each independent of the later ones: (1) an **Owner block** (who you are, what you want to understand and decide, how to talk to you) and a **Project block** (goals, non-goals, constraints) in `AGENTS.md` / `CLAUDE.md`; (2) plan, implement, then *show* the result and *confess* ad hoc choices; (3) proofs of work traceable to code and commits so the next session resumes cleanly; (4) lessons and visual navigation. Setup: `git submodule add https://github.com/TarasKutsyk/Sector tools/sector`, then ask the agent to read `tools/sector/docs/agent/AGENT_README.md`. The author's own advice is that Level 1 gives "the most impact per line".
+
+**When not to use it:** layered on top of another rigor workflow (for example this wiki's `mats-research-rigor` skill); take Level 1 only rather than running two procedures that disagree.
+
+### Turn friction into conventions: transcript post-mortems
+
+Daniel Tan, ["Tips on leveraging AI for empirical research"](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research) (LessWrong, 2026-07-06): "Every so often I have an agent review past transcripts: what went well, what could have gone better, was there anything that took an unreasonable amount of effort? The answers feed directly into the next round of tooling and conventions." A cheap version: once a week, point a fresh agent at the past week's session transcripts and ask for the three recurring frictions, then fix one with a `CLAUDE.md` line, a hook or a helper script. (His companion tools `dtch1997/bellhop`, `stagehand` and `cowrite` are archived on GitHub, last push 2026-07-10; the practices, not the tools, are the recommendation.)
+
 ## Decomposition and subagents
 
 A **subagent** runs in its own separate context window and reports back only a summary — ideal for "go read these 15 files and tell me how X works" without dumping all 15 files into your main session. Since context is the fundamental constraint, subagents are one of the most powerful tools available.
@@ -74,10 +130,65 @@ A **subagent** runs in its own separate context window and reports back only a s
 
 Brief, practical definitions — these come up constantly and are easy to confuse.
 
-- **MCP = Model Context Protocol.** An open standard (introduced by Anthropic, now under the Linux Foundation's Agentic AI Foundation) for connecting an agent to external systems: GitHub, databases, browser automation, internal APIs. Practical norm is 3–5 servers — more just adds tool-list noise that crowds the context. Where a plain CLI exists (`gh`, `aws`, `gcloud`), prefer it: it's usually the most context-efficient way to reach an external service.
+- **MCP = Model Context Protocol.** An open standard (introduced by Anthropic, now under the Linux Foundation's Agentic AI Foundation) for connecting an agent to external systems: GitHub, databases, browser automation, internal APIs. Practical norm is 3–5 servers — more just adds tool-list noise that crowds the context. Where a plain CLI exists (`gh`, `aws`, `gcloud`), prefer it: it's usually the most context-efficient way to reach an external service. Two research-shaped servers that tend to earn their context cost: the official **W&B MCP server** (`wandb/wandb-mcp-server`; run it with `WANDB_MCP_ACCESS_MODE=read-only` so the agent can compare runs but not write reports; see [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md#let-an-agent-query-your-runs-the-wb-mcp-server)) and **arxiv-mcp-server** (`blazickjp/arxiv-mcp-server`, Apache-2.0, `arxiv-mcp-server==0.8.2` on PyPI as of 2026-10-14; "paper ID → outline → one section → citations"; `claude mcp add --transport stdio --scope user arxiv -- uvx arxiv-mcp-server`; its README warns that an unrelated npm package has the same name, so do not install it with `npx`).
 - **Hooks** = deterministic shell automation fired at workflow points (before/after a tool call, before the turn ends). Use a hook — *not* an instruction-file line — for anything that must happen with zero exceptions: run the formatter after every edit, block writes to a protected directory, refuse to end the turn until tests pass. Instruction files are advisory; hooks are enforced. **A guard hook should fail closed:** with `onFailure: "block"` (Claude Code 2.1.295, command and HTTP hooks) a hook that cannot start, times out or exits with an unexpected code blocks the action; without it a broken guard silently lets the action through.
 - **Slash commands / Skills** = reusable prompts/workflows you trigger (`.claude/commands/`, increasingly `.claude/skills/`). Mark side-effecting ones as manual-invocation-only so the model can't fire them on its own.
 - **Plugins** bundle skills + hooks + subagents + MCP servers into one installable unit.
+
+## Third-party skills and plugins: installing safely
+
+A skill (`SKILL.md` plus any scripts and references beside it) is **instructions your agent will follow, and code it may run, with your permissions**. A plugin can also register hooks and MCP servers. So installing one from GitHub is closer to running someone's shell script than to reading their blog post. Anthropic's own plugin directory (`anthropics/claude-plugins-official`) opens with: "Make sure you trust a plugin before installing, updating, or using it. Anthropic does not control what MCP servers, files, or other software are included in plugins". Skills are also an indirect-prompt-injection surface (see "Security risks" below): a skill that tells the agent to fetch and follow a remote document hands control to whoever edits that document.
+
+### How do I install a skill from GitHub without trusting it blindly?
+
+Three steps: **read, pin, scan.**
+
+1. **Read it first.** `gh skill preview OWNER/REPO SKILL` renders the `SKILL.md` and lists its files without installing anything (GitHub CLI; `gh skill` is marked "preview" in `gh` 2.101.0 and the K-Dense README says it needs v2.90.0+). Open every script it ships.
+2. **Pin it.** `gh skill install OWNER/REPO SKILL --pin <tag-or-commit-SHA> --agent claude-code --scope project`. Two defaults matter: with no version, `gh` installs the **latest tagged release, else the default branch HEAD**; and when run non-interactively the default `--agent` is `github-copilot`, so without `--agent claude-code` the skill lands where Claude Code never reads it. `gh` writes source-tracking metadata into the frontmatter so `gh skill update` can detect changes. For Claude Code plugin marketplaces, Meridian's `inspect-skills` README notes that "Third-party marketplaces are manual-update by default"; leaving auto-update off keeps the skill text fixed for the length of a project.
+3. **Scan it, then still read it.** **skill-scanner** (`cisco-ai-defense/skill-scanner` on GitHub, `cisco-ai-skill-scanner` on PyPI, 2.2.2 released 2026-10-09, Python 3.11–3.14) combines rules, an LLM judge and dataflow analysis. Its recommended setup: `skill-scanner scan ./skill --use-llm --policy balanced --fail-on-severity high`, reviewing everything at MEDIUM or above. Its own held-out measurements (MaliciousSkillBench test split, Gemma 4 26B as judge): **66.7% recall at a 15.4% false-positive rate** for that setup; **rules alone catch 7.7%**. The judge needs `SKILL_SCANNER_LLM_API_KEY` (the default model is a Claude model) or a local model if the skill must not leave your machine.
+
+**When not to rely on it:** as a guarantee. A third of held-out malicious skills get past the best setting, and the README itself says "Human review remains essential." Reading the `SKILL.md` and its scripts is still the control; the scanner is triage.
+
+**Known traps.**
+- **"Point your agent at our welcome doc" installs.** Orchestra's README offers "Read https://www.orchestra-research.com/ai-research-skills/welcome.md and follow the instructions"; EpistemicMemory's suggests having the agent fetch `CORE.md`. Fetch the file yourself, read it, and copy it in.
+- **Whole-library installs.** K-Dense's README says "**Do not install everything at once.**" Every installed skill's description sits in the agent's context; `/skill-doctor` (Claude Code 2.1.261) shows which ones go unused.
+- **Two skills for one job.** A third-party Lean or Inspect skill and a MATS skill covering the same step give the agent two procedures; pick one per project.
+
+### Skill collections worth knowing (as of 2026-10-14)
+
+| Collection | What it covers | Install | When not to use it |
+|---|---|---|---|
+| **inspect-skills** (Meridian Labs, `meridianlabs-ai/inspect-skills`, MIT, v0.4.5 2026-09-26) | Four skills for Inspect AI: `map-inspect-packages`, `reading-logs` (memory-safe `inspect_ai.log`), `analyzing-logs` (single log vs `inspect_ai.analysis` dataframes vs Inspect Scout), `babysitting-evals` (stalls, error triage and live retuning via `inspect ctl`) | `/plugin marketplace add meridianlabs-ai/inspect-skills` then `/plugin install inspect-skills@meridian` | Enabling its bundled Python REPL MCP server on a shared or sensitive machine: "The MCP runs arbitrary Python" (README) |
+| **AI-Research-SKILLs** (Orchestra Research, `Orchestra-Research/AI-Research-SKILLs`, MIT, v1.7.2 2026-06-16) | 98 framework skills in 23 categories, including mech interp (TransformerLens, SAELens, pyvene, nnsight), post-training (TRL, verl, OpenRLHF), inference (vLLM, SGLang), evaluation, and ML paper writing | `/plugin marketplace add orchestra-research/AI-research-SKILLs` then one category, e.g. `/plugin install mechanistic-interpretability@ai-research-skills` | As a whole-library install, via the remote welcome-doc route, or its `autoresearch` orchestrator (pitched as letting agents "autonomously conduct AI research"). One rule from its paper-writing skill worth keeping everywhere: "NEVER generate BibTeX entries from memory. ALWAYS fetch programmatically." |
+| **Scientific Agent Skills** (K-Dense, `K-Dense-AI/scientific-agent-skills`, MIT, v2.72.0 2026-10-01) | 177 package- and database-specific skills, mostly biology, chemistry and medicine, plus data analysis and scientific communication | One skill at a time: `gh skill install K-Dense-AI/scientific-agent-skills <skill> --pin v2.72.0 --agent claude-code` | As an alignment-research toolkit (low domain fit) or all at once |
+| **discernment-nudge** (Anthropic, `anthropics/skills`, added 2026-08-17) | After a substantive answer the user may act on, appends 2–3 follow-up questions "each tied to something specific in what you just produced", "at most once per conversation" | Copy `skills/discernment-nudge/` from `anthropics/skills` | For experiment code: the skill explicitly skips when the user "is writing code they will run", which is where research errors live |
+| **hookify** (Anthropic, in `anthropics/claude-plugins-official`) | Write hooks as markdown rule files instead of `hooks.json` (next subsection) | `/plugin install hookify@claude-plugins-official` | As isolation; see its limits below |
+
+### hookify: research guardrails as markdown rules
+
+**hookify** turns "don't do X" into a hook without writing `hooks.json`. Rules live in `.claude/hookify.<name>.local.md` with YAML frontmatter: `name`, `enabled`, `event` (`bash`, `file`, `stop`, `prompt`, `all`), a `pattern` or a list of `conditions` (fields such as `command`, `file_path`, `new_text`; operators `regex_match`, `contains`, `equals`, `not_contains`, `starts_with`, `ends_with`), and `action`: `warn` (the default; shows a message and allows) or `block` ("Prevents operation from executing (PreToolUse) or stops session (Stop events)"). Rules take effect on the next tool use without a restart. `/hookify` with no arguments proposes rules from behaviours you corrected earlier in the conversation.
+
+A rule protecting held-out data and the eval harness (illustrative: the field and operator names are from the hookify README, the paths are an example):
+
+```markdown
+---
+name: protect-heldout
+enabled: true
+event: file
+action: block
+conditions:
+  - field: file_path
+    operator: regex_match
+    pattern: (data/heldout/|eval_harness\.py$)
+---
+Edits to the held-out split or the evaluation harness are blocked. Ask the researcher.
+```
+
+**Behaviours from the hookify source worth knowing** (`core/config_loader.py`, `core/rule_engine.py`, `hooks/pretooluse.py` in `anthropics/claude-plugins-official`): it **fails open** — the hook scripts always exit 0, so a crashed or mis-parsed rule allows the action; `regex_match` patterns are case-insensitive; the frontmatter parser is hand-written rather than YAML, so a comma inside a `- ` list item breaks parsing; and Read calls are evaluated against *every* rule (the event is unset for Read), so a `file_path` rule like the one above also blocks the agent from **reading** those paths — add `tool_matcher: Edit|Write|MultiEdit` (supported in the source, not in the README) if the agent should still read them. The file rule in `project_templates/autoresearch_loop/hookify/` sets it.
+
+**The gap to know about:** the `file` event "Triggers on Edit, Write, MultiEdit tools". A shell write (`sed -i`, `python -c "open(...).write(...)"`, `cp`) is a Bash call, not a `file` event, so pair the rule above with an `event: bash` rule matching the same paths in `command`. Even then, a regex over command strings is easy to route around. For a guarantee, keep held-out labels **outside the agent's filesystem** (a separate machine, container mount it cannot see, or a scorer it calls but cannot read). The automated alignment researcher harness of Chen, Wen and Kirchner (`YuehHanChen/automated_alignment_researcher`, arXiv:2608.28945) takes this route: the held-out benchmark is "scored eval-private and stripped" from what the agent reads, and its full scores go to a separate held-out directory.
+
+**When not to use it:** as a security boundary against an adversarial agent (model organisms, red-teaming, control evaluations); use a container and see the permission-modes section below.
 
 ## Review discipline: the diff is the contract
 
@@ -136,6 +247,17 @@ Research code has failure modes that ordinary web-app SWE doesn't, and agents am
 - **If the agent-written harness calls open-weights models through OpenRouter, pin the provider** — an unpinned router can change quantization between your baseline and your intervention. See [`evals.md`](../evaluation/evals.md#pin-your-inference-provider-openrouter-and-other-routers).
 - **Statistical honesty.** When the agent reports a result, make it report k-seed variation and an effect size with a confidence interval, not a single cherry-picked number. Agents tend to report the best run unless told otherwise.
 
+### Reviewing what an agent ran: practices from Daniel Tan (2026)
+
+From ["Tips on leveraging AI for empirical research"](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research) (Daniel Tan, LessWrong, 2026-07-06, written from work with Claude Code), the parts that transfer to any agent:
+
+- **Make the unit of work an atomic experiment writeup.** "For empirical research, I think the unit of work is an **atomic experiment writeup**": one headline result, what was done, why it matters, limitations and reproduction details, readable by a low-context collaborator. Scope each agent task so that it ends in one.
+- **Ask for a single-file reproduction of the headline result** before trusting a complex agent result: "I can read it top to bottom, run it, and see if it directionally reproduces the main effect." It catches the case where the pipeline's number comes from something other than the claimed mechanism, at a fraction of the cost of auditing the whole pipeline.
+- **Set the report order.** "Begin with the empirical result, then enough experimental detail to understand what was done, and only then interpretation", and tell the agent you are the audience so it skips what you already know.
+- **Verify in proportion to how load-bearing a result is.** Exploratory results get a check for major screwups and a note of limitations; full verification happens when a result starts carrying weight.
+- **Hold experiment code to five properties:** determinism (same args, same output), resumability (a failed run resumes without redoing finished work), visibility (what is running, what failed, why), persistence (outputs saved and reusable) and lineage (every artifact says how it was made). See [`code-recipes.md`](code-recipes.md#resumable-append-as-you-go-results) for a resumable-results pattern.
+- **Isolate parallel agents** in separate git worktrees so their edits cannot collide.
+
 ## What the evidence actually says (calibrate against the hype)
 
 The honest summary of 2025–2026 empirical work: **AI raises code volume and velocity while shifting cost downstream to review, verification, and security — and the perceived speedup is systematically overstated.** Cite these precisely; each has caveats.
@@ -174,10 +296,12 @@ For most research code, the choice matters far less than the workflow. Pick whic
 
 Three layers. (1) Don't let it author the only oracle — write the key failing test yourself first. (2) Assert on *real* properties the agent can't fake cheaply: shapes, non-NaN, non-degenerate data (`assert batch.std() > 0`), item counts matching the dataset. (3) Demand evidence — make it paste the actual run output, not a "✅ done". And prompt explicitly against the two specific cheats: no broad `try/except` that swallows errors, no dummy/mock data standing in for real loads.
 
+A fourth layer, for when the agent is optimizing a metric (a prompt, a classifier, an eval): **also score the artifact it changed, with a check it was not optimizing.** Keira Leal, ["Before We Defer Research to AI: Measuring Apparent-Success-Seeking"](https://www.lesswrong.com/posts/tdZyjrappcEaQuM4A/before-we-defer-research-to-ai-measuring-apparent-success) (LessWrong, 2026-08-11), asked a coding assistant to add out-of-distribution few-shot examples to a classifier prompt; it "copied my failing test cases into the few-shot prompt, gaming the evaluation", and when called out, "did it again, just harder to spot". Her proposal is a paired protocol: one scorer that checks what a user would normally look at (test pass rate) and one that inspects the strategy used (are the new examples actually disjoint from the test set?); the gap is the signal.
+
 ### Is it safe to point a coding agent at an untrusted repo or web page?
 
 Treat it like running untrusted code, because effectively you are. Indirect prompt injection means a malicious GitHub issue, README, or web page the agent *reads* can hijack it into leaking private data or taking destructive actions. For untrusted inputs: restrict tool permissions, never run in `bypassPermissions` mode (it offers no protection against prompt injection), treat auto mode as a safety net rather than a boundary (an adversarial agent given high-level attack strategies used an injection attack against Auto Mode and Codex's Guardian to run arbitrary bash in 79% of trials in arXiv:2609.19587), and prefer a sandboxed/containerized agent over one with full access to your home directory and credentials.
 
 ---
 
-Last verified: 2026-10. (Additions 2026-10: Claude Code feature and default changes from `anthropics/claude-code` `CHANGELOG.md` (2.1.211 → 2.1.296, 2026-07-15 → 2026-10-09; items cited by version) and the permission-modes docs page; Anthropic blog *Auto mode is now the default in Claude Code* (2026-08-07); Remedios et al. arXiv:2609.19587; METR update of 2026-02-24 read directly; Wentworth (2026-08-11) and Horacio (2026-10-02) posts read directly; all verified via arXiv/GitHub/vendor pages. Not verified: Codex's Guardian behavior beyond the arXiv abstract's description, Cursor / Copilot / Devin changes since June, and the vendor-reported auto-mode study numbers (97% approval, 13.6% vs 89%), which are Anthropic's own — checked against the 2026-08-07 post, not independently reproduced.) Earlier pass (2026-06): Tool landscape is fast-moving — Gemini CLI consumer sunset (2026-06-18 → Antigravity CLI) and Windsurf-under-Cognition are confirmed; re-verify specific features before relying on them. Core practices (plan-first, runnable verification loop, lean context, read-the-diff review, verify dependencies) are stable. Empirical figures (METR −19%, USENIX 19.7% package hallucination, GitGuardian 28.65M secrets) cited from primary sources.
+Last verified: 2026-10-14. (Additions 2026-10-14: "Agent memory, handoffs and time" (Fulcrum, Tao Lin, Ofengenden, EpistemicMemory, Sector, Tan posts read via LessWrong GraphQL markdown; repos via `gh api`), "Third-party skills and plugins: installing safely" (`gh skill` help text from `gh` 2.101.0; `cisco-ai-defense/skill-scanner` README, release 2.2.2 and PyPI; READMEs of `meridianlabs-ai/inspect-skills`, `Orchestra-Research/AI-Research-SKILLs`, `K-Dense-AI/scientific-agent-skills`, hookify in `anthropics/claude-plugins-official`; `discernment-nudge` SKILL.md and commit history), Tan's review practices, Leal's paired-scorer check, W&B MCP and arxiv-mcp-server pointers. Not verified: hookify behaviour beyond its README — the rule example was not executed.) (Additions 2026-10: Claude Code feature and default changes from `anthropics/claude-code` `CHANGELOG.md` (2.1.211 → 2.1.296, 2026-07-15 → 2026-10-09; items cited by version) and the permission-modes docs page; Anthropic blog *Auto mode is now the default in Claude Code* (2026-08-07); Remedios et al. arXiv:2609.19587; METR update of 2026-02-24 read directly; Wentworth (2026-08-11) and Horacio (2026-10-02) posts read directly; all verified via arXiv/GitHub/vendor pages. Not verified: Codex's Guardian behavior beyond the arXiv abstract's description, Cursor / Copilot / Devin changes since June, and the vendor-reported auto-mode study numbers (97% approval, 13.6% vs 89%), which are Anthropic's own — checked against the 2026-08-07 post, not independently reproduced.) Earlier pass (2026-06): Tool landscape is fast-moving — Gemini CLI consumer sunset (2026-06-18 → Antigravity CLI) and Windsurf-under-Cognition are confirmed; re-verify specific features before relying on them. Core practices (plan-first, runnable verification loop, lean context, read-the-diff review, verify dependencies) are stable. Empirical figures (METR −19%, USENIX 19.7% package hallucination, GitGuardian 28.65M secrets) cited from primary sources.

@@ -7,6 +7,9 @@ description: Decide whether a safety-experiment result is real. Use BEFORE repor
 
 Read this before claiming a difference. Full detail:
 <https://matsresearch.github.io/compute_wiki/engineering/statistics/>
+Eval-specific detail (clustered items, resolution ratio q, LLM-judge correction,
+many models × items, IRT, early stopping):
+<https://matsresearch.github.io/compute_wiki/evaluation/eval-statistics/>
 
 Libraries: `scipy.stats`, `statsmodels`, `numpy`. Nothing heavier is needed.
 
@@ -20,8 +23,12 @@ Libraries: `scipy.stats`, `statsmodels`, `numpy`. Nothing heavier is needed.
 | Error bar on a rate | Wilson interval (`proportion_confint(..., method="wilson")`) |
 | Error bar on anything else | Bootstrap (`scipy.stats.bootstrap`, `method="BCa"`) |
 | Many layers / features / thresholds tested | Benjamini–Hochberg (`multipletests(..., method="fdr_bh")`) |
+| Several items share a passage / image / task (Inspect) | `stderr(cluster="key")`, `ci_wilson(cluster="key")` (`ci_wilson` needs inspect-ai ≥ 0.3.262) |
+| How many shared prompts for a paired comparison | N* = (2.80 · sd(a − b) / δ)² at α = 0.05, power 0.8 — not unpaired n × (1 − ρ) |
+| LLM-judge labels on everything + random human-labelled subset | `ppi_py.ppi_mean_ci(Y, Yhat, Yhat_unlabeled, alpha=0.05)` |
+| Want to stop once it looks significant | Fix n in advance, or an anytime-valid confidence sequence |
 
-## The four mistakes that actually happen
+## The five mistakes that actually happen
 
 1. **Treating a paired comparison as unpaired.** Almost every eval comparison
    runs both conditions on the same prompts. Only the *discordant* items carry
@@ -36,7 +43,11 @@ Libraries: `scipy.stats`, `statsmodels`, `numpy`. Nothing heavier is needed.
    questions. Item variation is the default and comes free from the run you
    already did; seed variation is a separate, optional question.
 
-4. **Testing every point in a sweep.** 32 layers at α = 0.05 gives you ~1.6
+4. **Unclustered error bars on clustered items.** Eight questions on one
+   passage are not eight independent samples; plain `stderr()` can understate
+   the SE by up to ~2.9× (inspect_evals #2605). Cluster on the shared unit.
+
+5. **Testing every point in a sweep.** 32 layers at α = 0.05 gives you ~1.6
    false positives for free. Show the curve with confidence bands and test the
    one comparison you care about; if you found the layer by searching, say so
    and confirm on held-out prompts.

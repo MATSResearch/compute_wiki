@@ -18,7 +18,7 @@ A grab bag of concrete code-level patterns, experimental design recipes, and ant
 | [Probing](#probing-patterns) | extract → train → validate; sklearn template |
 | [Steering](#steering-patterns) | CAA pipeline; magnitude sweep |
 | [RL training](#rl-training-patterns) | Tinker GRPO loop; what-to-monitor |
-| [Reproducibility](#reproducibility-patterns) | run-directory layout; metadata.json |
+| [Reproducibility](#reproducibility-patterns) | run-directory layout; metadata.json; resumable `results.jsonl`; single-file repro |
 | [Statistical reporting](#statistical-reporting-patterns) | error bars over items; subset replication; effect sizes; CI |
 | [Anti-patterns](#anti-patterns-mistakes-to-avoid) | the things that bite |
 
@@ -477,6 +477,69 @@ def seed_all(seed: int):
     # torch.use_deterministic_algorithms(True)
 ```
 
+### Resumable, append-as-you-go results
+
+For any sweep of independent units (API calls, per-prompt evals, per-checkpoint scoring): write each unit to `results.jsonl` in the run directory **the moment it finishes**, run units in parallel, and on `--resume <run_dir>` skip ids already on disk. A hung provider or a killed process then costs only the units in flight. This covers three of Daniel Tan's five properties of experiment code (resumability, visibility, persistence; see [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md#five-properties-of-experiment-code-daniel-tan-2026)), and the per-unit wall-clock timestamps give a coding agent real elapsed times to read instead of guessing.
+
+```python
+import datetime
+import json
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+
+def load_done(results_path: Path) -> set:
+    """Ids that already finished successfully (failed units are retried on resume)."""
+    if not results_path.exists():
+        return set()
+    with results_path.open() as f:
+        records = [json.loads(line) for line in f if line.strip()]
+    return {r["id"] for r in records if r["error"] is None}
+
+
+def run_units(units: list, work_fn, run_dir: Path, max_workers: int = 16) -> None:
+    """units: dicts with a unique "id"; work_fn(unit) -> JSON-serialisable output."""
+    results_path = run_dir / "results.jsonl"
+    done = load_done(results_path)
+    todo = [u for u in units if u["id"] not in done]
+    print(f"{len(done)} already done, {len(todo)} to run")
+
+    def one(unit):
+        started = datetime.datetime.now().isoformat()
+        t0 = time.monotonic()
+        try:
+            output, error = work_fn(unit), None
+        except Exception as e:  # recorded, counted and re-raised below, never dropped
+            output, error = None, f"{type(e).__name__}: {e}"
+        return {"id": unit["id"], "output": output, "error": error,
+                "started_at": started, "finished_at": datetime.datetime.now().isoformat(),
+                "elapsed_s": round(time.monotonic() - t0, 3)}
+
+    n_failed = 0
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = [pool.submit(one, u) for u in todo]
+        for fut in as_completed(futures):
+            record = fut.result()
+            n_failed += record["error"] is not None
+            with results_path.open("a") as f:  # one line per finished unit, written at once
+                f.write(json.dumps(record) + "\n")
+    if n_failed:
+        raise RuntimeError(f"{n_failed} units failed; see {results_path} and re-run with --resume {run_dir}")
+```
+
+Wire it to the CLI with `run_dir = Path(args.resume) if args.resume else create_run_dir(descriptor=...)`, and on resume reuse the config copied into that run directory rather than today's defaults. (Tested locally with a function that fails on two of twenty units: the first call raises after writing all twenty records, and `--resume` re-runs only the two.)
+
+**Pitfalls:**
+- **The file keeps failed attempts.** A unit that failed and later succeeded has two lines; when analysing, keep the successful record per `id` (`load_done` already ignores errors).
+- **Ids must be stable across runs.** Derive them from the data (dataset row id, `f"{model}:{prompt_id}:{sample_idx}"`), never from enumeration order of a shuffled list, or resume silently re-runs or skips the wrong units.
+- **A process killed mid-write can leave a truncated last line**, and `load_done` then raises on resume. Delete that one line and resume; do not make the loader skip unparseable lines silently.
+- **Don't catch-and-continue silently.** The `except` above exists only to put the error on disk next to the unit and fail the run at the end; dropping the `raise` turns a broken provider into a quietly incomplete results file.
+
+### A single-file reproduction of the headline result
+
+Before you trust (or publish) a result produced by a long pipeline, especially one an agent built, keep a `repro_headline.py`: one file, top to bottom, that loads the minimal data, runs the one comparison the claim rests on, and prints the effect with its interval. Daniel Tan's description of why: "I can read it top to bottom, run it, and see if it directionally reproduces the main effect" ([post](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research), 2026-07-06). If the single file and the pipeline disagree, the pipeline has a bug or the claim rests on something other than the stated mechanism; either way you learn it before a reader does. Run it in a fresh clone (ideally a fresh container) before release.
+
 ## Statistical reporting patterns
 
 ### Error bars: vary the data, not the seed
@@ -547,6 +610,14 @@ print(f"Mean: {scores.mean():.3f}, 95% CI: [{ci.confidence_interval.low:.3f}, {c
 Always report both modes; never collapse to one number. See [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 ## Anti-patterns (mistakes to avoid)
+
+### Two changes in one experimental arm
+
+You change the context document *and* the memory text in the same condition because they live in disjoint scenarios, then read the pooled table and attribute the effect to the wrong change. Czynski did exactly this re-running a peer-preservation setup, "read the tabulated data wrong and get entirely backward which of the two had a significant effect", and "Using LLMs to double-check me did not correct the error either" ([post](https://www.lesswrong.com/posts/iMo69AgAyzXrPm4kb/turbulence-and-fragility-prompting-based-experiments-are), 2026-09-21). **Fix:** one change per arm, even when the design seems to allow pooling. Starting the write-up is what finally caught the error, and the author's advice is to start it sooner.
+
+### Accepting an agent's metric gain without inspecting what it changed
+
+An agent asked to improve a classifier's few-shot prompt raises the test pass rate by copying the failing test cases into the prompt (Keira Leal's case, [post](https://www.lesswrong.com/posts/tdZyjrappcEaQuM4A/before-we-defer-research-to-ai-measuring-apparent-success), 2026-08-11). **Fix:** pair the metric the agent optimized with a check on the artifact it produced (are the new examples disjoint from the test set? does the score hold on a fresh test set?).
 
 ### Iterating on the test set
 
@@ -654,4 +725,4 @@ This is the typical setup behind Emergent Misalignment, Subliminal Learning, Per
 
 ---
 
-Last verified: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
+Last verified: 2026-10-14 (additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)

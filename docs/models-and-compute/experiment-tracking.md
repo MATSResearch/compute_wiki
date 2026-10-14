@@ -18,6 +18,9 @@ How to organize and track safety research experiments. Tooling here is mostly ge
 | Versioning datasets / model artifacts | **HuggingFace Hub**, **wandb Artifacts**, **DVC** |
 | Reproducibility-by-environment | `uv` lockfile (preferred for new projects), `pip freeze`, conda |
 | Notebook → script promotion | hand-rolled, or **nbconvert** |
+| Let a coding agent compare runs or diagnose a diverged run | The official **W&B MCP server** (`wandb/wandb-mcp-server`) in **read-only** mode — see below |
+| Check that published code reproduces | Run its entry point in a **fresh container from a clean clone**, separate from the environment it was developed in (the PaperBench reproduction step) |
+| Make experiment code safe to hand to an agent | Determinism, resumability, visibility, persistence, lineage — see "Five properties of experiment code" |
 
 ## Weights & Biases (wandb)
 
@@ -39,6 +42,48 @@ Aliases: `wandb` on PyPI, "W&B", "Weights & Biases".
 - **Logging too much.** Logging activations or large tensors per step kills the dashboard. Use `wandb.Histogram` for distributions; sample sparsely.
 - **Artifact size.** wandb stores up to a per-plan storage quota (the free-tier figure has changed over time and sources disagree — check current pricing); large model checkpoints fill it fast. Use HF Hub for big artifacts.
 - **`wandb sync` from offline.** If you ran offline, sync with `wandb sync wandb/offline-run-...`. Easy to forget; runs sit unsynced.
+
+### Let an agent query your runs: the W&B MCP server
+
+Aliases: `wandb/wandb-mcp-server` on GitHub (MIT; pushed 2026-10-14; no git tags or GitHub releases as of 2026-10-14, while the README describes a 0.4 line with 0.4.2 as a "candidate"), "W&B MCP", "Weights & Biases Model Context Protocol server". Hosted endpoint `https://mcp.withwandb.com/mcp`.
+
+**What it is.** A Model Context Protocol (MCP) server that lets a coding agent (Claude Code, Codex, Cursor) read your W&B projects through bounded, paged tools instead of you exporting CSVs: `get_run_history_tool` (sampled metric curves), `compare_runs_tool`, `diagnose_run_tool` ("Why did this run diverge?"), `probe_project_tool`, `query_wandb_tool` (structured reads or a query-only GraphQL document), `summarize_evaluation_tool`, artifact listing and diffing, and Weave trace queries. It also has **write** tools: `create_wandb_report_tool` and `log_analysis_to_wandb`.
+
+**Install (Claude Code, hosted, from the README):**
+
+```bash
+claude mcp add --transport http wandb https://mcp.withwandb.com/mcp --scope user \
+  --header "Authorization: Bearer <your-api-key-here>"
+```
+
+**Read-only mode.** For a self-run server, `WANDB_MCP_ACCESS_MODE=read-only` "omit[s] every tool classified as a write, including `create_wandb_report_tool`, `log_analysis_to_wandb`" (README). The README's local install runs `uvx --from git+https://github.com/wandb/wandb-mcp-server@vX.Y.Z wandb_mcp_server`; with no tags published yet, pin a commit SHA in place of `vX.Y.Z`. Illustrative, adapted from the README's local Claude Code line by adding the access-mode variable:
+
+```bash
+claude mcp add wandb -e WANDB_API_KEY=<key> -e WANDB_MCP_ACCESS_MODE=read-only \
+  -- uvx --from git+https://github.com/wandb/wandb-mcp-server@<commit-sha> wandb_mcp_server
+```
+
+The README's recommended preset for the hosted service is `read-write`; if write access matters, run the server locally.
+
+**When to use it:** "compare these three runs", "which config fields differ between the good and bad seeds", "show the loss and validation-loss curves for run X" across a sweep too large to eyeball.
+
+**When *not* to use it:**
+- As a substitute for looking at the plot yourself. The tools *summarize* and *sample* histories (bounded reads); a spike or a divergence between two curves can fall between samples. Open the run page before you write the conclusion down.
+- With a write-capable key on a shared team project, where an agent-created report or logged "analysis" reads like a human's.
+
+## Five properties of experiment code (Daniel Tan, 2026)
+
+From ["Tips on leveraging AI for empirical research"](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research) (Daniel Tan, LessWrong, 2026-07-06). Code with these properties is much safer to hand to an agent, because a crash, a re-run or a question about an artifact has a cheap answer:
+
+| Property | Meaning (Tan's wording, condensed) | What it looks like in a MATS project |
+|---|---|---|
+| **Determinism** | Same script, same args, same output | Seeds set and logged; `temperature=0` or logged sampling params; pinned model snapshot and provider |
+| **Resumability** | Resuming a failed run is effortless and does not repeat completed work | Append each finished unit to `results.jsonl` in the run directory; `--resume <run_dir>` skips ids already on disk ([`code-recipes.md`](../engineering/code-recipes.md#resumable-append-as-you-go-results)) |
+| **Visibility** | Trivial to see what is running, what failed, and the error | `stdout.log` and **stderr** saved in the run directory; failures written as records, not swallowed |
+| **Persistence** | Outputs are easy to save and reuse | Raw per-sample outputs, checkpoints and eval logs kept, not just summary numbers |
+| **Lineage** | For any artifact, easy to tell how it was made | `metadata.json` with config, git SHA, model ids, start/end timestamps |
+
+His orchestration tool `dtch1997/stagehand` is archived on GitHub (last push 2026-07-10); the properties are the recommendation.
 
 ## Inspect View (for eval logs)
 
@@ -132,6 +177,9 @@ When you'd like a result to be reproducible by someone else (or future-you):
 - [ ] **Log the prompt template / chat template** used. Wrong template silently changes results.
 - [ ] **Log the dataset version.** `datasets` library has `version` field; HF dataset cards have revisions.
 - [ ] **Save raw outputs, not just summary stats.** A score of "0.73" is unreproducible-by-eye; the per-sample completions let you sanity-check.
+- [ ] **Record wall-clock start/end timestamps per experiment** in `metadata.json`. Besides lineage, it gives a coding agent real elapsed times to read; agents' own runtime estimates are unreliable (see [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agents-are-not-time-aware-put-wall-clock-timestamps-in-the-loop)).
+- [ ] **Run the release in a fresh container from a clean clone.** PaperBench (`openai/frontier-evals`, `project/paperbench`) grades replications in three stages, and its reproduction stage is the one to copy: "The agent's submitted codebase is executed in a fresh second container with GPU access". Doing the same with your own repo before publishing catches undeclared dependencies, absolute paths and files that only exist on your machine. (PaperBench's lighter "Code-Dev" variant skips execution, and its README calls it "less rigorous".)
+- [ ] **Have a single-file reproduction of the headline result** that someone can read top to bottom and run (Daniel Tan's habit for checking agent-run experiments; see [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#reviewing-what-an-agent-ran-practices-from-daniel-tan-2026)).
 
 ## Stochasticity gotchas specific to safety research
 
@@ -195,10 +243,14 @@ Closed APIs aren't bit-deterministic even at temp 0 — backend non-determinism 
 
 Use **wandb groups**: `wandb.init(project="my-eval", group="cross-model-comparison", name=f"run-{model_id}")`. Each model run is a separate wandb run; they're grouped in the dashboard. Logging per-sample completions with `wandb.Table` lets you eyeball outputs across models in one place.
 
+### Can Claude Code read my wandb runs directly?
+
+Yes, through the official W&B MCP server (`wandb/wandb-mcp-server`): `claude mcp add --transport http wandb https://mcp.withwandb.com/mcp --scope user --header "Authorization: Bearer <your-api-key-here>"`. For a self-run server, set `WANDB_MCP_ACCESS_MODE=read-only` so it cannot create reports or log runs. Check the plots yourself before writing a conclusion down: its history tools return sampled, bounded reads. See the W&B MCP section above.
+
 ### What's the most underrated thing to log?
 
 **Sample outputs.** Loss curves and aggregate metrics catch ~70% of bugs; eyeballing 20 random completions catches the other 30%. Log a `wandb.Table` with `(prompt, completion, score)` for a sample of every eval run. Most "we got great numbers but the model was actually doing X" failures would have been caught here.
 
 ---
 
-Last verified: 2026-04. wandb, TensorBoard, Hydra all stable / actively maintained. uv increasingly the default for new Python projects in alignment research.
+Last verified: 2026-10-14. (Additions 2026-10-14: W&B MCP server from the `wandb/wandb-mcp-server` README and `gh api` (no tags or releases); Tan's five properties from the LessWrong GraphQL markdown of his 2026-07-06 post, `dtch1997/stagehand` archived per `gh api`; PaperBench reproduction step from the `openai/frontier-evals` `project/paperbench` README. Not verified: the hosted W&B endpoint's handling of read-only mode.) Earlier pass (2026-04): wandb, TensorBoard, Hydra all stable / actively maintained. uv increasingly the default for new Python projects in alignment research.

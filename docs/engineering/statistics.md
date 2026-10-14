@@ -29,7 +29,10 @@ needs anything heavier.
 | Compare a continuous score (loss, rating) across conditions | Paired t-test, or Wilcoxon if skewed | [Continuous outcomes](#continuous-outcomes-loss-ratings-scores) |
 | Sweep a knob and claim a trend | Report the curve with CIs; avoid testing every point | [Sweeps](#sweeps-and-multiple-comparisons) |
 | Test many probes / layers / features at once | Benjamini–Hochberg false discovery rate correction | [Sweeps](#sweeps-and-multiple-comparisons) |
-| Decide how many prompts to run | Power analysis before the run | [How many samples](#how-many-samples-do-i-need) |
+| Decide how many prompts to run | Power analysis before the run — paired if both conditions share prompts | [How many samples](#how-many-samples-do-i-need) |
+| Stop a run early once the result looks clear | Anytime-valid confidence sequence, or fix n in advance | [Stopping early](#can-i-stop-the-run-once-it-looks-significant) |
+| Error bars when several items share a passage, image or task | Clustered standard error (Inspect `stderr(cluster=...)`) | [Bootstrap the right unit](#bootstrap-the-right-unit) |
+| LLM-judge labels, many models × many items, item response theory | The eval-specific page | [`eval-statistics.md`](../evaluation/eval-statistics.md) |
 | Say "there is a 95% chance the effect is between X and Y" | Bayesian credible interval — a CI does NOT mean this | [Bayesian alongside frequentist](#report-bayesian-and-frequentist-side-by-side) |
 | Argue an intervention did NOT hurt capability | ROPE / equivalence test — a non-significant p cannot show this | [Arguing for no effect](#arguing-that-there-is-no-effect) |
 | Get an error bar without burning compute on reruns | Bootstrap over items; paired designs | [Where error bars come from](#where-error-bars-actually-come-from) |
@@ -128,6 +131,15 @@ res = bootstrap((idx,), stat, n_resamples=10_000, confidence_level=0.95)
 ```
 
 This is the single most common way an eval CI ends up dishonestly tight.
+
+The same applies when several **items** share one unit: eight questions about
+one reading passage, several questions about one image, a user task crossed
+with several prompt injections. Resample the shared unit (passages), not the
+questions. In Inspect AI the built-in version is `stderr(cluster="passage_id")`
+and `ci_wilson(cluster="passage_id")`, keyed on a `Sample.metadata` field. A
+census of `inspect_evals` tasks (issue #2605, October 2026) found clustered
+standard errors up to 2.9× the plain ones; details and the Inspect API are in
+[Clustered items](../evaluation/eval-statistics.md#clustered-items-passages-images-problem-sheets-and-shared-tasks).
 
 ## Continuous outcomes: loss, ratings, scores
 
@@ -252,6 +264,13 @@ starred point in the middle of a noisy sweep.
 If you found the layer by searching, say you searched. A held-out confirmation
 on fresh prompts is worth more than any correction.
 
+The same multiplicity problem arises when ranking many models: a ranking of k
+models implies k(k − 1)/2 pairwise claims. For a per-item results table of many
+models × benchmarks, **evalci** (`evalci` on PyPI, young: 3 stars as of
+2026-10-14) runs paired tests with Holm or Benjamini–Hochberg correction in one
+call; see
+[Many models at once](../evaluation/eval-statistics.md#many-models-at-once-leaderboards-and-model-by-benchmark-grids-evalci).
+
 ### Picking the "best" hyperparameter config: report its spread, not its luckiest run
 
 In a hyperparameter sweep (learning rate × β × data subset, say), the config
@@ -326,9 +345,11 @@ with a t-likelihood so outliers do not drag it around. In Python: **PyMC** or
 **NumPyro** to fit, **ArviZ** to summarise and plot
 (`az.plot_posterior(idata, rope=(-0.01, 0.01))`).
 
-Note ArviZ's default credible level is **0.94**, not 0.95 — deliberately, to
-stop people reading it as a significance threshold. Set `hdi_prob=` explicitly
-and say which you used.
+Note ArviZ's default credible level is not 0.95 — deliberately, to stop people
+reading it as a significance threshold: **0.94** (HDI) in ArviZ 0.x, **0.89**
+(equal-tailed) in ArviZ 1.x, which current PyMC requires. Set it explicitly
+(`hdi_prob=` in 0.x; `ci_prob=` and `ci_kind="hdi"` in 1.x) and say which you
+used.
 
 ### Arguing that there is no effect
 
@@ -378,7 +399,57 @@ Prefer posteriors and ROPE decisions over Bayes factors for this reason.
 
 ## How many samples do I need?
 
-Decide before the run, not after the result disappoints.
+Decide before the run, not after the result disappoints. Which calculation to
+use depends on the design.
+
+### Paired: both conditions on the same prompts (the usual case)
+
+Most eval comparisons are paired, and a paired comparison needs far fewer
+prompts than the unpaired formula says. Required paired prompts:
+N\* = (z₁₋α/₂ + z₁₋β)² · σ_D² / δ², where σ_D² is the variance of the
+per-prompt **difference** D = score_A − score_B and δ is the gap to detect.
+
+```python
+import numpy as np
+from scipy.stats import norm
+
+z = norm.ppf(1 - 0.05 / 2) + norm.ppf(0.80)       # alpha = 0.05, power = 0.8 → ≈ 2.80
+
+# From a pilot on shared prompts (0/1 or graded scores):
+d = pilot_a - pilot_b                              # per-prompt differences, same prompts
+n_star = (z * d.std(ddof=1) / 0.05) ** 2           # prompts to detect a 5-point gap
+
+# Before any data, for 0/1 scores, from guessed accuracies and their correlation rho:
+def n_star_binary(p_a, p_b, rho):
+    va, vb = p_a * (1 - p_a), p_b * (1 - p_b)
+    return z**2 * (va + vb - 2 * rho * np.sqrt(va * vb)) / (p_a - p_b) ** 2
+
+print(f"~{n_star_binary(0.75, 0.70, 0.5):.0f} shared prompts (paired, rho = 0.5)")
+```
+
+ρ is the correlation between the two conditions' per-prompt correctness. It is
+often substantial (on the real leaderboard pairs in the paper cited below,
+ρ̂ ranges from about 0.45 to 0.99), and a pilot of a few hundred prompts estimates it. When the
+two accuracies are close, the paired N\* is about (1 − ρ) times the unpaired
+per-arm n. On 40 Open LLM Leaderboard v1
+pairs, the paired required N was a median 2.15× smaller than the unpaired
+formula (Kotawala, arXiv:2605.30315, 2026).
+
+**A known trap: the "(1 − ρ) shortcut".** Multiplying a calculator's unpaired
+per-arm output by (1 − ρ) is only right if the calculator counts both arms'
+variance, as `statsmodels`' `NormalIndPower` does. The same paper reports that
+with a K/h² per-arm convention, the shortcut gives about half the correct N\*
+for close comparisons. (It attributes that convention to Cohen's 1988 formula,
+G\*Power 3.1 and R's `pwr`, but `pwr::pwr.2p.test`'s source computes power from
+h·√(n/2), which is 2K/h² per group, the same as `statsmodels`.) Computing N\*
+from σ_D² directly, as above, avoids the question.
+
+The same paper defines the **resolution ratio q = N / N\***: q ≥ 1 means a
+benchmark of N prompts can resolve the gap at (α, power). That diagnostic,
+for a published ranking or a leaderboard, is in
+[Paired comparisons](../evaluation/eval-statistics.md#paired-comparisons-can-this-benchmark-resolve-the-gap-the-resolution-ratio-q).
+
+### Unpaired: the two conditions use different prompts
 
 ```python
 from statsmodels.stats.power import NormalIndPower
@@ -387,12 +458,43 @@ from statsmodels.stats.proportion import proportion_effectsize
 # Detect a 5-point accuracy difference around a 70% baseline, 80% power:
 effect = proportion_effectsize(0.75, 0.70)
 n = NormalIndPower().solve_power(effect_size=effect, alpha=0.05, power=0.8)
-print(f"~{int(np.ceil(n))} prompts per condition (unpaired)")
+print(f"~{int(np.ceil(n))} prompts per condition (unpaired)")   # ≈ 1250
 ```
 
-Paired designs need substantially fewer. If the number comes back larger than
-your budget, that is useful information *before* you spend it — either widen the
-effect you are willing to claim, or pick a design with more power.
+This is the right calculation only when the two conditions really are measured
+on different items. Used for a shared-prompt comparison it over-asks, by about
+1/(1 − ρ).
+
+### Clustered items
+
+If items share a passage, image or task, the effective sample size is smaller
+than the item count; multiply the required N by the design effect
+(SE_clustered / SE_plain)². See
+[Clustered items](../evaluation/eval-statistics.md#clustered-items-passages-images-problem-sheets-and-shared-tasks).
+
+If the number comes back larger than your budget, that is useful information
+*before* you spend it: either widen the effect you are willing to claim, or
+pick a design with more power (pairing first).
+
+### Can I stop the run once it looks significant?
+
+Not with a fixed-n test. Checking the p-value after every batch and stopping at
+the first p < 0.05 inflates the false-positive rate far above 5%; it is the
+sequential version of trying several prompt sets. Two legitimate options:
+
+- **Fix N in advance** from the calculation above, and look once.
+- **Use an anytime-valid method**: a confidence sequence (Howard et al.,
+  *Annals of Statistics* 2021) or an e-process is valid at every sample size
+  simultaneously, so stopping whenever it excludes zero is fine. The price is
+  a wider boundary: in simulations in arXiv:2605.30315 (calibrated to two ARC
+  pairs) the expected stopping time was 1.84–2.32× the fixed-n N\*.
+
+For Inspect evals with repeated epochs, **optstop** (UK AI Security Institute)
+is a Bayesian alternative: it stops epochs once a hierarchical credible
+interval stops changing. Its guarantee is about credible intervals, not
+frequentist error rates, and it is weakest for rates near 0, which is where
+many safety evals live. See
+[Stopping an eval early](../evaluation/eval-statistics.md#stopping-an-eval-early-when-run-until-it-looks-significant-is-legitimate).
 
 ## Pitfalls, with the symptoms you'd actually see
 
@@ -416,7 +518,17 @@ effect you are willing to claim, or pick a design with more power.
   that worked is the same error as testing 32 layers, minus the correction.
 - **Judge-based scores treated as ground truth.** A large language model (LLM)
   judge has its own error rate; validate on a human-labelled subset and report
-  agreement, or your CI is measuring the judge, not the model.
+  agreement, or your CI is measuring the judge, not the model. With a
+  **random** human-labelled subset, prediction-powered inference
+  (`ppi-python` on PyPI) turns judge labels plus that subset into an interval
+  that is valid however biased the judge is; see
+  [PPI](../evaluation/eval-statistics.md#llm-judge-labels-plus-a-small-human-labelled-subset-prediction-powered-inference-ppi).
+- **"My eval's error bars look too small for 1,200 items."** Several items
+  probably share a passage, image or task, and the reported `stderr()` is not
+  clustered. See [Bootstrap the right unit](#bootstrap-the-right-unit).
+- **Stopping when p first dips below 0.05.** Optional stopping without an
+  anytime-valid method inflates false positives. See
+  [Can I stop the run once it looks significant?](#can-i-stop-the-run-once-it-looks-significant).
 
 ## Where this connects
 
@@ -428,14 +540,17 @@ effect you are willing to claim, or pick a design with more power.
   number): [`ai-control.md`](../oversight-and-control/ai-control.md).
 - Eval design and dataset choice:
   [`evals.md`](../evaluation/evals.md).
+- Eval-specific statistics (clustered items, resolution ratio q, LLM-judge
+  correction with PPI, crossed random effects, item response theory, early
+  stopping): [`eval-statistics.md`](../evaluation/eval-statistics.md).
 
 ---
 
-Last verified: 2026-08. Bayesian section follows Kruschke's HDI+ROPE decision
-rule (2018) and BEST (2013); ArviZ's 0.94 default credible level verified. Drafted by Claude, revised per Nathan's steer that
+Last verified: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
+rule (2018) and BEST (2013); ArviZ default credible levels (0.94 in 0.x, 0.89 in 1.x) verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical
 recommendations here are a first pass and have not yet been reviewed by the MATS
 research staff. Library APIs (`scipy.stats.bootstrap`, `statsmodels`
 `mcnemar` / `proportion_confint` / `multipletests` / `NormalIndPower`) verified
-against current releases.
+against current releases. (Additions 2026-10-14: power section rewritten to lead with the paired calculation; the paired N\* formula, the (1 − ρ) shortcut finding and the 2.15× median from arXiv:2605.30315 were checked against the paper's Eqs. 3–5, Table 1 and §2, and the worked example (N\* ≈ 1,028 at p = 0.65/0.60, ρ = 0.3) was recomputed; Inspect `stderr(cluster=)` / `ci_wilson(cluster=)` checked against `std.py` and the CHANGELOG; inspect_evals issue #2605 read directly; optional-stopping numbers from arXiv:2605.30315 Appendix C.)

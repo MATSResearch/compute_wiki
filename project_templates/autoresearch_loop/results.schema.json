@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/MATSResearch/compute_wiki/project_templates/autoresearch_loop/results.schema.json",
+  "title": "Autoresearch loop: one results.jsonl line",
+  "description": "One experiment in an agent-driven keep/discard loop. results.jsonl is append-only: one JSON object per line, never rewritten; a correction is a new line. Written by log_result.py, which also enforces what JSON Schema cannot (run numbers 1..n with no gaps; revisits_run pointing at an earlier non-kept run).",
+  "type": "object",
+  "required": ["run", "ts", "kind", "status", "commit", "metrics", "hypothesis", "prediction", "description", "rollback_reason", "revisits_run"],
+  "additionalProperties": false,
+  "properties": {
+    "run": {"type": "integer", "minimum": 1, "description": "Experiment number within the session: 1, 2, 3, ..."},
+    "ts": {"type": "string", "format": "date-time", "description": "ISO-8601 UTC time the record was written."},
+    "kind": {
+      "enum": ["baseline", "experiment", "rerun"],
+      "description": "baseline = the unchanged code; experiment = a new change (or a deliberate revisit); rerun = a repeat measurement of an already-logged commit, to resolve noise."
+    },
+    "status": {
+      "enum": ["keep", "discard", "crash", "checks_failed"],
+      "description": "pi-autoresearch's four statuses. checks_failed = the dev metric improved but checks.sh failed; treated like a crash (no keep, revert)."
+    },
+    "commit": {"type": ["string", "null"], "description": "Short git SHA of the tried change; null only for a crash before commit."},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {"type": "number"},
+      "description": "name -> value, parsed from measure.sh's `METRIC name=value` lines (DEV split only; never a held-out score)."
+    },
+    "hypothesis": {"type": "string", "minLength": 1, "description": "Why this change should help. Written before the run."},
+    "prediction": {"type": "string", "minLength": 1, "description": "What the metric is expected to do. Written before the run."},
+    "description": {"type": "string", "minLength": 1, "description": "What was changed. For a revisit, what assumption changed since the earlier discard."},
+    "rollback_reason": {"type": ["string", "null"], "description": "Required for discard, crash, checks_failed: the assumption that made the idea fail, so a later result can show it no longer holds."},
+    "revisits_run": {"type": ["integer", "null"], "minimum": 1, "description": "Earlier run number when deliberately retrying a discarded idea because its rollback_reason stopped being true. Not set for verification reruns."}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"enum": ["discard", "crash", "checks_failed"]}}},
+      "then": {"properties": {"rollback_reason": {"type": "string", "minLength": 1}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "keep"}}},
+      "then": {"properties": {"rollback_reason": {"type": "null"}, "commit": {"type": "string"}}}
+    }
+  ]
+}

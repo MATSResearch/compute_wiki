@@ -5,6 +5,11 @@ proofs. The optional [skill hint hook](skill-hints.md) points the agent to it
 after a Lean edit, without requiring invocation or another editing pass.
 Install the skill alongside the other [Lean skills](lean-formalization.md).
 Explicit cleanup requests still call for doing the requested editing.
+Cameron Freer's **lean4-skills** plugin (`cameronfreer/lean4-skills`) has
+comparable `refactor` ("leverage mathlib, extract helpers, simplify proof
+strategies") and `golf` ("directness, clarity, performance, and brevity")
+workflows; use one set of skills per project, not both
+([comparison](lean-formalization.md#mats-lean-skills-or-lean4-skills-pick-one-per-project)).
 
 ## What the comparison suggests
 
@@ -91,6 +96,14 @@ An imported unfinished helper can make a proof look complete; a successful exit
 code alone will not detect every such case. Preserve the existing constructive
 or classical assumptions, and report material changes rather than hiding them
 as style edits. See [proof evidence](lean-formalization.md#interpret-the-evidence).
+
+If the project keeps its headline theorems in a challenge file checked by
+`lake comparator` (Lean v4.35.0 or later; see
+[the CI pattern](lean-formalization.md#check-every-push-in-ci-the-statementslean-and-solutionslean-pattern)),
+rerun it after cleanup: a pass confirms that the cleaned proofs still prove
+exactly the reviewed statements with only the permitted axioms, which is the
+preservation boundary above made mechanical for those theorems (helpers and
+definitions outside the challenge still need the manual comparison).
 
 When compilation is unavailable, preserve the known checked artifact and label
 the edited candidate unchecked. Avoid replacing a verified deliverable with an

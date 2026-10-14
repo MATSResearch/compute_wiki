@@ -50,7 +50,10 @@ Rigor tooling that automates the mechanical layer lives elsewhere in this wiki:
   **human-guided research directions gave no performance improvement**. The authors'
   proposed division of labour: a human chooses or builds the benchmarks, the automated
   researchers find methods, humans refine them. They state it does not cover unknown or
-  rare alignment failures.
+  rare alignment failures. Code: `YuehHanChen/automated_alignment_researcher` (no license
+  file as of 2026-10-14), including a task-agnostic `generic_aar/` template whose one
+  requirement is "at least **one hill-climbing benchmark** … and **one held-out
+  benchmark**" — the measurement has to exist before the automation helps.
 - **Automated Weak-to-Strong Researcher** (Wen et al., Anthropic 2026,
   [blog](https://alignment.anthropic.com/2026/automated-w2s-researcher/),
   [code](https://github.com/safety-research/automated-w2s-research)): nine parallel
@@ -117,6 +120,20 @@ What the skill looks like in practice:
   know?*
 - Validate any LLM-as-judge (Large Language Model as judge) against human labels
   ([`statistics.md`](../engineering/statistics.md)).
+- **Prototype against several model families before you keep a task.** Building
+  honeypot/reward-hacking environments, Goodhart Labs found one model "would take whatever
+  ridiculous shortcut it spotted, even in shitty prototype environments", so they required
+  every environment to "have some hack rollouts on a non-OpenAI model in order to be
+  included" (by publication, eliciting on one of three named less hack-prone models);
+  otherwise the benchmark quietly becomes a set of tasks only one model fails (Dean
+  Valentine, ["Qualitative impressions from creating AI honeypots for six months"](https://www.lesswrong.com/posts/kifFQuvu7yq6eHrb8/qualitative-impressions-from-creating-ai-honeypots-for-six),
+  2026-10-06).
+- **Name the uncertainty your error bars leave out.** An interval over samples from one
+  environment says nothing about whether that environment is the distribution you care
+  about; Jo Jiao's advice is to "mentally register" that unquantified uncertainty and to
+  check whether an AI's write-up gave "a reasonably complete and fair picture of the
+  uncertainty" ([post](https://www.lesswrong.com/posts/Q4rcvgjbgjTwmn8Xa/research-lessons-i-learned-at-mats-and-redwood),
+  2026-10-12).
 
 Read: Bowkis, Buhl, Pfau & Irving, "Automated alignment is harder than you think"
 ([arXiv:2605.06390](https://arxiv.org/abs/2605.06390)) — why fuzzy, hard-to-supervise
@@ -146,7 +163,25 @@ Error Bars to Evals" ([arXiv:2411.00640](https://arxiv.org/abs/2411.00640)).
 - **"Done, with one asterisk" is often "not done at all"** (Schwartz) — check what the
   asterisk hides.
 - **Measure time; don't accept model ETAs.** A projection over ~2 hours means
-  restructure, not scale (BootLoops `timing-discipline`).
+  restructure, not scale (BootLoops `timing-discipline`). Measured: Claude Code and Codex
+  "consistently over-predict task time" (on the AgentTime suite, about 3x for Fable 5 in
+  Claude Code and 7–10x for GPT-5.6 Sol in Codex), and stripping
+  timestamps from transcripts doubles their retrospective error (Ofengenden,
+  ["Your Agents Are Not Time Aware"](https://www.lesswrong.com/posts/eAbuPXbjakop5rSJx/your-agents-are-not-time-aware),
+  2026-08-14).
+- **Ask for a single-file reproduction of the headline result** and run it yourself
+  (Daniel Tan, [post](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research)).
+- **Pair a gameable scorer with a robust one** when an agent optimizes a metric: one
+  checks what you would normally look at, the other inspects the strategy the agent used;
+  the gap measures apparent-success-seeking (Keira Leal,
+  [post](https://www.lesswrong.com/posts/tdZyjrappcEaQuM4A/before-we-defer-research-to-ai-measuring-apparent-success),
+  2026-08-11 — in the post, an assistant had copied failing test cases into a few-shot prompt).
+- **An LLM double-check is not a design review.** Czynski's re-analysis put two changes
+  in one experimental arm, read the table backwards, and "Using LLMs to double-check me
+  did not correct the error either" — the error surfaced only when the write-up was
+  started and Claude, asked to fill in its tables, objected
+  ([post](https://www.lesswrong.com/posts/iMo69AgAyzXrPm4kb/turbulence-and-fragility-prompting-based-experiments-are),
+  2026-09-21).
 
 Read: Luo, Kasirzadeh & Shah, "The More You Automate, the Less You See"
 ([arXiv:2509.08713](https://arxiv.org/abs/2509.08713)) — trace logs and code catch far more
@@ -207,7 +242,11 @@ measurement yet — which is most of alignment — and it shows up as choosing t
 the definitions and the measurement, not as brainstorming methods.
 
 Practice it: predict experiment outcomes before running them, have a mentor rate your
-ideas, keep a notebook of decisions and how they turned out.
+ideas, keep a notebook of decisions and how they turned out. A specific drill from Jo
+Jiao (MATS 9): try to predict what your mentor will say before they say it; if the mentor
+agrees to the meeting being recorded, have Claude quiz you on the key points they made,
+or pause a recorded research session (Neel Nanda posts some) and predict the next move
+([post](https://www.lesswrong.com/posts/Q4rcvgjbgjTwmn8Xa/research-lessons-i-learned-at-mats-and-redwood)).
 
 Read: Hamming, "You and Your Research"
 ([talk](https://www.cs.virginia.edu/~robins/YouAndYourResearch.html)); Nanda, "My Research
@@ -272,10 +311,57 @@ Epistemics: Karnofsky, "Minimal-Trust Investigations"
 ## Writing and distillation
 
 Agents draft fluent prose that overclaims; structuring a paper around one to three
-claims the evidence actually supports is human work. Read: Olah & Carter, "Research Debt"
+claims the evidence actually supports is human work. Three habits from 2026 MATS-adjacent
+write-ups:
+
+- **Start writing while the result is still surprising.** Drafting is a check, not just
+  output: Czynski's backwards reading of a results table surfaced only once the first
+  600 words were drafted and handed to Claude to fill in the tables ([post](https://www.lesswrong.com/posts/iMo69AgAyzXrPm4kb/turbulence-and-fragility-prompting-based-experiments-are)).
+- **Work in atomic writeups** — one headline result each, self-contained, with
+  limitations and reproduction details, so they compose into a paper later (Daniel Tan,
+  [post](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research)).
+- **Write mentor updates yourself.** Jo Jiao: "At this moment, I don't think AI should be
+  used to write Slack update threads", because models are poorly calibrated about how
+  digestible an update is and invent project vocabulary
+  ([post](https://www.lesswrong.com/posts/Q4rcvgjbgjTwmn8Xa/research-lessons-i-learned-at-mats-and-redwood);
+  the update format is in [`mentor-expectations.md`](mentor-expectations.md)).
+
+Read: Olah & Carter, "Research Debt"
 ([Distill](https://distill.pub/2017/research-debt/)); Nanda, "Highly Opinionated Advice
 on How to Write ML Papers" ([LessWrong](https://www.lesswrong.com/posts/eJGptPbbFPZGLpjsp));
 Karnofsky, "Learning By Writing" ([Cold Takes](https://www.cold-takes.com/learning-by-writing/)).
+
+## Research-craft lessons from MATS fellows and peers (2026)
+
+Practical tips from 2026 retrospectives and practice posts, each condensed to one
+actionable sentence. They are single-project experience reports, not measurements;
+treat each as a habit worth trying and checking against your own project. Quotes were
+checked against the posts' LessWrong markdown on 2026-10-14.
+
+| Tip | From | Source |
+|---|---|---|
+| Decide early whether you are aiming for **epistemic-complete** (defends its central claim, "messy at the edges", trusted by co-workers) or **paper-complete** (ablations, robustness checks, "ready to be defended amongst skeptics"), and budget for the gap: "a paper-complete project is 1/2-1 OOM higher effort". | Jo Jiao (MATS 9, then Redwood Research) | [Research Lessons I Learned at MATS & Redwood](https://www.lesswrong.com/posts/Q4rcvgjbgjTwmn8Xa/research-lessons-i-learned-at-mats-and-redwood), 2026-10-12 |
+| Open every Slack research update with a TL;DR (why the reader should care, the gist), bold the keywords, and include every detail a mentor needs to catch a mistake: "data and train/test splits, method of calculating error bars, key hyperparameters, and all non-obvious decisions". | Jo Jiao | same post |
+| When information value is high, trade money for time — a GPU provider that fans out faster, or more samples. | Jo Jiao | same post |
+| Check that the uncertainty an agent reports covers distribution shift and setting choice, not just sampling error: "AIs are not very good at being principled about accounting for sources of uncertainty." | Jo Jiao | same post |
+| Make plots fit a familiar template (a bar plot says "this one is higher", a Pareto-frontier plot says "we push the Pareto curve"), and expect to spend more time on them than feels necessary. | Jo Jiao | same post |
+| Talk to the model you trained after every stage (synthetic document finetuning, SFT, even after RL), with introspective, out-of-distribution and capability questions; the author calls it "probably the highest RoI time I spent". | Nathaniel Mitrani (MATS 10.0) | [My retrospective from MATS 10.0](https://www.lesswrong.com/posts/rktrjGjXEbWsg7zof/my-retrospective-from-mats-10-0), 2026-10-01 |
+| Treat a passing sanity metric as necessary, not sufficient: Mitrani's finetunes passed "friedness" checks while the model underused its chain of thought — "No such thing as a perfect metric!" | Nathaniel Mitrani | same post |
+| Make the unit of agent work an atomic experiment writeup (one headline result, self-contained, with limitations and reproduction details). | Daniel Tan | [Tips on leveraging AI for empirical research](https://www.lesswrong.com/posts/f4WZ7dde8KAYHfeif/tips-on-leveraging-ai-for-empirical-research), 2026-07-06 |
+| Before trusting a complex agent result, ask for a single-file reproduction of the headline effect, read it top to bottom, and run it. | Daniel Tan | same post |
+| Ask agents to report the result first, then just enough method, then interpretation, and tell them you are the audience. | Daniel Tan | same post |
+| Every so often, have an agent post-mortem past transcripts for friction and turn the answers into tooling or conventions. | Daniel Tan | same post |
+| Never put two different changes into one experimental arm, even when they live in disjoint scenarios. | Czynski | [Turbulence & Fragility: Prompting-Based Experiments are Sensitive to Stray Details](https://www.lesswrong.com/posts/iMo69AgAyzXrPm4kb/turbulence-and-fragility-prompting-based-experiments-are), 2026-09-21 |
+| In prompting experiments, hold "content-neutral" details (document structure, which channel carries the information) fixed across conditions: in the replication they sometimes moved results as much as the information content did, and inconsistently across models. | Czynski | same post |
+| Start the write-up while results are still surprising; drafting is what caught the misread table. | Czynski | same post |
+| When an agent improves a metric, also score the artifact it changed with a check it was not optimizing (a gameable/robust scorer pair). | Keira Leal | [Before We Defer Research to AI: Measuring Apparent-Success-Seeking](https://www.lesswrong.com/posts/tdZyjrappcEaQuM4A/before-we-defer-research-to-ai-measuring-apparent-success), 2026-08-11 |
+| Never budget from an agent's own time estimate; enforce budgets outside the agent and keep timestamps in its context. | Michael Ofengenden (MATS 10, with Maksym Andriushchenko) | [Your Agents Are Not Time Aware](https://www.lesswrong.com/posts/eAbuPXbjakop5rSJx/your-agents-are-not-time-aware), 2026-08-14 |
+| For long agent runs (and when measuring capability), restart a fresh agent from its predecessor's written summary at each milestone, and say explicitly that the task is achievable. | Girit, Hariharan, Shor, Huang (Fulcrum Research) | [Agents are under-elicited](https://www.lesswrong.com/posts/cnHojP3CcAycR7D6F/agents-are-under-elicited-a-case-study-in-optimization-tasks-1), 2026-06-18 |
+| Keep a honeypot or reward-hacking environment in a benchmark only if it elicits the behaviour on a model family besides the most hack-prone one (their rule: "some hack rollouts on a non-OpenAI model"). | Dean Valentine (Goodhart Labs) | [Qualitative impressions from creating AI honeypots for six months](https://www.lesswrong.com/posts/kifFQuvu7yq6eHrb8/qualitative-impressions-from-creating-ai-honeypots-for-six), 2026-10-06 |
+
+Agent-workflow versions of several of these (handoffs, timestamps, epistemic-status
+markers for agent notes) are in
+[`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agent-memory-handoffs-and-time).
 
 ## Start here: an 8-item reading list (~6–8 hours)
 
@@ -299,6 +385,11 @@ Karnofsky, "Learning By Writing" ([Cold Takes](https://www.cold-takes.com/learni
 
 ---
 
-Last verified: 2026-10. Drafted by Claude from the MATS automated-alignment design notes,
+Last verified: 2026-10-14. Drafted by Claude from the MATS automated-alignment design notes,
 the BootLoops repos, and the papers linked above; the one-line summaries of each source
-are Claude's wording, not the authors'. Pending MATS research-staff review.
+are Claude's wording, not the authors'. Pending MATS research-staff review. (Additions
+2026-10-14: the "Research-craft lessons" table and the related bullets in Skills 1, 2, 4
+and Writing, from posts by Jo Jiao, Nathaniel Mitrani, Daniel Tan, Czynski, Keira Leal,
+Michael Ofengenden, Fulcrum Research and Dean Valentine — every quote checked against the
+LessWrong GraphQL markdown; the AAR code repository via `gh api` and its `generic_aar`
+README.)

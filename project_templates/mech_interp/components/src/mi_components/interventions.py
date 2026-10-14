@@ -18,6 +18,15 @@ These work on any module whose forward output is the activation you want to inte
 on. For HF transformers that's typically `model.model.layers[L]` (residual stream
 post-block), `model.model.layers[L].mlp` (MLP output), or
 `model.model.layers[L].self_attn` (attn output).
+
+Sandwich-norm models (Gemma 2/3/4, OLMo 2/3) normalise each sublayer's output before the
+residual add, so `model.model.layers[L].mlp` is the *raw* MLP output, not the residual
+contribution. The contribution (what TransformerLens calls `blocks.L.hook_mlp_out`, and
+what Gemma Scope MLP SAEs read) is the output of
+`model.model.layers[L].post_feedforward_layernorm`. Ablating or reading the raw `.mlp`
+output on these models is a different intervention. `post_attention_layernorm` is also a
+trap: a post-attention-output norm on Gemma, but the pre-MLP norm on Llama/Qwen/Mistral.
+See docs/interpretability/mech-interp.md, "The sandwich-norm hook trap".
 """
 
 from __future__ import annotations

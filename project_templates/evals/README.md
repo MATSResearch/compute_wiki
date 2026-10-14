@@ -67,7 +67,9 @@ includes a `docs/papers/` summary, and is structured the way the wiki recommends
   `lm-evaluation-harness` (EleutherAI); it's the standard for MMLU/ARC/HellaSwag
   and faster for log-prob multiple-choice. See `docs/evaluation/evals.md`.
 - **You want long-horizon dangerous-capability / agent time-horizon evals.** Use
-  METR's HCAST suite (run via Inspect or `vivaria`). See `docs/evaluation/evals.md`.
+  METR's HCAST suite or the RE-Bench Inspect port (`METR/inspect-tasks-public`).
+  METR's `vivaria` is archived; METR now runs Inspect (at scale via `METR/hawk`).
+  See `docs/evaluation/evals.md` and `docs/evaluation/agent-scaffolds.md`.
 - **You want adversarial red-team-vs-blue-team control protocols.** Use the
   `ai_control/` templates (ControlArena). See `docs/oversight-and-control/ai-control.md`.
 - **You want a 30-line one-shot script over an API.** Inspect's task structure is
@@ -109,6 +111,26 @@ See [`../../docs/evaluation/evals.md`](../../docs/evaluation/evals.md) for the b
 framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic/OpenAI eval
 formats) and [`../../docs/evaluation/red-teaming.md`](../../docs/evaluation/red-teaming.md) for
 jailbreak/refusal benchmarks.
+
+## Before you report a number: judge validation, statistics, sandboxes
+
+- **Model-graded scores need a validation set.** `graded_qa_with_refusal()` and any
+  LLM scanner are judges. Inspect Scout validation sets (`id,target,split` CSV;
+  `scout scan ... -V <scanner>:labels.csv`) measure agreement with your hand labels on
+  a held-out `test` split; HiBayES models how much the grader moves 0–10 scores. See
+  `docs/evaluation/evals.md` ("Judge calibration and eval-result tooling").
+- **Cheaper grading and fewer epochs.** Inspect's `cascade()` scorer (0.3.262+) runs
+  the LLM grader only where an exact-match stage did not settle the sample; `optstop`
+  stops epochs once estimates stop moving (not for rare-event rates). Same section.
+- **Confidence intervals.** `analysis.wilson_ci` assumes independent samples. For
+  clustered items (several questions per passage, multi-turn tasks, paraphrase
+  expansions of one item) or paired model comparisons, see
+  `docs/evaluation/eval-statistics.md` (general layer: `docs/engineering/statistics.md`).
+- **Agentic tasks and Docker.** Since `inspect_ai` 0.3.280 (2026-10-14) Docker
+  sandboxes refuse writable host bind mounts; use `:ro`, `Sample.files` or a
+  Docker-managed volume. No Docker at all: `inspect-sandboxes` (Daytona / E2B /
+  Modal). See `docs/evaluation/agent-scaffolds.md` ("Sandbox providers and
+  containment").
 
 ## Inspect AI version pin
 

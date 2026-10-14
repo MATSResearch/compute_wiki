@@ -61,6 +61,14 @@ How to order the parts of a project yourself, which is the planning a daily mana
 
 How to "peel the next 20-hour problem off of a 400-hour problem" — the month-into-weeks-into-days breakdown that Mentors expect you to do alone. Three ways to make a subproblem (simpler question, simpler system, fact-finding), red flags for subproblems that are too vague, too hard or too easy, and when to ask someone else whether to quit. Winer explicitly argues against Steinhardt's fail-early rule: it fits projects with several must-win steps where partial work is worthless, while most projects reward patching an approach rather than abandoning it. Read the two together and decide which shape your project has.
 
+### Jo Jiao, "Research Lessons I Learned at MATS & Redwood"
+
+[LessWrong](https://www.lesswrong.com/posts/Q4rcvgjbgjTwmn8Xa/research-lessons-i-learned-at-mats-and-redwood) — 2026-10-12. Written after MATS 9 (Team Shard, mentored by Alex Turner and Alex Cloud) and an internship at Redwood Research.
+
+The most concrete guide to the weekly update a Mentor reads when deciding whether you could be left alone for a month. The reader is high-context but behind on details, so a good Slack update thread has heavy "goal-posting" with bolded keywords, a first section that works as a TL;DR (why the reader should care, and the gist, e.g. "*x* intervention probably doesn't work on *y* model in *z* setting"), and "all the necessary details in the update so the mentor can flag any mistakes": "data and train/test splits, method of calculating error bars, key hyperparameters, and all non-obvious decisions made in the experiment." The author's view is that the thread should be "Completely human written" for now, and that most new researchers underinvest in this skill: "front-loading communication level-ups would clearly have been worth it."
+
+Two more pieces of the monthly-oversight skill set are in the same post. **Know which level of "done" you are aiming for**: an *epistemic-complete* project "can defend its central claim, but is messy at the edges", a *paper-complete* one is "ready to be defended amongst skeptics", and the second is "1/2-1 OOM higher effort" — choosing between them is exactly the kind of planning call a Mentor hopes you make without being told. And **trade money for time** when the information value is high (a faster-fanning GPU provider, more samples).
+
 ---
 
-Last verified: 2026-10. Essay by Nathan Helm-Burger. The reading-list notes were drafted by Claude.
+Last verified: 2026-10-14. Essay by Nathan Helm-Burger. The reading-list notes were drafted by Claude. (Addition 2026-10-14: the Jo Jiao note, quotes checked against the post's LessWrong GraphQL markdown.)

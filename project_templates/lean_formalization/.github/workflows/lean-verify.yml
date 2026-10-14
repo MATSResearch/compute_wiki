@@ -1,0 +1,95 @@
+# Check on every push that Solutions.lean still proves exactly the statements in
+# Statements.lean, using only the axioms in comparator.json, accepted by Lean's
+# kernel and by every independent checker bundled with the toolchain.
+#
+# Needs Lean >= v4.35.0 (`lake comparator` and `lake check` were added to Lake in
+# v4.35.0, 2026-10-12). On an older toolchain, see README.md, "On toolchains older
+# than v4.35.0".
+#
+# What this job is: a DRIFT CHECK for your own repository. It proves that, as the
+# library changes, the proofs still discharge the reviewed statements. It is not
+# an adversarial audit of a solution someone else wrote: the lean-action step
+# below builds Solutions.lean outside the sandbox before the sandboxed checks
+# run. To judge an untrusted solution, use a trusted Linux host, a fresh checkout
+# with a committed lake-manifest.json, and run only `lake comparator --paranoid`
+# (no prior `lake build`), so the untrusted code is only ever built inside the
+# bwrap sandbox.
+#
+# Adapted for this template, not copied from another project, and not yet run
+# by the wiki maintainers: treat the first run as part of setting it up.
+
+name: lean-verify
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel an in-flight run when the same ref is pushed again.
+concurrency:
+  group: lean-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    # `--paranoid` replays the export through five extra checkers. On a
+    # Mathlib-sized project that can take hours; GitHub-hosted jobs stop at 360.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      # `lake comparator` and `lake check` build the project inside a bubblewrap
+      # sandbox. Without `bwrap` they exit with status 2 ("could not start").
+      - name: Install bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+
+      # bwrap needs unprivileged user namespaces (or a setuid bwrap). Ubuntu
+      # images can restrict those through AppArmor via the sysctl below; relax it
+      # on this throwaway runner only, then fail fast if bwrap still cannot start.
+      # Symptoms when this is wrong: "bwrap: setting up uid map: Permission
+      # denied" or "bwrap: Creating new namespace failed".
+      - name: Allow bwrap to create user namespaces
+        run: |
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --ro-bind / / --dev /dev true
+
+      # Installs elan and the toolchain in lean-toolchain, fetches the Mathlib
+      # cache if the project depends on Mathlib, and runs `lake build` on the
+      # default targets. The build writes lake-manifest.json, which the sandboxed
+      # commands need because they cannot write to the project directory.
+      - uses: leanprover/lean-action@v1
+        with:
+          build: "true"
+
+      # The statements must elaborate on their own. Expect a
+      # "declaration uses 'sorry'" warning per statement; an error here means
+      # the challenge itself is broken.
+      - name: Build the statements
+        run: lake build Statements
+
+      # Whole-project check of the default targets (Solutions and what it
+      # imports): exported, replayed through Lean's kernel and the bundled
+      # external checkers, standard axioms only. Catches a stray `sorry`
+      # ("Axiom 'sorryAx' is not permitted; it is used by '...'") or a custom
+      # axiom anywhere in the proof library. Exit 0 accepted, 1 rejected,
+      # 2 could not start.
+      - name: lake check --paranoid
+        run: lake check --paranoid
+
+      # Statement check against the trusted challenge, configured by
+      # comparator.json in the project root (the default --config location).
+      # Prints "Your solution is okay!" on success. Exit 0 accepted, 1 rejected
+      # (statement mismatch, forbidden axiom, kernel rejection, failed build),
+      # 2 could not start (no bwrap, no lake-manifest.json, bad config).
+      - name: lake comparator --paranoid
+        run: lake comparator --paranoid

@@ -57,7 +57,9 @@ For difficult structural edits or examples of tradeoffs, read the
 ## Verify and finish
 
 Check coherent edits incrementally and the final artifact in its real project,
-including affected dependents. Compare the actual declaration and its context,
+including affected dependents. If the project carries a `comparator.json`,
+rerun `lake comparator` after cleanup: it confirms the headline statements are
+unchanged. Compare the actual declaration and its context,
 not just the visible theorem line. Check helpers as well as the main proof;
 inspect warnings and axiom output, not only exit status. Measure compilation
 when changing expensive automation or when a slowdown appears; fewer lines do

@@ -77,7 +77,12 @@ def _residual_hook_name(layer: int) -> str:
     """Path to the layer's output module on a HF Gemma model.
 
     Gemma 3 follows the standard `model.layers[L]` naming; the residual stream after the
-    layer is the layer module's output. For attention/MLP-output SAEs this would change.
+    layer is the layer module's output. For attention/MLP-output SAEs this would change,
+    and Gemma 3 has sandwich norms: `model.layers[L].mlp` is the raw MLP output, while the
+    residual contribution is the output of `model.layers[L].post_feedforward_layernorm`.
+    Gemma Scope's MLP SAEs on Gemma 2 were measured to read the contribution; for a Gemma
+    Scope 2 MLP SAE, read its config's hook and check FVU / L0 on both candidates before
+    trusting features; see docs/interpretability/mech-interp.md, "The sandwich-norm hook trap".
     """
     return f"model.layers.{layer}"
 

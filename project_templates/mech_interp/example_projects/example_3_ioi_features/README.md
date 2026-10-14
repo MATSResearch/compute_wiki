@@ -37,6 +37,8 @@ Building this well needs (a) Gemma 3 1B IOI sanity check, (b) IOI prompt generat
 - [`docs/papers/ioi_summary.md`](docs/papers/ioi_summary.md) — paper summary.
 - [`../example_1_gemma_scope/`](../example_1_gemma_scope/) — single-prompt SAE attribution.
 - [`../../components/`](../../components/) — `mi_components` for hooks, run dirs, config.
+- Head-level baselines without writing the circuit code yourself (as of 2026-10-14): **CircuitKIT** (`pip install circuitkit`; `Pipeline("gpt2", task="ioi")` → `discover(algorithm="eap-ig")` → `evaluate()` → `prune()`), pinned to TransformerLens 3.8.0 and under a source-available licence (LSAL v1.2, not OSI open source), so keep it in its own environment; or **EAP-IG** scored with **MIB**'s evaluator. See `docs/interpretability/mech-interp.md` § Circuit discovery.
+- If you extend this to Gemma Scope 2 MLP SAEs or transcoders: Gemma 3 has sandwich norms (the raw `.mlp` output is not the residual contribution), and SAELens < 6.54.2 loaded `*_affine` transcoders with a transposed skip connection. See `docs/interpretability/saes.md`.
 
 ## Challenge exercises
 

@@ -36,6 +36,10 @@ expects, and both run standalone as a smoke test.
 | Quick distribution check mid-experiment | **seaborn** (`boxplot`, `violinplot`, `stripplot`) |
 | Interactive exploration, or an HTML report to send someone | **Plotly** |
 | Faceted small multiples, declarative | **Altair** (slow past ~5k rows) |
+| Paper figure sized to the NeurIPS/ICML/ICLR column | **tueplots** `bundles.<venue>(usetex=False)` into `plt.rcParams` |
+| Plots straight from Inspect logs | **Inspect Viz** views (`scores_by_task`, `scores_by_limit`) |
+| Browse thousands of embedded transcripts / features | **Embedding Atlas** with your own PaCMAP/LocalMAP `--x/--y --disable-projection` (its default is UMAP) |
+| Exploration notebook without hidden state | **marimo** (`uvx marimo edit --sandbox nb.py`); static export freezes widget-driven cells |
 
 Producing a report that needs **both** an interactive and a static version of
 each plot: Plotly for the interactive, Matplotlib PNG for the static — or just
@@ -90,8 +94,9 @@ use `templates/make_report.py`, which does exactly this.
   that cannot be traced to a config is not evidence.
 - **Save the plotted numbers too** (`.csv`/`.npz`) — restyling later shouldn't
   mean re-running the experiment.
-- Set the figure to its final printed size (`figsize=(5, 3.2)` for one column)
-  rather than shrinking a big one, or the text ends up unreadable.
+- Set the figure to its final printed size (`figsize=(5, 3.2)` for one column,
+  or a tueplots bundle) rather than shrinking a big one, or the text ends up
+  unreadable.
 
 ## Symptoms worth recognising
 
@@ -101,5 +106,8 @@ use `templates/make_report.py`, which does exactly this.
   `plt.close(fig)` in a loop; memory climbs.
 - `ValueError: x and y must have same first dimension` → the off-by-one from
   plotting a per-step metric against an epoch axis.
+- `RuntimeError: Failed to process string with tex because latex could not be
+  found` → `text.usetex` on without LaTeX (tueplots NeurIPS/ICML/ICLR default,
+  SciencePlots `science`). `usetex=False` or add the `no-latex` style.
 
 Which error bar to draw, and on what unit: use the **mats-statistics** skill.

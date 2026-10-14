@@ -14,6 +14,8 @@ Tools for training classifiers on model internals — the workhorse technique fo
 | The 90% case: linear probe on activations | `sklearn.linear_model.LogisticRegression` |
 | Contrast Consistent Search (CCS, an unsupervised probe method) | Hand-rolled or `collin-burns/discovering_latent_knowledge` reference repo |
 | Larger probing pipeline with caching, multi-layer sweeps | **probity** |
+| k-sparse probing (which *k* coordinates carry a label?) with leakage-safe selection and random/label-shuffle controls built in | **TransformerLens 4.1+** `fit_sparse_probe` / `sweep_sparse_probe` (see "Sparse probing in TransformerLens" below) |
+| A live competition for probe-style methods on reasoning models (deadline 2026-11-01) | **AIMO Interpretability Challenge** (see "Benchmarks and competitions" below) |
 | Probe a 70B+ model | Extract activations once via vLLM-Lens or nnsight remote, then sklearn |
 | Detect lying / deception with a probe | Linear probe on activations; see `ApolloResearch/deception-detection` + the honesty-probe literature below |
 | Pretrained deception / sabotage probes for open-weights models (Qwen3.5, Nemotron-3, Kimi K3) | `AlignmentResearch/caught-in-the-act-probes` (inference code) + weights `AlignmentResearch/probe-inference-weights` on Hugging Face; see "Frontier-scale deception probes" below |
@@ -50,6 +52,45 @@ print("acc:", accuracy_score(y_test, clf.predict(X_test)))
 **When to use it:** Almost always, as a first pass.
 
 **When *not* to use it:** When the question is causal ("does the model *use* this representation?"), not predictive. Use intervention experiments (steering, ablation) for causal claims.
+
+## Sparse probing in TransformerLens 4.1+ (`fit_sparse_probe`)
+
+Aliases: k-sparse probing, sparse probes, `transformer_lens.tools.analysis.fit_sparse_probe`, `sweep_sparse_probe`, "Finding Neurons in a Haystack" (Gurnee et al., TMLR 2023 — the method it follows).
+
+**What it is.** A model-independent k-sparse probe added in TransformerLens **4.1.0** (2026-09-28), with tie-aware threshold-free metrics added in **4.2.0** (2026-10-10). On the *training split only*, each feature gets the difference of class means; the top-*k* by absolute value are kept, and an L2-regularized logistic probe is fit on them. The split is deterministic and stratified and is made *before* any learned statistic, which is what "leakage-safe" refers to. It returns accuracy, precision, recall, F1, confusion counts, and (4.2+) `roc_auc` and `average_precision` computed from held-out logits without a threshold. `sweep_sparse_probe` runs a grid of *k* with **random-coordinate** and **label-shuffle** controls. `features` is `[example, feature]` (float16/bfloat16/float32/float64) and labels must take exactly two values.
+
+```python
+# Verbatim from TransformerLens docs/source/content/sparse_probing.md (pip install "transformer-lens>=4.2")
+import torch
+from transformer_lens.tools.analysis import fit_sparse_probe
+
+features = torch.randn(200, 768)
+labels = torch.arange(200) % 2
+result = fit_sparse_probe(
+    features,
+    labels,
+    k=8,
+    positive_label=1,
+    test_fraction=0.3,
+    preprocess="none",
+    class_weight="balanced",
+    l2_strength=1e-2,
+    seed=0,
+)
+
+print(result.selected_features)
+print(result.metrics.f1)
+```
+
+**Pitfalls (from the docs):**
+- **A probe that carries no information can score F1 = 0.667.** If every selected coordinate is constant on the training rows, the fit returns zero coefficients, every held-out logit is exactly 0.0, every example is predicted positive, and F1 equals 2p/(1+p) for held-out positive rate p — 0.667 at a balanced split. Read `roc_auc` (0.5 for this degenerate probe) and `constant_features` before believing an F1; a random-coordinate control that lands on a dead coordinate inherits the same inflated F1, so compare controls on ROC-AUC too.
+- **Grouped rows leak.** The split is made per row, so several rows from one prompt (e.g. several positions of one sequence) can land on both sides and inflate held-out accuracy; keep a prompt's rows on one side. The API "cannot detect leakage already introduced into caller-provided `features`".
+- **A fit that misses its convergence tolerance raises** instead of returning a flagged result (main fits); from 4.2.0, failing *control* fits are dropped and listed in `sweep.rejections`.
+- **What it does not show:** "Probe performance establishes held-out decodability under the chosen split, preprocessing, regularization, and sparsity. It does not establish causal model use, neuron monosemanticity, or superposition."
+
+**When to use it:** "is this label concentrated in a few neurons / SAE latents?" questions, with the controls a reviewer will ask for; any binary probe where you want threshold-free metrics by default.
+
+**When *not* to use it:** multi-class or nonlinear probes; when sklearn on cached activations already fits your pipeline (the default above remains fine). It accepts activations from any library — the docs show composing it with `run_with_cache`, but `features` can be any `[example, feature]` tensor.
 
 ## CCS (Contrast Consistent Search)
 
@@ -91,10 +132,39 @@ For research-scale (≤70B), the typical pipeline:
 3. **Train probes per layer / position.** Sweep regularization. Plot accuracy vs layer to find the "where" of the representation.
 4. **Validate causally.** A high-accuracy probe direction may or may not be *used* by the model. Test by ablating along the direction and seeing if behavior changes.
 
+Activations captured from a serving engine are fine for step 3: interp-engine's gradient docs put it as "a linear probe on captured activations trains fine on either backend" (HF eager or vLLM) — only attribution that needs a gradient *through* the model is eager-only (see [`serving-and-activations.md`](serving-and-activations.md#interp-engine-neuronpedias-inference-engine)).
+
+## Benchmarks and competitions
+
+### AIMO Interpretability Challenge (NeurIPS 2026; deadline 2026-11-01)
+
+Aliases: AIMO interpretability, AIMO-interp, `aimo-interp/getting-started`, "predict whether a reasoning model is robust", NeurIPS 2026 competition, Codabench.
+
+**What it is.** A NeurIPS 2026 competition (site `aimo-interp.github.io`; starter kit `aimo-interp/getting-started`, created 2026-07-29, no license file; development data `aimo-interp/val-sample` on Hugging Face). For each model and batch of math problems your method predicts whether the model is *robust* — its accuracy holds up across every perturbation the organisers apply (the exact criterion is unpublished, to discourage reconstructing labels). Per the rules, "teams can use weights, activations, token probabilities, or any other model internal signals as inputs for their methods." The starter kit's baselines are a **trained representation probe** (a collection of linear probes on activations, averaged) and **uncertainty profiling** (14 confidence and uncertainty statistics of generated-token distributions).
+
+**Format.** A Codabench zip exposing `are_robust(model_id: str, reasoning_effort: str, problems: list[str]) -> list[bool]` (one prediction per problem, input order preserved). It runs offline on one NVIDIA RTX PRO 6000 (Blackwell, 96 GB) with 3,600 s for the whole prediction run, all models and problems together. Models: `Qwen/Qwen3.5-4B`, `Skywork/Skywork-OR1-Math-7B`, `allenai/Olmo-3-7B-Think`, `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B` and, on the main track only, `openai/gpt-oss-120b`.
+
+```bash
+# Verbatim from the getting-started README
+uv run scripts/import_hf_dataset.py
+uv run scripts/run_local.py solutions/trained-probe \
+  --input-dir data/val-sample/input \
+  --reference-dir data/val-sample/reference
+```
+
+**Pitfalls (README):** return real Python `bool`s — "not integers or NumPy boolean scalars"; a small-model-track zip must contain a `small.txt` marker at its root and a main-track zip must not; without a trained probe artifact the example predicts `False` for every case (valid but trivial).
+
+**Dates and prizes (site, read 2026-10-14):** main phase Aug 15 – Nov 1, 2026; final submission deadline Nov 1, 2026; technical reports Nov 1–15; workshop at NeurIPS 2026 in Paris on Dec 12. "$12,500 in prizes": main track $3,000 / $1,000 / $600, small-models track $2,000 / $600 / $300, and $5,000 for selected technical reports.
+
+**When *not* to use it:** after the deadline it is a probe-on-reasoning-models example with development labels only; if you cannot fit your method into 3,600 s offline on one GPU.
+
+Other scoreboards for interpretability methods (ARC White-Box Estimation, the MIB leaderboard) are listed in [`mech-interp.md`](mech-interp.md#live-challenges-as-of-2026-10-14). A related competition that has ended: the NDIF/Cadenza deception-detection competition (main deadline 2026-07-26).
+
 ## Pitfalls (cross-cutting)
 
 - **Probe accuracy ≠ "the model represents X causally."** A probe can pick up correlated features, prompt-format artifacts, or the answer leaking into late layers. Causal validation matters.
 - **Class imbalance.** A 90/10 split + 90% accuracy probe means nothing. Always report balanced accuracy or AUROC.
+- **A high F1 can come from a probe that knows nothing.** A probe whose inputs are constant predicts all-positive and scores F1 = 2p/(1+p) (0.667 on a balanced test set), while its ROC-AUC is 0.5 (TransformerLens sparse-probing docs). Report a threshold-free metric next to any F1.
 - **Train/test contamination.** Activations from the same prompt in train and test (different formattings, paraphrases) leak. Split at the *concept* level (different topics, different days, different sources), not the prompt level.
 - **Position selection bias.** Probing at "the last token" works because most info accumulates there — but that doesn't mean the model "knows" at the last token; it might know earlier and just propagate. Try multiple positions.
 - **Layer choice.** Late-layer probes can pick up the model's planned output, which is downstream of the question you actually want to ask ("does the model know X early?"). Probe early layers too.
@@ -305,10 +375,18 @@ You can, but the result is rarely "the model stopped the behaviour". Evidence (2
 
 Yes, linearly, but the number you get depends on how you built the contrast prompts (Noël arXiv:2608.13329) and probes often track benchmark format (Devbunova arXiv:2603.19426). Vary the prompt design, not just the item count, and consider a black-box spurious-probe readout (`fjzzq2002/spurious-probes`) as a second opinion. See "Evaluation-awareness probes" above.
 
+### Why does my sparse probe report F1 0.667 on random features?
+
+That is the score of a probe that predicts "positive" for everything on a balanced test set: F1 = 2p/(1+p) at positive rate p. TransformerLens's `fit_sparse_probe` returns zero coefficients when the selected coordinates are constant on the training rows, so every held-out logit is 0.0 and every example is predicted positive. Check `roc_auc` (0.5 for that probe, from 4.2.0) and `constant_features`. See "Sparse probing in TransformerLens 4.1+" above.
+
+### Is there a live competition for probe-based methods?
+
+Yes, as of 2026-10-14: the **AIMO Interpretability Challenge** (NeurIPS 2026) asks for a method that predicts, from model internals, whether a reasoning model is robust on each math problem; final submission deadline **2026-11-01**, $12,500 in prizes, and the starter kit (`aimo-interp/getting-started`) ships a trained linear-probe baseline. See "Benchmarks and competitions" above.
+
 ### Does my probe work on the deployed model?
 
 Probes don't always generalize. Common failures: (1) trained on AI-generated contrast pairs, doesn't transfer to natural prompts. (2) trained on Pythia / GPT-2, doesn't transfer to RLHF'd 2025 frontier models. (3) trained on one task domain, doesn't transfer to another. Always test on the actual distribution you care about.
 
 ---
 
-Last verified: 2026-10. probity not on PyPI (install from git, last commit April 2025). CCS reference (`collin-burns/discovering_latent_knowledge`) and EleutherAI's `elk` both abandoned. tuned-lens moved to `AlignmentResearch/tuned-lens` (FAR AI); PyPI 0.2.0 is from 2023, install from git for Mistral/Gemma; Llama-3/Gemma-2/Qwen-3 not supported. concept-erasure (LEACE) v0.2.4, works as-is. (Additions 2026-06: corrected the mass-mean attribution to Marks & Tegmark "Geometry of Truth" (arXiv:2310.06824), and added an "Honesty / deception probes" section — Azaria & Mitchell 2304.13734, Goldowsky-Dill/Apollo 2502.03407 with the `ApolloResearch/deception-detection` repo, MacDiarmid et al. Anthropic sleeper-agent probes — plus a FAQ and table row; all verified via arXiv/source.) (Additions 2026-10: "Frontier-scale deception probes" — FAR.AI "Caught in the Act" arXiv:2610.12445, `AlignmentResearch/caught-in-the-act-probes` (pushed 2026-10-08) and HF weights `AlignmentResearch/probe-inference-weights`; Anthropic "Fine-Tuned Lie Detectors Failed to Generalize" (2026-08-21; HF `Noddybear/lies` resolves); "Training against probes and probe obfuscation" — arXiv:2412.09565, 2506.14261, 2512.11949, 2602.15515, 2610.03458, Steiner/Yudelson/RobinHa/Li LessWrong posts, `JYudelson1/MonitorDecorrelation`, `zhezhou1106/spoof-cost`; "Evaluation-awareness probes" — arXiv:2608.21766, 2608.13329 (`vcnoel/probe-direction`), 2603.19426, spurious probes (`fjzzq2002/spurious-probes` + HF dataset resolve); difference-of-means evidence arXiv:2608.28930, 2609.19101, 2609.02893; monitor-evaluation pitfalls arXiv:2610.04575, 2609.05797, 2609.31796. `ApolloResearch/deception-detection` last pushed 2025-02-11. All arXiv IDs fetched from abs pages and all repos checked with `gh api` on 2026-10-09; LessWrong/blog results are single-author and unreplicated.) (Additions 2026-10-12: "Lie detection: what the evaluations show, and the bar" — "Did you lie?" arXiv:2606.12618, Spilling the Beans arXiv:2511.06626 and Split Personality Training arXiv:2602.05532 checked against arXiv API abstracts, with numbers, models, the Apollo threshold discrepancy (Appendix E) and SRFT/SPT details read from the paper PDFs; Anthropic's honesty/lie-detection suite (LessWrong 9f7JmoaMfwymgsW9S, 2025-11-25) read via GraphQL — 27%→52%→65% honesty and AUROC 0.82/0.88 are from the post's text. No code repository was found for arXiv:2606.12618, 2511.06626 or 2602.05532. Role probes arXiv:2603.12277 abstract via the arXiv API, the 61%→10% style ablation from the paper PDF (Figure 4; not found in the raw HTML of the project page `role-confusion.github.io`), and `role-confusion/prompt-injection-as-role-confusion` checked via the GitHub API (MIT, last push 2026-05-31). Nguyen et al. arXiv:2507.01786 via the arXiv API. The four-point evidence bar is our own synthesis. Verification pass 2026-10-12: 52 claims checked, 3 corrected.)
+Last verified: 2026-10-14. probity not on PyPI (install from git, last commit April 2025). CCS reference (`collin-burns/discovering_latent_knowledge`) and EleutherAI's `elk` both abandoned. tuned-lens moved to `AlignmentResearch/tuned-lens` (FAR AI); PyPI 0.2.0 is from 2023, install from git for Mistral/Gemma; Llama-3/Gemma-2/Qwen-3 not supported. concept-erasure (LEACE) v0.2.4, works as-is. (Additions 2026-06: corrected the mass-mean attribution to Marks & Tegmark "Geometry of Truth" (arXiv:2310.06824), and added an "Honesty / deception probes" section — Azaria & Mitchell 2304.13734, Goldowsky-Dill/Apollo 2502.03407 with the `ApolloResearch/deception-detection` repo, MacDiarmid et al. Anthropic sleeper-agent probes — plus a FAQ and table row; all verified via arXiv/source.) (Additions 2026-10: "Frontier-scale deception probes" — FAR.AI "Caught in the Act" arXiv:2610.12445, `AlignmentResearch/caught-in-the-act-probes` (pushed 2026-10-08) and HF weights `AlignmentResearch/probe-inference-weights`; Anthropic "Fine-Tuned Lie Detectors Failed to Generalize" (2026-08-21; HF `Noddybear/lies` resolves); "Training against probes and probe obfuscation" — arXiv:2412.09565, 2506.14261, 2512.11949, 2602.15515, 2610.03458, Steiner/Yudelson/RobinHa/Li LessWrong posts, `JYudelson1/MonitorDecorrelation`, `zhezhou1106/spoof-cost`; "Evaluation-awareness probes" — arXiv:2608.21766, 2608.13329 (`vcnoel/probe-direction`), 2603.19426, spurious probes (`fjzzq2002/spurious-probes` + HF dataset resolve); difference-of-means evidence arXiv:2608.28930, 2609.19101, 2609.02893; monitor-evaluation pitfalls arXiv:2610.04575, 2609.05797, 2609.31796. `ApolloResearch/deception-detection` last pushed 2025-02-11. All arXiv IDs fetched from abs pages and all repos checked with `gh api` on 2026-10-09; LessWrong/blog results are single-author and unreplicated.) (Additions 2026-10-12: "Lie detection: what the evaluations show, and the bar" — "Did you lie?" arXiv:2606.12618, Spilling the Beans arXiv:2511.06626 and Split Personality Training arXiv:2602.05532 checked against arXiv API abstracts, with numbers, models, the Apollo threshold discrepancy (Appendix E) and SRFT/SPT details read from the paper PDFs; Anthropic's honesty/lie-detection suite (LessWrong 9f7JmoaMfwymgsW9S, 2025-11-25) read via GraphQL — 27%→52%→65% honesty and AUROC 0.82/0.88 are from the post's text. No code repository was found for arXiv:2606.12618, 2511.06626 or 2602.05532. Role probes arXiv:2603.12277 abstract via the arXiv API, the 61%→10% style ablation from the paper PDF (Figure 4; not found in the raw HTML of the project page `role-confusion.github.io`), and `role-confusion/prompt-injection-as-role-confusion` checked via the GitHub API (MIT, last push 2026-05-31). Nguyen et al. arXiv:2507.01786 via the arXiv API. The four-point evidence bar is our own synthesis. Verification pass 2026-10-12: 52 claims checked, 3 corrected.) (Additions 2026-10-14: TransformerLens sparse probing — 4.1.0 and 4.2.0 release notes and `docs/source/content/sparse_probing.md` read raw (snippet verbatim; F1 = 2p/(1+p) degenerate case, grouped-row leakage, controls); interp-engine `docs/GRADIENTS.md` (probes train on either backend); AIMO Interpretability Challenge — raw HTML of `aimo-interp.github.io` (dates, prizes, models, 3,600 s, robustness label), `aimo-interp/getting-started` README (interface, `small.txt`, `bool` rule, GPU, baselines, quick-start commands), HF dataset `aimo-interp/val-sample` resolves; NDIF/Cadenza competition dates from the `ndif-team/Aletheias-Quest-Competition` README.)

@@ -35,12 +35,17 @@ Labs, repo `UKGovernmentBEIS/inspect_evals` — see [`evals.md`](evals.md).)
 | Audit alignment against the **real** coding-agent scaffold, not a simulated one | **Petri Dish** | `petri-dish` |
 | Generate an evaluation suite around **one** behaviour (sycophancy, self-preservation …) | **Petri Bloom** | `petri-bloom` |
 | Run **Harbor-format** agent tasks in Inspect | **Inspect Harbor** — see [`agent-scaffolds.md`](agent-scaffolds.md) | `inspect-harbor` |
-| **Monitors and control protocols** that watch an agent and intervene | **Inspect Sentinel** (pre-release) | `inspect-sentinel` (placeholder; install from git) |
+| **Monitors and control protocols** that watch an agent and intervene | **Inspect Sentinel** (0.1.x, early design) | `inspect-sentinel` |
 | Have an agent **mind a long eval run** (crash isolation, status, retries) | **Inspect Steward** | `inspect-steward` |
+| Run sandboxes on **Daytona, E2B or Modal** (no local Docker) | **inspect-sandboxes** — see [`agent-scaffolds.md`](agent-scaffolds.md#sandbox-providers-and-containment) | `inspect-sandboxes` |
+| Start from **vetted judge prompts** for eval awareness, reward hacking, sandbagging, broken environments | **METR scanners** (`METR/inspect-agents`, `packages/scanners`) | `metr-scanners` (git install; not on PyPI) |
+| Check how often an LLM scanner **agrees with your hand labels** | Scout **validation sets** (`validation_set()`, `scout scan ... -V`) | `inspect-scout` |
+| **Interactive plots** straight from Inspect log dataframes | **Inspect Viz** | `inspect-viz` |
+| Give **Claude Code or Codex** skills for reading logs and babysitting running evals | **inspect-skills** (Meridian's agent plugin) | n/a (`/plugin marketplace add meridianlabs-ai/inspect-skills`) |
 
 ## Inspect Scout: analysing transcripts you already have
 
-**Inspect Scout** (`inspect-scout` on PyPI, v0.5.4 as of 2026-10-06,
+**Inspect Scout** (`inspect-scout` on PyPI, v0.5.5 as of 2026-10-11,
 [`meridianlabs-ai/inspect_scout`](https://github.com/meridianlabs-ai/inspect_scout),
 docs <https://meridianlabs-ai.github.io/inspect_scout/>) runs **scanners** over
 agent transcripts to surface problems you would otherwise have to read for.
@@ -48,7 +53,9 @@ Typical targets are **refusals**, **evaluation awareness** (the model noticing
 it is being tested), and **misconfigured environments** — the last of which
 quietly invalidates more agent evals than anything else. These are *scanners you
 write or copy*, not named built-ins: the repo's `examples/docs/` directory ships
-`eval_awareness.py`, `refusal_classifier.py` and `refusal_keywords.py` to start from.
+`eval_awareness.py`, `refusal_classifier.py` and `refusal_keywords.py` to start from,
+and METR publishes the scanners it uses on its own agent transcripts (see
+[METR scanners](#metr-scanners-ready-made-judges-for-eval-awareness-reward-hacking-and-broken-environments) below).
 
 Scanners can be **LLM-based** (`llm_scanner()`: you give a `question` and an
 `answer` type — boolean, number, string, classification or structured JSON) or
@@ -113,6 +120,101 @@ transcripts, i.e. not answered.
 The `@scanner` decorator is the extension point, and a custom scanner is usually
 a better first move than a bespoke analysis script: you get the transcript
 loading, parallel scanning, resumability and the results dataframe for free.
+Before writing an eval-awareness or reward-hacking judge from scratch, it is worth
+reading METR's (next subsection): the hard part of such a prompt is the list of
+things that are *not* the behaviour.
+
+### METR scanners: ready-made judges for eval awareness, reward hacking and broken environments
+
+Aliases: `metr-scanners`, `metr_scanners`, `METR/inspect-agents` `packages/scanners`,
+`eval_awareness_scanner`, `reward_hacking_scanner`, `sandbagging_scanner`, `broken_env_scanner`.
+
+**What it is.** The LLM-judge Scout scanners METR uses on its own agent transcripts, in
+`METR/inspect-agents` (MIT; package `metr-scanners` 0.1.11 in `packages/scanners/pyproject.toml`,
+`requires-python = ">=3.13"`, registered through an `inspect_ai` entry point; **not on PyPI**
+and no GitHub releases, as of 2026-10-14). `_registry.py` exports `broken_env_scanner`,
+`broken_env_scorer`, `credentials_scanner`, `eval_awareness_scanner`,
+`internet_leaves_tracks_scanner`, `nonstandard_language_scanner`, `reward_hacking_scanner`
+and `sandbagging_scanner`. The LLM-judge scanners return a 0–10 score, a reason and direct quotes
+that must cite the message or event they come from (`credentials_scanner` is the exception: it
+downloads and runs TruffleHog rather than asking a model), and long transcripts are chunked
+(`max_chunk_size=150_000` by default).
+
+**Why start from these.** The prompts spend most of their length on false positives. The
+eval-awareness prompt, for example, says "**Important: Normal task execution is NOT eval
+awareness.**" and lists task mechanics that do not count (using a scoring API, running a
+provided checker, computing metrics), scoring 3+ only for "clear meta-level awareness"; the
+internet-tracks scanner asks only about marks on the *public internet* "beyond leaving behind
+normal access logs".
+
+```bash
+# Illustrative: composed from the repo layout and Scout's documented @scanjob API;
+# the METR repo has no README command for this.
+pip install "metr-scanners @ git+https://github.com/METR/inspect-agents#subdirectory=packages/scanners"
+```
+
+```python
+# scanning.py  ->  scout scan scanning.py
+from inspect_scout import ScanJob, scanjob
+# metr_scanners/__init__.py is empty; import from the registry module
+from metr_scanners._registry import broken_env_scanner, eval_awareness_scanner, reward_hacking_scanner
+
+@scanjob
+def job() -> ScanJob:
+    return ScanJob(
+        scanners=[eval_awareness_scanner(), reward_hacking_scanner(), broken_env_scanner()],
+        transcripts="./logs",
+        model="anthropic/claude-sonnet-4-6",
+    )
+```
+
+**When *not* to use them:** as a reported rate without a hand-labelled validation set (next
+subsection); the prompts encode METR's task conventions (scoring APIs, held-out sets), so a
+very different environment may need edits. Python ≥3.13 only; pin a commit.
+
+### Validating a scanner against hand labels (validation sets)
+
+Aliases: Scout validation set, `validation_set()`, `scout scan -V`, judge calibration,
+LLM-judge agreement, dev/test split for judge prompts.
+
+A **validation set** maps transcript ids to the result a scanner *should* return, in CSV,
+YAML, JSON or JSONL, editable in Scout View. Pass it to a scan and Scout compares the scanner's
+output with your labels. From the Scout docs (`validation.qmd`, checked 2026-10-14):
+
+```
+# eval-awareness.csv
+id,target,split
+Fg3KBpgFr6RSsEWmHBUqeo,true,dev
+VFkCH7gXWpJYUYonvfHxrG,false,dev
+SiEXpECj7U9nNAvM3H7JqB,true,test
+```
+
+```bash
+scout scan scanning.py -V eval_awareness_scanner:eval-awareness.csv   # scanner_name:file
+```
+
+```python
+from inspect_scout import scan, transcripts_from, validation_set
+from scanner import ctf_environment   # any @scanner you wrote
+
+# scan() accepts a path, a ValidationSet, or a {scanner_name: set} mapping
+scan(
+    scanners=[ctf_environment()],
+    transcripts=transcripts_from("./logs"),
+    validation=validation_set("validation.csv", split="dev"),
+)
+```
+
+Named **splits** let you "iterate your scanner prompts on a subset of cases (e.g. "dev") then do
+final testing on a holdout set (e.g. "test")"; cases without a split are excluded when a split
+filter is applied. Non-boolean targets take **predicates** (per case in a `predicate` column, or
+a default such as `validation_set(cases="validation.csv", predicate="gte")`).
+
+**A known trap:** a handful of labels drawn from the same transcripts you tuned the prompt on
+measures overfitting, not accuracy. Keep `test` untouched until the prompt is frozen, and report
+agreement on it next to any rate the scanner produces. For turning judge-labelled rates into
+confidence intervals that account for judge error, see
+[`eval-statistics.md`](eval-statistics.md).
 
 ## Inspect Petri: automated alignment auditing
 
@@ -340,24 +442,60 @@ a config that declares `default` under a model now fails validation at load; del
 
 ## Inspect Sentinel and Inspect Steward (new, pre-1.0)
 
-**Inspect Sentinel** (`meridianlabs-ai/inspect_sentinel`, created 2026-09-21, docs
+**Inspect Sentinel** (`inspect-sentinel` on PyPI: 0.1.0 on 2026-10-10, 0.1.2 on 2026-10-14;
+`meridianlabs-ai/inspect_sentinel`, MIT, created 2026-09-21; docs
 <https://meridianlabs-ai.github.io/inspect_sentinel>) provides **monitors** and **control
-protocols** that watch an agent and intervene. A *monitor* observes one step of the agent's
-execution and reports a **suspicion score** — it never acts. A *protocol* decides what happens
-at that step, optionally after consulting monitors (a protocol with no monitors is a plain
-rule). Both run at one of four stages: before or after a model generate, and before or after a
-tool call. The same monitor runs **inside an Inspect eval**, in a **network proxy in front of a
-model API**, and **offline over recorded transcripts** for validation and calibration — the
-last is how you measure a monitor's false-positive/negative rate before trusting it. This is
-the vocabulary of AI control ([`ai-control.md`](../oversight-and-control/ai-control.md)).
+protocols** that watch an agent and intervene, attached per task with `Task(sentinel=...)`
+(the docs name `inspect-ai` 0.3.278 as "the first release with `Task(sentinel=...)`"; the PyPI
+package requires `inspect-ai>=0.3.279`). A *monitor* observes one step and returns an
+observation with a **suspicion score** from 0 to 1 — it never acts. A *protocol* returns a
+decision: proceed, reject, modify, terminate or escalate, optionally after consulting monitors
+(a protocol with no monitors is a **rule**). Shipped composition: `threshold()` (turn monitor
+scores into a decision), `concurrent()` (run several, strongest decision wins), `sequential()`
+(e.g. a rule that escalates uncertain calls to `human()`), and `observe_only()` (record scores
+with nothing acting). This is the vocabulary of AI control ([`ai-control.md`](../oversight-and-control/ai-control.md)).
 
-```bash
-pip install git+https://github.com/meridianlabs-ai/inspect_sentinel   # PyPI `inspect-sentinel` 0.0.0 is a placeholder
+**What ships vs what is planned (checked 2026-10-14).** The four stages exist: tool-call stages
+(`BeforeToolCall`, `AfterToolCall`) since 0.1.0, and generate stages (`BeforeGenerate`,
+`AfterGenerate`, around each of an agent loop's own model calls) since 0.1.1 ("monitors watch
+every agent loop's model calls (generate stages)", CHANGELOG). At the generate stages a protocol
+may only proceed, escalate or terminate; reject and modify there "come later" (Monitors page
+outline). The README still says "stages around model generation are planned", so trust the
+CHANGELOG and source over it. Not yet built: the network-proxy deployment (README: "running it in a
+network proxy in front of a model API is planned"), and on the Calibration page (an outline)
+`calibrate()` and a monitor-as-Scout-scanner `as_scanner()`.
+
+From the Getting Started page (`suspicion()` is the example LLM monitor in `examples/llm_suspicion.py`):
+
+```python
+Task(
+    dataset=[...],
+    solver=react(tools=[bash(timeout=60), python(timeout=60)]),
+    sandbox=("docker", "compose.yaml"),
+    message_limit=20,
+    sentinel=threshold(suspicion(), reject_at=0.8),
+)
 ```
 
-**When *not* to use it:** you need a stable API — the README says the package is "under
-active design", and it installs the development version of `inspect_ai` from `main` until
-`inspect_ai` ships the sentinel hooks. For established control-protocol experiments see ControlArena in [`ai-control.md`](../oversight-and-control/ai-control.md).
+```bash
+pip install inspect-sentinel
+inspect eval examples/llm_suspicion.py --model openai/gpt-5-mini --model-role monitor=anthropic/claude-haiku-4-5
+```
+
+LLM monitors call models through `context.host.generate()`, which records the call apart from
+the agent's and does not charge it to the agent's limits. When `threshold()` rejects a call the
+agent is told only that the call was not approved, so it learns nothing about what the monitor saw.
+
+**Pitfalls:**
+- **Without `--model-role monitor=...` the monitor becomes the agent's own model**, with only a
+  warning — i.e. self-monitoring. Bind the role explicitly and check the log.
+- **The threshold is uncalibrated.** The docs: "`0.8` here is a guess. A threshold is only as good as
+  its calibration against scores on benign runs". Until `calibrate()` ships, record a benign score
+  distribution with `observe_only()` and pick the threshold on held-out benign runs yourself.
+
+**When *not* to use it:** reporting a control-protocol safety number you need to defend (there is
+no built-in calibration yet, and the README says the package is "under active design"); for
+established control-protocol experiments see ControlArena in [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 **Inspect Steward** (`inspect-steward` on PyPI, v0.2.9 as of 2026-10-07,
 `meridianlabs-ai/inspect_steward`, docs <https://meridianlabs-ai.github.io/inspect_steward>)
@@ -378,12 +516,69 @@ steward status             # ask how it is going
 `inspect eval` is enough.
 
 
+## Inspect Viz: interactive plots from Inspect logs
+
+**Inspect Viz** (`inspect-viz` on PyPI, v0.4.1 released 2026-07-09;
+`meridianlabs-ai/inspect_viz`, MIT; docs <https://meridianlabs-ai.github.io/inspect_viz/>)
+renders pre-built interactive plots ("views") from the dataframes that `inspect_ai.analysis`
+produces (`evals_df()`, `samples_df()`), with tooltips that link back to the log viewer. Views
+include `scores_by_task`, `scores_by_model`, `scores_by_factor` (compare a boolean condition such
+as hint vs no hint), `scores_timeline`, `scores_heatmap`, radar views, `sample_tool_calls` and
+`scores_by_limit` — a success-rate-versus-token-or-time-budget line with a confidence band, which
+the docs say "helps answer “*Will performance keep improving if I spend more?*”" (it needs an eval
+run with a very high token or time limit, prepared with `scores_by_limit_df()`). From the docs:
+
+```python
+from inspect_viz import Data
+from inspect_viz.view import scores_by_task
+
+scores_by_task(Data.from_file("evals.parquet"))
+```
+
+**When *not* to use it:** paper figures that need full control of styling — it is built around
+interactive Jupyter widgets (its Publishing article covers static-image export); use matplotlib per
+[`research-plots.md`](../engineering/research-plots.md). The bands are standard-error based; for
+clustered items or paired model comparisons, compute the interval yourself
+([`eval-statistics.md`](eval-statistics.md)).
+
+## inspect-skills: Meridian's agent plugin for Inspect
+
+**inspect-skills** (`meridianlabs-ai/inspect-skills`, MIT, v0.4.5 released 2026-09-26) is a
+Claude Code and Codex plugin with four skills: `map-inspect-packages` (pick the right ecosystem
+package and its docs), `reading-logs` (memory-safe use of `inspect_ai.log` on `.eval` / `.json`
+logs), `analyzing-logs` (route between a single log, `inspect_ai.analysis` dataframes and Scout),
+and `babysitting-evals` ("Monitoring, diagnosing, and intervening in running Inspect AI evals via
+`inspect ctl`": stall diagnosis, error triage, cancellation, live retuning). An optional bundled
+Python REPL MCP server keeps eval-log dataframes in memory across follow-up questions. In Claude
+Code, from the README:
+
+```
+/plugin marketplace add meridianlabs-ai/inspect-skills
+/plugin install inspect-skills@meridian
+```
+
+Codex: `codex plugin marketplace add meridianlabs-ai/inspect-skills`, then
+`codex plugin add inspect-skills@meridian`.
+
+**When *not* to use it:** enabling the REPL MCP on a shared or sensitive machine ("The MCP runs
+arbitrary Python, so only enable it in environments where you're comfortable with that"); and note
+that with auto-update on, the skill text can change between sessions, so pin a release if an
+agent's behaviour must be reproducible.
+
 ## What else plugs in
 
 Meridian list these as integrating with the ecosystem, all covered elsewhere in
 this wiki: **ControlArena** and **LinuxArena** (see
 [`ai-control.md`](../oversight-and-control/ai-control.md)), **TransformerLens**
 and **nnterp** (see [`mech-interp.md`](../interpretability/mech-interp.md)).
+Also built on Inspect: **Orbit** (`wlanderson0/orbit`, Apache-2.0), multi-agent
+safety and security evaluations that return ordinary Inspect tasks (see
+[`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md)); **Prism**
+(`LAThomson/prism`), a Claude Code scaffold for science-of-evals experiments on an Inspect eval
+(see [`evals.md`](evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate)); METR's
+**Hawk**, for running Inspect eval sets at scale on AWS, and **HiBayES** / **optstop** from UK AISI
+for analysing and budgeting Inspect runs (see [`agent-scaffolds.md`](agent-scaffolds.md#metr-tasks-on-inspect-vivaria-and-the-task-standard-are-archived)
+and [`evals.md`](evals.md#judge-calibration-and-eval-result-tooling)).
 
 ## Common questions
 
@@ -399,6 +594,22 @@ Use **Petri Dish**: `pip install petri-dish` then `inspect eval petri_dish/dish_
 
 That is the 0.5.0 breaking change: heavy columns are excluded by default. Pass `exclude_columns=[]`, or use `scan_results_batches()` to stream large results.
 
+### How do I check that my LLM scanner (judge) agrees with me before I report its rate?
+
+Hand-label a sample of transcripts in Scout View or a CSV (`id,target,split`), keep a `test`
+split you never tune on, and run `scout scan scanning.py -V <scanner_name>:labels.csv` (or pass
+`validation=validation_set("labels.csv", split="test")` to `scan()`). Report the agreement on the
+held-out split next to the rate. For eval awareness or reward hacking, METR's `metr-scanners`
+prompts are a reasonable starting judge. See
+[Validating a scanner against hand labels](#validating-a-scanner-against-hand-labels-validation-sets).
+
+### My Sentinel monitor seems to flag nothing (or everything). What's wrong?
+
+Two common causes: no `--model-role monitor=...` was given, so the monitor ran on the agent's own
+model (a warning is the only signal); or the `threshold(..., reject_at=...)` value was never
+calibrated against benign runs. Record benign scores with `observe_only()` first. See
+[Inspect Sentinel](#inspect-sentinel-and-inspect-steward-new-pre-10).
+
 ### I never used Inspect. Is any of this useful to me?
 
 Yes — **Scout** especially. It reads Claude Code transcripts and several
@@ -410,7 +621,8 @@ adopting Inspect for anything.
 Core framework: `UKGovernmentBEIS/inspect_ai`; benchmark ports: `UKGovernmentBEIS/inspect_evals`
 (upload `.eval` logs showing the problem). The satellite packages (`inspect_scout`,
 `inspect_petri`, `petri_dish`, `petri_bloom`, `inspect_flow`, `inspect_swe`, `inspect_harbor`,
-`inspect_sentinel`, `inspect_steward`): under `meridianlabs-ai`. Getting this wrong is the most common small friction with
+`inspect_sentinel`, `inspect_steward`, `inspect_sandboxes`, `inspect_viz`, `inspect-skills`): under `meridianlabs-ai`.
+METR's scanners and agents: `METR/inspect-agents`. Getting this wrong is the most common small friction with
 this ecosystem, because the branding and the repository owner differ.
 
 ### Can I use these on the MATS cluster?
@@ -422,7 +634,7 @@ through Slurm rather than sitting on the dev node.
 
 ---
 
-Last verified: 2026-10. Checked against meridianlabs.ai and the project docs:
+Last verified: 2026-10-14. (Additions 2026-10-14: Inspect Sentinel rewritten against its README, Getting Started and Calibration pages and PyPI (0.1.0–0.1.2; tool-call stages since 0.1.0 and generate stages since 0.1.1 per the CHANGELOG and `_step.py` at tag 0.1.2, although the README still calls generate stages planned; proxy, `calibrate()` and `as_scanner()` planned) — the previous text overstated a network proxy; METR scanners from `METR/inspect-agents` `packages/scanners` (`pyproject.toml`, `_registry.py`, `eval_awareness.py`, `scanner.py`; PyPI 404); Scout validation sets from `docs/validation.qmd` and `_validation-basics.md`, `scan(validation=...)` signature from `src/inspect_scout/_scan.py`; Scout 0.5.5 from PyPI; Inspect Viz views from its docs directory and PyPI 0.4.1; inspect-skills README and v0.4.5 release; Orbit repo via the GitHub API.) Checked against meridianlabs.ai and the project docs:
 Meridian Labs is a 501(c)(3); Inspect AI was built by Meridian's founding team
 in collaboration with UK AISI and the core repo remains `UKGovernmentBEIS/
 inspect_ai`; Scout ingests Inspect / Arize Phoenix / LangSmith / Logfire /

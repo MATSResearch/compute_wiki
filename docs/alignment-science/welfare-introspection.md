@@ -91,7 +91,7 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 - Effect is real but limited to simple tasks.
 - Distinct from the activation-injection approach (Lindsey et al. 2025) — this is *behavioral*, that one is *internal-state*.
 
-**Tools:** OpenAI/Anthropic finetune APIs for closed models; TRL or Tinker for open (see [`rl-training.md`](../oversight-and-control/rl-training.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
+**Tools:** closed-model finetuning APIs where still available (OpenAI's is winding down — [dates](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14)); TRL or Tinker for open models (see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
 
 **Pitfalls:**
 - **The self-prediction format itself is learnable.** M2 trained on M1's behavior does *some* of the job; the test is whether M1 still beats M2. Compute the gap; small gaps are weak evidence.
