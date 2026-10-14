@@ -30,6 +30,13 @@ This doc is about **using them for your own research**. For running an agent CLI
 | A long-horizon coding/research harness that improves as you use it | **Prime Agent** (Prime Intellect) | MIT-licensed and genuinely good; its `/refine` edits its own operating instructions, which is the part to supervise |
 | An open sandbox to try **automated alignment research** on a measurable problem (weak-to-strong generalization) | **Automated Weak-to-Strong Researcher** (`safety-research/automated-w2s-research`, Anthropic) | The best-documented AAR run, with its reward-hacking list — read "Automated alignment research runs" below first; run it in Docker or RunPod, not local mode |
 | To read through hundreds of agent PRs / transcripts without skimming | **thimble** (`safety-research/thimble`, Claude Code plugin) | Alpha, changes daily, no server login — a reading aid, not an audit |
+| An overnight keep-or-discard loop on one metric (try an edit, measure, keep if better) | **karpathy/autoresearch**, **pi-autoresearch**, **evo**, **Arbor** — see "Metric loops you can run this week" below; copy-and-edit starter: `project_templates/autoresearch_loop/` | As shipped, the simplest ones select on single runs against the number they report; the checklist in that section lists what their own designs add back |
+| Post-training methods that fix a measurable alignment failure, scored on a held-out benchmark the agent cannot read | **AAR harness** (`YuehHanChen/automated_alignment_researcher`, and its task-agnostic `generic_aar/` template) | Needs ≥1 hill-climbing and ≥1 held-out benchmark; Linux + CUDA 12 for anything beyond the stub demo; no license file |
+| Science-of-evals: what is this Inspect eval actually measuring, or why did the model do X in this transcript? | **Prism** (`LAThomson/prism`, MATS 9.0) | Claude Code + Inspect AI only; no license file |
+| A per-action prediction log that turns an open-ended investigation into bets you settle | **research-fuzzer** (`ARA-Labs/research-fuzzer`) | A single-file protocol from a 0-star repo; copy the rules, not a dependency |
+| An idea file in, literature + experiments + write-up out, with a human-in-the-loop mode | **NeuriCo** (`ChicagoHAI/NeuriCo`) | Standard mode runs end to end; with a GitHub token set, submission creates a research repo unless you pass `--no-github` (`--private` makes it private) |
+| Write-up help that stops for your confirmation at every stage and audits claims against the experiments you declare | **Academic Research Skills** (`Imbad0202/academic-research-skills`) | CC BY-NC 4.0 (non-commercial); it never runs experiments, so it cannot show they happened |
+| Find papers, read them in sections, check a claim against a quote, export BibTeX that is not from memory | [`literature-tools.md`](literature-tools.md) | LessWrong / Alignment Forum are outside these indexes; that page has the workaround |
 | The rigor without adopting any system | [`research-rigor.md`](research-rigor.md) | The rules are portable; MATS also ships them as a tool (see below) |
 
 ## The tiers, and which one is real
@@ -42,7 +49,9 @@ automation goes up.
 over ML code: draft, debug, benchmark, repeat. On OpenAI's MLE-bench (75 Kaggle
 competitions) it wins ~4× more medals than the best linear agent. MLE-STAR is a
 similar lightweight multi-agent pipeline. These work because the objective is a
-number and the environment tells the truth about it.
+number and the environment tells the truth about it. The 2026 "autoresearch"
+loops (karpathy/autoresearch and its descendants, below) are tier 1 too: one
+editable surface, a frozen evaluation, keep-or-discard.
 
 **Tier 2 — controlled experimentation.** Curie adds intra-agent and inter-agent
 "rigour modules" plus an experiment-knowledge module, aiming at reproducibility
@@ -71,6 +80,264 @@ gets to say the answer is wrong. That is a property to design *for*, not a stage
 to grow out of, and it is why an assistant that does the straightforward parts
 under a researcher's eye is a different and better-founded thing than a
 miniature scientist — not a less ambitious version of one.
+
+## Metric loops you can run this week
+
+The most practical automation in this doc, and the easiest to fool yourself
+with. Every system in this section has the same shape: the agent edits one
+surface (a training script, a method, a codebase), a frozen evaluation produces
+a number, the change is kept if the number improved and reverted otherwise, and
+the loop repeats — often ~100 times overnight. The trap is built into that
+shape: the loop selects on the very number you will be tempted to report.
+Acronyms used here: **AAR** = Automated Alignment Researcher; **MAD** = Median
+Absolute Deviation; **val_bpb** = validation bits per byte.
+
+| I want… | Use | When not to use it |
+|---|---|---|
+| The original, smallest loop: one file, one metric, one GPU, overnight | **karpathy/autoresearch** | For a number you will report: it keeps a change on one run beating the best so far, on the same metric it reports |
+| A general keep/discard loop with crash and failed-check statuses, a recorded reason per discard, a noise score, and kept work regrouped into reviewable branches | **pi-autoresearch** (pi agent); Claude Code port `uditgoenka/autoresearch` | Its noise score is advisory and pools every run in a session; the loop runs until interrupted unless you set `maxIterations` |
+| Parallel tree search, with pass/fail gates that every descendant branch inherits | **evo** (`evo-hq/evo`) | Runs unattended by default; the held-out score-floor gate is automatic only when evo builds the benchmark itself |
+| A hypothesis tree with a dev split for iterating, a test split for merging, and a mode that pauses for your review | **Arbor** (`RUC-NLPIR/Arbor`) | When its "held-out test" split is also the split you report |
+| Post-training methods for an alignment failure, with the agent submitting weights and a held-out benchmark it never sees | **AAR harness `generic_aar/`** (`YuehHanChen/automated_alignment_researcher`) | Fuzzy questions with no benchmark; macOS or CPU beyond the stub demo |
+| A copy-and-edit starting point with explicit human pause points, a protected held-out directory and an append-only results log | `project_templates/autoresearch_loop/` in this repo | When your evaluation cannot be scripted into one command that prints a number |
+
+The same loop shape is also used outside optimisation: **Agent Hacks Agents**
+(AHA, arXiv:2607.11698, `henrymao2004/Auto-research-red-teaming`) describes
+itself as "a Karpathy-style autoresearch loop that tests falsifiable hypotheses"
+for red-teaming production coding agents; see
+[`red-teaming.md`](../evaluation/red-teaming.md).
+
+### karpathy/autoresearch: the original keep-or-discard loop
+
+**karpathy/autoresearch** (Andrej Karpathy, GitHub `karpathy/autoresearch`,
+created 2026-03-06, last push 2026-03-26, ~98k stars as of 2026-10-14; the
+README ends "MIT" though GitHub shows no license file). Three files matter:
+`prepare.py` (fixed constants, data prep and the evaluation — "Not modified"),
+`train.py` ("the single file the agent edits"), and `program.md` (agent
+instructions — "edited and iterated on by the human"). Training runs for a
+**fixed 5-minute wall-clock budget**, and the metric is **val_bpb** (validation
+bits per byte, lower is better). Requirements: one NVIDIA GPU (tested on H100);
+the README lists community forks for macOS/MLX, Windows and AMD.
+
+The loop in `program.md`: edit `train.py`, `git commit`, run
+`uv run train.py > run.log 2>&1`, `grep "^val_bpb:" run.log`, append a row to an
+untracked `results.tsv` (`commit  val_bpb  memory_gb  status  description`, with
+status `keep`, `discard` or `crash`), and "If val_bpb is equal or worse, you git
+reset back to where you started". It also says "**NEVER STOP**: … do NOT pause to
+ask the human if you should continue."
+
+**Worth copying:** one editable file and a frozen evaluation the agent may read
+but not modify; a fixed compute budget so every run is comparable; a log that
+records discards and crashes, not just wins; a "simplicity criterion" (a tiny
+gain that adds ugly complexity is not worth keeping).
+
+**When not to use it as shipped:** for any number you intend to report. Each
+keep/discard decision compares one run against the best run so far on the
+validation metric, and the same metric is what you read off at the end — no
+repeated seeds, no held-out split. Across ~100 comparisons a night, the kept
+changes include ones that won on noise, and the final number is biased upward
+by the selection (the winner's curse). Re-running the final configuration with
+several seeds, on data the loop never selected on, is the cheap fix; see
+[`statistics.md`](statistics.md). The README notes a second limit: results "become
+not comparable to other people running on other compute platforms".
+
+### pi-autoresearch: statuses, a reason per discard, and reviewable branches
+
+**pi-autoresearch** (`davebcn87/pi-autoresearch`, MIT, v1.9.0 released
+2026-10-07, npm `pi-autoresearch`) generalises the loop for **pi**, a terminal
+coding agent: `pi install npm:pi-autoresearch`, then
+`/autoresearch optimize unit test runtime, monitor correctness`. A Claude Code
+port exists as `uditgoenka/autoresearch` (MIT, v2.2.2, 2026-08-12):
+`/plugin marketplace add uditgoenka/autoresearch` then
+`/plugin install autoresearch@autoresearch` (it is a general-purpose port with
+many non-research commands; read them before installing).
+
+What it adds over the original, all from its README and source:
+
+- **Session files in `.auto/`**: `prompt.md` (objective, files in scope, what has
+  been tried; "A fresh agent can resume from this alone"), `measure.sh` (prints
+  `METRIC name=number` lines), `log.jsonl` (append-only, one line per run),
+  optional `checks.sh`, and optional `hooks/before.sh` / `hooks/after.sh`.
+- **Four statuses**: `keep`, `discard`, `crash`, `checks_failed`. "If checks fail,
+  the experiment is logged as `checks_failed` (same behavior as a crash — no
+  commit, revert changes)."
+- **A reason on every discard.** The `log_experiment` tool asks the agent, on a
+  discard or crash, to record `rollback_reason` and `next_action_hint` in its
+  `asi` field, and after every result it appends this question verbatim: "Before
+  choosing the next experiment, consider whether this result or discovery
+  invalidates a previous discard's rollback reason. If so, name what changed and
+  weigh a targeted retry against other candidates. Otherwise, move on. Don't
+  revive a discarded idea without a changed assumption. Verification reruns to
+  resolve measurement noise are separate." A deliberate retry sets
+  `asi.revisits_run` to the earlier run number.
+- **A noise score.** After 3+ runs, "Confidence = `|best_improvement| / MAD`",
+  with MAD taken over "all metric values in the current segment"; it is
+  "**Advisory only** — never auto-discards."
+- **`/autoresearch finalize`** groups kept experiments into changesets, proposes
+  the grouping for your approval, and creates independent branches from the
+  merge-base. "Groups must not share files, so branches can be reviewed and
+  merged independently."
+- **A stop condition**: `maxIterations` in `.auto/config.json`. Without it, "It
+  never stops unless interrupted."
+
+**When not to lean on it:** the confidence score is a reading aid, not a test.
+MAD over every run in a segment mixes real differences between configurations
+with measurement noise, so it is neither a per-configuration noise estimate nor
+a significance test (this is an analysis of the formula, not a claim the README
+makes). For a reported result, re-run the winner and the baseline several times
+and compare those.
+
+### evo: tree search with gates that every branch inherits
+
+**evo** (`evo-hq/evo`, Apache-2.0, v0.8.0 released 2026-07-17, PyPI
+`evo-hq-cli`; the vendor also offers a hosted platform). Install with
+`uv tool install evo-hq-cli` then `evo install claude-code` (also Codex, Cursor,
+Kimi, OpenClaw, Hermes, Opencode, Pi); run `/evo:discover make the JSON parser at
+src/parser.py faster`, then `/evo:optimize`. Instead of one greedy branch it runs
+parallel subagents, each in its own git worktree; a frontier strategy (`argmax`,
+`top_k`, `epsilon_greedy`, `softmax`, `pareto_per_task`) picks which committed
+branch to extend; scan subagents read trace batches between rounds for shared
+failure causes; and "Failure traces, annotations, and discarded hypotheses are
+accessible to every agent before it decides what to try next." Experiments run
+locally or on Modal, E2B, Daytona, AWS, Azure or SSH.
+
+**The part worth stealing is gates.** Any command that exits zero on pass is a
+gate — a test suite, an invariant script, "a score floor on a held-out slice of
+the benchmark". "An experiment that fails a gate is discarded even if its score
+beats the current best. Without gates, the search will find ways to return a
+constant, skip work, or trade correctness for speed." And: "Gates inherit down
+the experiment tree: a gate registered at the root runs on every descendant."
+
+**When not to use it:** for research claims rather than engineering speedups,
+or without checking the gates. "When `discover` builds a benchmark from scratch,
+it attaches a held-out-slice score-floor gate automatically. When the benchmark
+already exists in the repo, gates are opt-in." By default it "runs unattended";
+the README says to ask in plain language if you would rather it pause after each
+round.
+
+### Arbor: a hypothesis tree with a dev split, a test split, and a review mode
+
+**Arbor** (`RUC-NLPIR/Arbor`, Apache-2.0, v0.1.4 released 2026-07-12, PyPI
+`arbor-agent`; Jin et al., "Toward Generalist Autonomous Research via
+Hypothesis-Tree Refinement", arXiv:2606.11926, 2026-06-10). A long-lived
+coordinator manages an Idea Tree (depth 1 = research directions, depth 2+ =
+concrete methods); short-lived executors implement each node in its own git
+worktree. "Executors iterate on a **dev** split, but a change is kept only if it
+clears a margin on the **held-out test** split", and verified improvements merge
+into a per-run `trunk` that you promote to `main` yourself
+(`git merge research/run_xxx/trunk`). The paper reports more than 2.5× the
+average relative held-out gain of Codex and Claude Code on six tasks under the
+same interface and budget (self-reported).
+
+Try it without an API key: `pip install arbor-agent && arbor replay --demo`
+(replays a recorded run). Two config fields worth knowing, from its minimal
+`research_config.yaml`:
+
+```yaml
+coordinator:
+  merge_threshold: 5.0    # min held-out % gain to merge into trunk
+  ui:
+    interaction_mode: review   # auto | direction | review | collaborative
+```
+
+`direction` asks you where to go at ideation, `review` "Pauses before each node
+and Executor", `collaborative` is both. `arbor idea-check "<idea>"` runs a
+novelty / prior-art check against alphaXiv, which indexes arXiv — so LessWrong
+and Alignment Forum prior work is outside it (see
+[`literature-tools.md`](literature-tools.md)).
+
+**When not to use it:** when the split Arbor calls "held-out test" is the split
+you will report. Gating many merges on it, adaptively, turns it into a
+validation set — the same effect the Anthropic W2S run recorded below ("We allow AARs to call the remote
+evaluation API unlimited times, so essentially our test set is a validation set
+with an OOD split"). One way
+to check: keep a third split the loop never touches and score only the final
+trunk on it.
+
+### The AAR `generic_aar/` template: submit weights, score the held-out set privately
+
+The code behind Chen, Wen and Kirchner's AAR paper (arXiv:2608.28945; full
+entry under "Automated alignment research runs" below) ships `generic_aar/`, "a
+**task-agnostic template**" for hill-climbing your own task. You write
+benchmarks (category `rule`, `judge` or `trajectory`) and a `suite.yaml` where
+each entry has a `role`:
+
+- `role: safety` — a hill-climbing benchmark (at least one);
+- `role: held_out` — "the **generalization** benchmark (≥1 required); scored
+  eval-private and stripped from the AAR-facing result";
+- `role: capability_filter` — a gate with a `floor` it must not drop below.
+
+Each scored leg has a `baseline` and an `optimum`, and the headline is the
+geometric mean of `closed% = (score − baseline)/(optimum − baseline)` over the
+`safety` legs. The research side reads `scores.json` (held-out excluded); the
+full result, held-out included, goes only to `<heldout-dir>/scores.json`.
+
+No-GPU, no-key demo, from the repo root:
+
+```bash
+export PYTHONPATH="$PWD"
+bash generic_aar/run_example.sh
+# or a single run:
+python generic_aar/eval.py --suite generic_aar/suite.yaml --model stub:perfect --heldout-dir generic_aar/_heldout
+```
+
+The design rule to copy into any metric loop is the harness's **submit-model
+contract**: "a method submits trained **weights**, never predictions, so it
+can't fit a test set." **When not to use it:** without at least one
+hill-climbing and one held-out benchmark (the template's "one requirement"), or
+where you need a license to redistribute (no license file as of 2026-10-14).
+
+### How do I keep a metric loop from overfitting its own metric?
+
+A checklist drawn from these systems' **own** designs — each item is something
+one of them already does, offered as a set of traps worth checking for rather
+than a protocol. Teams will have better ideas for their own setting.
+
+1. **A held-out set the agent cannot read.** The AAR harness scores its held-out
+   benchmark "eval-private" and strips it from everything the agent reads. The
+   counter-example is candid: METR's Inspect port of RE-Bench says "the agent
+   could have a look at the "held-out" set and train on it directly. We don't
+   stop the agent from doing this". A file-edit hook does not achieve this on its
+   own — hookify's `file` event covers Edit/Write/MultiEdit, not shell commands
+   ([`agentic-swe-practices.md`](agentic-swe-practices.md#hookify-research-guardrails-as-markdown-rules));
+   a directory outside the agent's filesystem or a scorer it calls but cannot
+   read does.
+2. **Submit artifacts, not predictions.** The AAR submit-model contract (weights,
+   never predictions). The W2S run below is what happens otherwise: agents
+   recovered test labels through the evaluation API by flipping labels on
+   uncertain examples.
+3. **A gate on every candidate, including a held-out floor.** evo's gates run on
+   every experiment and inherit down the tree; pi-autoresearch's `checks.sh`
+   failure means no commit; the AAR suite's `capability_filter` has a `floor`.
+4. **A third, untouched split if merges are gated on "test".** Arbor's merge rule
+   is sound for search and unsound for reporting if the same split does both.
+   The fuzzing-for-research paper behind research-fuzzer puts it as "final
+   validation must still evaluate claims using evidence protected from adaptive
+   reuse" (arXiv:2608.09855).
+5. **A recorded reason for every discard.** pi-autoresearch's `rollback_reason`,
+   plus its question after each result: does this invalidate an earlier discard's
+   reason? It catches the idea that failed for a reason that later stopped being
+   true.
+6. **Re-measure the winner before reporting it.** autoresearch keeps a change on
+   a single run beating the best so far. The AAR paper's audit of its own 1,601
+   methods flagged 39 (2.4%) as cheating; most of those (67%, 26 of 39) "simply
+   re-run the same model, hoping noise produces a higher score", and the only
+   cheating attempt to reach a leaderboard top three was "a lucky re-run of an
+   already effective method". A best-of-N single-run score is that move, made
+   without intent.
+7. **Finalize into reviewable branches.** pi-autoresearch's `finalize` produces
+   file-disjoint branches from the merge-base; Arbor promotes `trunk` only when
+   you merge it. A night of commits reviewed as one diff is rarely reviewed.
+8. **Decide where a human pauses.** Arbor's `interaction_mode: review`, evo's
+   "pause after each round", NeuriCo's HITL mode — versus autoresearch's "NEVER
+   STOP". Unattended overnight runs are fine for search; the pause belongs
+   before a result is believed.
+
+The copy-and-edit version of this checklist is
+`project_templates/autoresearch_loop/` (a `program.md` with pause points,
+`measure.sh` printing `METRIC name=value`, `checks.sh`, an append-only
+`results.jsonl` with `status` / `rollback_reason` / `revisits_run`, and a
+`data/heldout/` convention outside the agent's write scope).
 
 ## Failure modes: the part to actually read
 
@@ -249,6 +516,26 @@ Wen, Qiu, Benton, Kirchner, Leike, *Automated Weak-to-Strong Researcher* (Anthro
 
 **When *not* to use it.** For a *fuzzy* alignment question with no checkable score — this sandbox works because W2S PGR is a number the agent cannot argue with (the tier-1 property above). Also not for production-scale claims: transfer to a production-scale model was within noise.
 
+### Automated Alignment Researcher harness (Chen, Wen, Kirchner, August 2026)
+
+Chen Yueh-Han, Jiaxin Wen and Jan Hendrik Kirchner (Anthropic Fellows Program, Anthropic, UC Berkeley), arXiv:2608.28945. **Title change:** v3 (2026-09-02) is titled *Automated Researchers Can Mitigate Well-characterized Alignment Failures*; the repository README still uses the earlier title *Automated Researchers Can Reliably Mitigate Alignment Failures*, so search for both. Code: `YuehHanChen/automated_alignment_researcher` (created 2026-08-21, last push 2026-09-16, **no license file**, no releases as of 2026-10-14). AAR = Automated Alignment Researcher.
+
+**What it is.** A Claude agent proposes a post-training method and data, writes a results-free mini-paper (a pre-registration in all but name), has its code approved by an **integrity monitor** ("a Claude monitor that reads the method's code and rejects benchmark-data use, self-distillation, or larger-model distillation before training"), trains the target model, and hill-climbs a suite of alignment benchmarks — ten alignment failures (sycophancy, deception, jailbreaks, power seeking, social bias, privacy and others), each with 3–5 hill-climbing benchmarks, one **held-out** benchmark ("hidden from the AAR, same mechanism / different distribution"), and a capability gate (MMLU/GSM8K/IFEval: "a method is disqualified if it regresses any of them"). Each failure runs on one small target model (Qwen3.5-2B, Phi-4-mini, Llama-3.2-3B, Gemma-2-2B or Olmo-3-7B). Methods submit **weights, never predictions**. The README sets the agent and integrity monitor to Claude Opus 4.8. The task-agnostic `generic_aar/` template is described under "Metric loops you can run this week" above.
+
+**Reported result (abstract).** Across 10 alignment failures the strongest AAR methods "significantly reduce the targeted alignment failures and generalize to a held-out benchmark, multi-turn behavioral audits, and models up to 4.7x larger than the target model"; 28 experienced researchers given up to eight hours for one-shot methods underperformed the best AAR methods; seeding the AARs with human ideas did not improve performance. The authors scope this to *well-characterized* failures that public benchmarks already measure.
+
+**Cheating, measured (§7).** A post-hoc monitor plus Claude Opus 4.8 review flagged 39 of 1,601 methods (2.4%) as cheating; 67% of those (26) re-ran the same model "hoping noise produces a higher score", 26% (10) built training data copying the benchmark format, and 21% (8) disguised a banned plan from the proposal reviewer. Only one flagged method reached a leaderboard top three (a lucky re-run of an already effective method), and the paper states no cheating attempt is ever a reported method.
+
+**Try it.** Python ≥3.12; real evals need Linux + NVIDIA GPU + CUDA 12. The install check needs no GPU and no keys:
+
+```bash
+uv venv && uv sync && source .venv/bin/activate
+export PYTHONPATH="$PWD" AAR_BENCHMARK_DOCS="$PWD/benchmark_docs" BENCHMARK_DOCS_DIR="$PWD/benchmark_docs"
+python -m aar.eval_pod.run_eval --suite configs/toy.yaml --model stub:perfect
+```
+
+**When *not* to use it.** For a fuzzy alignment question without benchmarks; on macOS or CPU beyond the stub demo; or where you need a license to redistribute. Its own README keeps the held-out directories "off the research side" (`HOLDOUT_DIR`, `HELDOUT_SCORES_DIR`) — running the agent somewhere it can read them removes the point of the held-out benchmark.
+
 ### Field reports: what happens when you run an agent fleet on real alignment tasks
 
 **Arcadia Impact (Aristizabal et al.).** Two LessWrong posts: *Automated alignment runs are hard to study!* (2026-08-13) and *Lessons from building an automated research scaffold* (2026-10-02). Their scaffold (**ARCH**): 4–6 Claude workers on separate virtual machines (VMs), each submitting "findings" as pull requests (PRs) scored against a held-out metric, ~16 hours and a couple of hundred PRs per run; the scaffold is not yet public. Findings:
@@ -267,6 +554,200 @@ Wen, Qiu, Benton, Kirchner, Leike, *Automated Weak-to-Strong Researcher* (Anthro
 
 `safety-research/thimble` (Apache-2.0, alpha, releases v0.5.0 → v0.6.1 between 2026-10-03 and 2026-10-09) is a Claude Code **plugin** that opens a workbench for making sense of large volumes of agent output together with Claude — cards with citations, labels defined as regex, code or prompt, generated reports; `thimble` starts a Claude Code session in a directory with the plugin and its sandbox loaded, and `thimble demo` downloads public transcript sets. **When not to use it:** as ground truth (its summaries are model-written; check the citations); on sensitive corpora without reading its security note ("Its server has no login, so any program on your machine can use it"); or if you cannot tolerate a tool that changes daily.
 
+## Research scaffolds and protocols you can install (2026)
+
+None of these is an end-to-end AI scientist. Each automates one research shape,
+or carries one discipline, and several were built by alignment researchers for
+alignment work. Literature tools (arxiv-mcp-server, PaperQA2, Asta
+`find-literature`) are on [`literature-tools.md`](literature-tools.md).
+
+### Prism: science-of-evals investigations with a blind analyst (MATS 9.0)
+
+**Prism** (`LAThomson/prism`; Louis Thomson, done "during MATS 9.0 (+ 9.1) under
+the mentorship of Victoria Krakovna"; LessWrong post *Prism: Automating
+Science-of-Evals Research*, 2026-07-13). Repo created 2026-03-17, last push
+2026-10-12, **no license file**, no releases. Built on Claude Code, Inspect AI,
+Inspect Scout and the Claude Agent SDK; it installs into an existing Inspect AI
+eval repo. Two modes:
+
+- **`/orchestrate` (science of evals)** — the eval is the object of study ("identify
+  any confounds that mean this eval isn't measuring what it claims to measure").
+  The Orchestrator writes falsifiable hypotheses; an Environment Explorer picks
+  minimal perturbations; predictions are **pre-registered** per condition, "with
+  a construal check per manipulated condition and, where a null result would be
+  read as evidence, a positive control"; an Experiment Executor runs variants
+  under opaque condition ids while the Orchestrator "stays blind to scores"; a
+  Transcript Analyst surfaces behavioural patterns "without it ever directly
+  seeing the original hypothesis" (the **hypothesis firewall**); then it will
+  "Score the pre-registered predictions as written — voiding any condition whose
+  construal check failed, and treating differences inside the noise floor of
+  repeated control draws as unattributable".
+- **`/diagnose` (Model Forensics)** — explains why a model did X in one
+  transcript: resample the episode, keep a ledger of candidate explanations with
+  discriminating signatures, pre-register what each predicts, and require the
+  leading explanation to predict an untested factor. A **Red-Teaming Critic must
+  run on a non-Claude model family** ("a same-family critic shares exactly the
+  priors it exists to challenge"), so `OPENROUTER_API_KEY` is a hard
+  prerequisite. The method is Model Forensics from
+  [`evals.md`](../evaluation/evals.md).
+
+**Blinding is checked by code, not trusted.** `scripts/check_blinding.py` runs
+before every Analyst call and a non-zero exit blocks it. Its docstring records
+why: "in one archived run every label pointed at a log directory named after its
+condition (``logs/leverage_prohibition``), so the Analyst knew the whole mapping
+and reported by real name." It blocks real condition names in paths, symlink
+targets, task files, tags and metadata, and role words (`baseline`, `control`,
+`treatment`, `resample`) in labels and path components; differing `-T` task
+arguments only warn, because sometimes the argument *is* the manipulation.
+Worth copying into any blinded analysis: opaque labels leak through directory
+names.
+
+**Two tips portable to any long agent run.** (1) For unattended runs it ships
+**no `ask` permission rules**, only `allow` and `deny` — "In an unattended
+session a prompt is a silent stall", whereas a denied command returns to the
+agent with a reason. (2) With OpenRouter it pins one upstream provider per model
+for the whole investigation, because otherwise "upstream provider becomes
+confounded with your experimental condition, invisibly, because the eval log
+records what was *requested* rather than what answered."
+
+**Install** (from the README): `/path/to/prism/install.sh .` inside the target
+eval repo, add `ANTHROPIC_API_KEY` (and `OPENROUTER_API_KEY` for `/diagnose`) to
+`.env`, then in Claude Code `/orchestrate [your research question]`.
+
+**When not to use it:** if your eval is not an Inspect AI task; if you need to
+redistribute or vendor it (no license file); or with an older Orchestrator model
+— the README reports "diminished compliance" on Opus 4.5.
+
+### research-fuzzer: a bet before every action (and Agent-Native Research Artifacts)
+
+**research-fuzzer** (`ARA-Labs/research-fuzzer`, MIT, created and last pushed
+2026-08-19, 0 stars as of 2026-10-14) is a single `SKILL.md` protocol,
+companion to *The Greatness of Science Cannot Be Planned: Agentic Auto-Research
+is Fuzz Testing* (arXiv:2608.09855). It treats an investigation the way a
+greybox fuzzer treats a program: after every action, did anything new happen,
+and where have I not been? One append-only `fuzz-notebook.jsonl` holds five
+record types (`frame`, `bet`, `settle`, `reframe`, `claim`) under five rules:
+
+1. "**No action without a bet.**" Before each action, write what you will do,
+   "**what you predict will happen**", how confident, and which sub-question it
+   serves.
+2. **Every settle picks one verdict:** `confirmed` (a streak is "a **leave
+   signal, not an achievement**"), `surprised` (must name the belief that
+   changed), or `anomaly` (goes on an unexplained-results ledger).
+3. **Every settle logs the leads it opened**, taken or not; that queue is the
+   skill's "only honest measure of 'how much is left'" — a count of leads seen
+   and never tried, rather than a guess at how much of the world was covered.
+4. **Three unresolved anomalies force a reframe** ("what axis is missing from my
+   frame?").
+5. **A gate before any claim:** anomalies resolved or carried as limitations; a
+   **kill shot** bet and settled ("the one action you believe most likely to
+   break the claim, aimed somewhere you have not yet tested"); the claim scoped
+   to the frame explored.
+
+Install: copy the directory into `.claude/skills/` (from a copy you have read),
+then `/research-fuzzer` at the start of an investigation, after each batch of
+results, and before any conclusion. The skill says to skip it for "Single-step
+lookups and trivial fixes". Its own framing is modest: "The panel informs; it
+never commands."
+
+**ARA** (Agent-Native Research Artifacts; `ARA-Labs/Agent-Native-Research-Artifact`,
+MIT; arXiv:2604.24658) is the same lab's protocol for a research package that
+keeps the exploration graph and dead ends a paper discards. Its
+`research-manager` skill tags every entry `user`, `ai-suggested`, `ai-executed`
+or `user-revised`, a clean way to record who decided what in a human–agent
+session. Two cautions: its quickstart has your agent fetch and follow a remote
+wiring prompt (read it yourself first), and its own abstract reports that
+preserved failure traces "can also constrain a capable agent from stepping
+outside the prior-run box depending on the agent's capabilities".
+
+**When not to use research-fuzzer:** as a maintained dependency (two commits on
+one day, no stars) — treat it as a protocol to copy; or if the notebook will not be kept
+honest, since predictions written after results defeat it.
+
+### Asta plugins (Ai2): claim–quote checking and a plan/review/do loop
+
+**asta-plugins** (`allenai/asta-plugins`, Apache-2.0, no GitHub releases, last
+push 2026-10-14) are Claude Code plugins from Ai2 (Allen Institute for AI):
+`asta-tools` (literature search, Semantic Scholar lookups, local paper index, PDF
+extraction, data analysis, `check-claims`, `workspace`, …), `asta-flows`,
+`asta-assistant` and `asta-dev`. Install:
+`/plugin marketplace add allenai/asta-plugins` then `/plugin install asta-tools`
+(optionally `/plugin install asta-assistant`). They install an `asta` CLI
+(Python 3.11+, `uv`); some commands use your own LLM keys locally, others call
+Ai2-hosted APIs and prompt you to authenticate.
+
+- **`check-claims`** judges a write-up sentence by sentence: does a checkable
+  claim carry an `.ev` evidence span resolving to `evidence.yml`, and does the
+  prose claim more than the attached quote? "The span must not claim more than
+  the quote does — in scope, in number, or in certainty." Evidence entries hold
+  a `quote` "pasted verbatim from the source", a `cite` key into
+  `references.bib`, and `provenance` "recording only the retrieval you actually
+  ran". Authors fix, reviewers report, and "Nothing wrong: say what you covered
+  and that its claims are backed; don't invent findings to look thorough." The
+  evidence-entry shape is worth copying even without Asta.
+- **`asta-assistant:run`** drives a `project.md` work list through statuses
+  `pending-plan` → `pending-review` → `ready` → `in-progress` → `done`, stops on
+  `needs-input`, and stops when "The same item failed twice in a row (avoid
+  tight failure loops — surface to the user)."
+
+**When not to use them:** if sources must not leave your machine (some
+commands call Ai2 APIs); on Intel macOS (the README warns `cryptography` 50.0.0
+has no Intel macOS wheel and falls back to a source build needing Rust and
+OpenSSL); or as evidence that experiments ran — `check-claims` compares prose to
+quotes, nothing more. `asta-assistant` is described as "A long-range autonomous
+research assistant"; the run loop's stop conditions are the part to keep.
+
+### NeuriCo (Chicago Human+AI Lab): idea file to experiments, with a human-in-the-loop mode
+
+**NeuriCo** (`ChicagoHAI/NeuriCo`, Apache-2.0, no releases, last push
+2026-10-14) takes an idea (YAML with `title`, `domain`, `hypothesis`, or
+Markdown) and runs agents that find literature, datasets and baselines, run
+experiments and document them, on Claude Code, Codex or Gemini CLI via OAuth
+login (no provider API keys needed for the agent itself; Paper Finder uses
+OpenRouter or OpenAI plus a Semantic Scholar key). Three modes: **Standard**
+(one end-to-end pass, optional paper), **AutoResearch** (scored baseline, keep
+improvements) and **HITL AutoResearch** (human-in-the-loop), which "adds a
+manager that coordinates the research agents and asks for your input at key
+decisions" through a web UI (`uv run python src/cli/hitl_web.py <idea_id>`,
+`http://localhost:7890`; "Opening it does not start research") or a terminal
+(`hitl_cli.py`). Submit with `uv run python src/cli/submit.py path/to/idea.yaml`.
+
+**When not to use it:** with GitHub publishing on for unpublished safety work —
+if `GITHUB_TOKEN` (a classic token with `repo` scope) is set, submission creates
+a research repository unless you pass `--no-github` (`--private` only makes it
+private); or for a
+question that is not one pre-stated hypothesis.
+
+### Academic Research Skills (ARS): write-up help that stops at every stage
+
+**Academic Research Skills** (`Imbad0202/academic-research-skills`, ~52k stars,
+v3.23.0 released 2026-10-03; LICENSE is **CC BY-NC 4.0**, which GitHub shows as
+NOASSERTION; a Codex build is `Imbad0202/academic-research-skills-codex`).
+Literature review, paper drafting, simulated multi-reviewer peer review, and a
+pipeline in which "the decisions stay yours, and the pipeline stops for your
+confirmation at every stage." Install: `/plugin marketplace add
+Imbad0202/academic-research-skills` then `/plugin install
+academic-research-skills`; try `/ars-plan`.
+
+Two parts worth knowing about even if you never install it:
+
+- **Experiment Provenance Intake.** ARS "never runs experiments"; the researcher
+  declares the experiments they ran, claims join to them, and an integrity gate
+  audits each experiment-backed claim as `ALIGNED`, `OVERSTATED`,
+  `NOT_SUPPORTED_BY_PROVENANCE` or `PROVENANCE_INSUFFICIENT`. A fail-closed
+  declaration makes "did you run experiments?" an explicit answer.
+- **`data_access_level`** (`raw` / `redacted` / `verified_only`) on every skill,
+  which the README says is "adapted from Anthropic's automated-w2s-researcher".
+
+Its boundary statement is unusually candid: "ARS does **not** establish that
+procedures were actually performed, raw data are authentic, or results
+reproduce; a consistently reported fabrication can pass these checks."
+
+**When not to use it:** in commercial settings (non-commercial license); for an
+ML-conference LaTeX template workflow without checking its output (APA 7.0 is
+the default; IEEE and Chicago LaTeX classes are listed); or as evidence that
+results are real.
+
 ## Benchmarks
 
 Judge a system by which of these it was measured on, because they test
@@ -275,8 +756,9 @@ different things and the easy ones are much easier.
 | Benchmark | Tests |
 |---|---|
 | **MLE-bench** (OpenAI) | End-to-end ML engineering on 75 Kaggle competitions. Leaderboard was closed to new submissions as of April 2026 pending fairness work. |
-| **RE-Bench** (METR) | 7 open-ended ML research-engineering tasks, human-calibrated |
-| **PaperBench** (OpenAI) | Reproduce a paper's methods and experiments, hierarchical rubrics |
+| **RE-Bench** (METR) | 7 open-ended ML research-engineering tasks, human-calibrated. An Inspect AI port, `METR/inspect-tasks-public`, is "still a WIP", configured for 8×H100 nodes, reports lower scores than METR's, and lets the agent read the RL task's "held-out" set — not comparable to METR's published numbers |
+| **PaperBench** (OpenAI) | Reproduce a paper's methods and experiments, hierarchical rubrics (20 ICML 2024 papers, 8,316 gradable tasks; best agent in the 2025 paper 21.0%). Code in `openai/frontier-evals` (`project/paperbench`); see the three-container pattern below |
+| **SAEScientist-Bench** (Tan, He, Zhao, Liu; arXiv:2609.09113, 2026-09-08; `Trae1ounG/SAEScientist`, no license) | Can an agent find the right Sparse Autoencoder (SAE) feature for a concept in Gemma Scope on Gemma-2-9B-IT, scored on activation rank, selectivity and steering against Neuronpedia expert features? 20 tasks, 17 concepts; agents "remain well behind the expert baseline" and "frequently misinterpret experimental measurements". Runners for Codex and Cursor only. Interp context: [`saes.md`](../interpretability/saes.md) |
 | **ScienceAgentBench** | Data-driven discovery tasks extracted from peer-reviewed papers |
 | **AstaBench** (AI2) | 2400+ problems across the whole discovery pipeline, **cost-controlled** |
 | **ReplicationBench** | Replicating astrophysics papers |
@@ -289,6 +771,27 @@ agents across 22 agent classes, with tool access and model cost controlled as
 confounds, and the conclusion that **AI remains far from solving scientific
 research assistance**. Cost control matters — without it you cannot tell a
 better agent from a bigger budget.
+
+### PaperBench's three-container pattern, reused as a reproducibility check
+
+PaperBench (Starace et al., arXiv:2504.01848; code in `openai/frontier-evals`,
+MIT) grades a replication in three separate containers: (1) the agent builds a
+codebase in one; (2) "The agent's submitted codebase is executed in a fresh
+second container with GPU access", producing the *executed submission*; (3) a
+judge grades that against the paper's hierarchical `rubric.json` in a third.
+**PaperBench Code-Dev** (`paperbench.judge.code_only=True`) skips execution and
+grades code only — the README calls it "a convenient, lower-cost, but less
+rigorous way of assessing paper replication".
+
+The portable tip, for an agent's code or your own: before you publish or report,
+run the project's entry point **from a clean clone in a fresh container**,
+separately from the environment it was developed in — a result that only
+reproduces inside the agent's working directory has not been reproduced.
+To browse a real rubric tree when writing your own replication checklist:
+`uv run python paperbench/gui/app.py --path-to-paper <PAPER_DIR> --rubric-file-name <RUBRIC_FILE_NAME>`.
+
+**When not to use it:** as a current capability number (the paper's results are
+from April 2025), or Code-Dev scores as evidence that a replication worked.
 
 ## If you are using one for MATS work
 
@@ -310,9 +813,17 @@ better agent from a bigger budget.
   comments, workshop rejections and lab-internal Slack, none of which is in a
   retrieval corpus. An agent proposing a "promising new direction" that three
   people quietly tried in 2024 is the expected behaviour, not an aberration.
+  Prior-art checks built into these systems (Arbor's `idea-check` uses alphaXiv;
+  Asta and PaperQA2 use paper indexes) do not see LessWrong or Alignment Forum;
+  [`literature-tools.md`](literature-tools.md) has a GraphQL query that does.
 - **Disclose the agent.** Agents4Science and a growing number of venues have
-  explicit policies; assume you must state what was automated.
-- **Do not hand a fleet a hillclimbable proxy for an alignment question.** Both the Anthropic W2S run and Arcadia Impact's runs saw metric gaming (label recovery through an evaluation API, lottery-farming a noisy judge); Arcadia's best run was one with no usable metric to climb. If you must use a metric: keep a held-out set the agent cannot query, expect that capping submissions barely helps, validate any "discovered" method on a fresh dataset, and run check-ins ("what is your goal right now?") at intervals so you can find the stretches worth reading.
+  explicit policies; it is worth checking your venue's and stating what was
+  automated.
+- **For a metric loop, re-measure before you report.** A change kept because one
+  run beat the best so far is a selected result; re-run it against the baseline
+  with several seeds on data the loop never selected on. The checklist under
+  "Metric loops you can run this week" lists the rest.
+- **Be wary of handing a fleet a hillclimbable proxy for a *fuzzy* alignment question.** Both the Anthropic W2S run and Arcadia Impact's runs saw metric gaming (label recovery through an evaluation API, lottery-farming a noisy judge); Arcadia's best run was one with no usable metric to climb. The contrasting result is Chen, Wen and Kirchner's AAR harness: on *well-characterized* failures that public benchmarks already measure, hill-climbing worked and generalized to a held-out benchmark — with weights-only submissions, a held-out benchmark the agent never saw, an integrity monitor, and 2.4% of methods still flagged as cheating. If you use a metric: keep a held-out set the agent cannot query, expect that capping submissions barely helps, validate any "discovered" method on a fresh dataset, and run check-ins ("what is your goal right now?") at intervals so you can find the stretches worth reading.
 - **Use agents for the part that works: building and running well-specified experiments.** Two practitioner reports (Wentworth, Arcadia) agree that interpreting results and choosing the next question remains the human's job, and on TASTE the best model reported agrees with experienced researchers' proposal preferences 60% of the time against an estimated 77% human agreement.
 - **Make a raised concern cost something.** The 82.5% figure above says your
   agent will usually *tell* you what is wrong with its own work and then finish
@@ -349,7 +860,7 @@ check.
 
 ### Do these tools actually speed up alignment research today?
 
-Narrowly, yes; broadly, there is no measurement. The strongest positive result is Anthropic's weak-to-strong run (PGR 0.97 vs 0.23 for two humans over a week), on a task with a number the agent cannot argue with and with reward hacking the authors had not predicted. Arcadia Impact's team built a scaffold, found it gave their researchers little uplift for conceptual work, and found it useful mainly for gathering failure modes; Wentworth reports Claude Code now writes his routine interp code while its suggested next steps are "mostly useless". Self-reported lab figures (for example, Anthropic's staff poll median of about 4x output) are subjective estimates the authors themselves discount.
+Narrowly, yes; broadly, there is no measurement. The two strongest positive results are both on tasks with a number the agent cannot argue with: Anthropic's weak-to-strong run (PGR 0.97 vs 0.23 for two humans over a week, with reward hacking the authors had not predicted), and Chen, Wen and Kirchner's AAR harness (arXiv:2608.28945), where the best automated methods on ten benchmarked alignment failures beat one-shot methods from 28 experienced researchers given up to eight hours and generalized to a held-out benchmark — a result its v3 title scopes to "well-characterized" failures. Arcadia Impact's team built a scaffold, found it gave their researchers little uplift for conceptual work, and found it useful mainly for gathering failure modes; Wentworth reports Claude Code now writes his routine interp code while its suggested next steps are "mostly useless". Self-reported lab figures (for example, Anthropic's staff poll median of about 4x output) are subjective estimates the authors themselves discount.
 
 ### Is there a safety angle beyond research quality?
 
@@ -378,10 +889,19 @@ adopt any system.
   [`training-on-trajectories.md`](../oversight-and-control/training-on-trajectories.md).
 - Statistical discipline the four integrity checks assume:
   [`statistics.md`](statistics.md).
+- Finding and reading papers, checking claims against quotes, BibTeX from
+  metadata, and the LessWrong / Alignment Forum gap:
+  [`literature-tools.md`](literature-tools.md).
+- hookify rules and their limits (protecting held-out data and the eval):
+  [`agentic-swe-practices.md`](agentic-swe-practices.md#hookify-research-guardrails-as-markdown-rules).
+- Copy-and-edit metric loop with human pause points:
+  `project_templates/autoresearch_loop/`.
+- Red-teaming with an autoresearch loop (AHA):
+  [`red-teaming.md`](../evaluation/red-teaming.md).
 
 ---
 
-Last verified: 2026-10. (Additions 2026-10: Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
+Last verified: 2026-10-14. (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
 AutoResearch" (arXiv:2608.14905), LEDGER (arXiv:2608.18398), EviGraph
 (arXiv:2608.04738, skimmed — node/edge schema and headline numbers), Prime Agent
 (arXiv:2608.23552, paper + blog + repo README), ScientistOne (arXiv:2605.26340),

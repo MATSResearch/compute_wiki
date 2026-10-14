@@ -7,7 +7,9 @@ tags:
 
 Libraries for inspecting and intervening on the internals of transformer language models, plus the **workspace lenses** (J-Lens, R-Lens, J++ Lens) used to read a model's unspoken intermediate variables off its activations. The big three libraries are **TransformerLens**, **nnsight**, and (for a no-library option) **baukit** + raw PyTorch hooks. **vLLM-Lens** covers the high-throughput case and is documented in [`serving-and-activations.md`](serving-and-activations.md).
 
-> **Version alert (2026-10).** TransformerLens **4.0** (2026-09-21) *removed* `HookedTransformer` — `from transformer_lens import HookedTransformer` now raises `ImportError`; use `TransformerBridge`. nnsight **0.8.0rc1** (2026-09-09, pre-release) deprecated `LanguageModel` in favour of `TransformersModel`. SAELens pins `transformer-lens<4`, and circuit-tracer's TransformerLens backend breaks on TL 4.0 (open issue). Details in the sections below.
+> **Version alert (as of 2026-10-14).** TransformerLens **4.0** (2026-09-21) *removed* `HookedTransformer` — `from transformer_lens import HookedTransformer` now raises `ImportError`; use `TransformerBridge`. The current release is **4.2.0** (2026-10-10). nnsight **0.8.0rc1** (2026-09-09, pre-release) deprecated `LanguageModel` in favour of `TransformersModel`. SAELens (6.54.5, 2026-10-14) still pins `transformer-lens<4`, and circuit-tracer's TransformerLens backend breaks on TL 4.0 (issue #115, open). Agent skill packs written before these releases (for example Orchestra's mech-interp skills, below) still teach the removed APIs. Details in the sections below.
+>
+> **Hook-point trap on Gemma 2/3/4 and OLMo 2/3 (sandwich-norm models).** "MLP output" names two different tensors on these models: the raw MLP module output, and the post-norm *residual contribution*. Gemma Scope MLP SAEs read the contribution. See [The sandwich-norm hook trap](#the-sandwich-norm-hook-trap-gemma-234-olmo-23).
 
 ## At a glance: which library?
 
@@ -18,11 +20,16 @@ Libraries for inspecting and intervening on the internals of transformer languag
 | Read what a model is "thinking" but not saying (unspoken intermediate variables) from activations | **Workspace lenses** — start with the **J++ Lens** (see [Workspace lenses](#workspace-lenses-j-lens-r-lens-j-lens)) |
 | Just one quick hook, no library | **`register_forward_hook`** + **baukit** |
 | Throughput / serving / 70B+ local | **vLLM-Lens** (see [`serving-and-activations.md`](serving-and-activations.md)) |
+| One capture-and-steer API on HF eager *and* vLLM, with hook names standardized across architectures (Neuronpedia's engine) | **interp-engine** (see [`serving-and-activations.md`](serving-and-activations.md#interp-engine-neuronpedias-inference-engine)) |
+| Which input tokens drove this output? (saliency, integrated gradients, AttnLRP) | See [Attribution](#attribution-which-tokens-or-components-drove-this-output) — **Captum**, **inseq**, **LXT** |
 | SAE work specifically | **SAELens** (see [`saes.md`](saes.md)) |
 | Interventions as first-class saveable objects; DAS; non-transformer architectures | **pyvene** |
 | Compare a base model against its finetune | **diffing-toolkit** (see [`model-diffing.md`](model-diffing.md)) |
-| Find a task circuit (edges between heads/MLPs) and score its faithfulness | **EAP-IG** (`hannamw/EAP-IG`), scored on **MIB** (see [Circuit discovery](#circuit-discovery-and-how-to-evaluate-it-eap-ig-mib-causal-abstraction)) |
-| Let an LLM agent run interpretability experiments, or benchmark one | See [Interpretability agents](#automated-interpretability-and-interpretability-agents) (MAIA, Predictive Concept Decoders, Seer) |
+| Find a task circuit (edges between heads/MLPs) and score its faithfulness | **EAP-IG** (`hannamw/EAP-IG`), scored on **MIB** (see [Circuit discovery](#circuit-discovery-and-how-to-evaluate-it-eap-ig-mib-causal-abstraction)); **MAttr** for a full ranking over all sparsities; **CircuitKIT** for discover → evaluate → prune → export in one pipeline |
+| Let an LLM agent run interpretability experiments, or benchmark one | See [Interpretability agents](#automated-interpretability-and-interpretability-agents) (MAIA, Predictive Concept Decoders, Seer, SAEScientist-Bench, CHIVE) |
+| Check whether an interpretability tool beats just reading the transcript | **CHIVE** (`adamkarvonen/chive`; see [Interpretability agents](#automated-interpretability-and-interpretability-agents)) |
+| A cheap analogue domain with crisp ground truth (chess transformers) | **chessformer_lens** (see [Analogue domains](#analogue-domains-chess-transformers-chessformer_lens)) |
+| A live competition or open challenge to test a method against | See [Live challenges](#live-challenges-as-of-2026-10-14) (AIMO Interpretability Challenge, ARC White-Box Estimation, MIB leaderboard) |
 | Interpret through loss-landscape geometry or training dynamics instead of activations | **devinterp** (see [`slt-devinterp.md`](slt-devinterp.md)) |
 
 ## TransformerLens
@@ -36,6 +43,12 @@ Aliases: `transformer_lens` on PyPI, `TransformerLensOrg/TransformerLens` on Git
 - You're doing classic mech interp: induction heads (Olsson et al. 2022, "In-context Learning and Induction Heads", arXiv:2209.11895), IOI-style circuit analysis (Wang et al. 2022, "Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small", arXiv:2211.00593), attention pattern visualization.
 - You need ablation, patching (resample, and **attribution patching** — the fast linear approximation from Syed, Rager & Conmy 2023, "Attribution Patching Outperforms Automated Circuit Discovery", arXiv:2310.10348), and activation arithmetic with a clean API. TL 4.0 also ships analysis tools under `transformer_lens.tools.analysis`: direct logit attribution, attribution patching (node and edge/EAP scoring), direct path patching, `JacobianLens` (see [Workspace lenses](#workspace-lenses-j-lens-r-lens-j-lens)), backward lens, SVD circuits, sparse probing.
 - You need gradients (attribution patching, backward hooks, Jacobian-lens fitting): load with `TransformerBridge.boot_transformers(...)`, the transformers backend (the vLLM and Inspect backends have no autograd).
+
+**New in TransformerLens 4.1 (2026-09-28) and 4.2 (2026-10-10)** (release notes and `docs/source/content/analysis_tools.md` / `sparse_probing.md`, read 2026-10-14):
+- **Built-in logit lens (4.2).** `logit_lens(model, prompt)` or `cache.logit_lens()` reads every entry of the accumulated residual stream through the model's own `ln_final` (statistics recomputed), `W_U`, `b_U` and the adapter's output transform (Gemma-style softcap, Cohere logit scale); its final entry equals the model's logits on a raw bridge. `targets=` gives per-layer rank trajectories (`result.rank_trajectory(" Paris")`), `top_k=` / `vocab=` restrict the output, and `logit_readout` applies the same kernel to any `d_model` vector (a head output, steering direction or SAE decoder column). In compatibility mode `center_unembed` shifts logits by a per-position constant, so the docs say to compare `return_type="log_probs"` or ranks across processing modes, not raw logits. Rejected: encoder-only and encoder-decoder bridges, quantized unembeddings.
+- **Leakage-safe k-sparse probing (4.1; tie-aware `roc_auc` / `average_precision` added in 4.2).** `fit_sparse_probe` and `sweep_sparse_probe` with random-coordinate and label-shuffle controls — see [`probes.md`](probes.md#sparse-probing-in-transformerlens-41-fit_sparse_probe).
+- **Unreduced activation patching (4.2):** per the analysis-tools guide, the metric returns a scalar by default and a `[batch]` tensor under `reduce="mean"` or `"none"`, and per-example values are stored (`cells × batch` floats per metric) so statistics can be computed after the sweep without extra forwards.
+- **Bridge fixes worth knowing if you produced numbers before 4.2:** `rmsnorm_uses_offset` set on the Qwen3.5, Qwen3Next and Nemotron adapters; Cohere/Cohere2 rotated with their own RoPE convention; HunYuan QK-norm applied after RoPE; `get_caching_hooks` keeps the batch dimension when batch > 1 (all from the 4.2.0 release notes). On those architectures it is worth re-running a result that came from a 4.0/4.1 bridge.
 
 **When *not* to use it:**
 - You want exact HuggingFace behaviour with zero abstraction and a deferred-execution syntax → **nnsight**.
@@ -71,6 +84,8 @@ Aliases: `nnsight` on PyPI, `ndif-team/nnsight` on GitHub, "the NDIF library", "
 **What it is.** A library that wraps any PyTorch / HuggingFace model in a tracing context where you can read and modify activations using a deferred-execution syntax. The same code runs locally on a small model or remotely on a 405B model hosted by NDIF (the National Deep Inference Fabric).
 
 **Agent-friendly docs.** The nnsight repo (0.8) carries a `CLAUDE.md` plus 105 recipe-style pages under `docs/`, and `ndif-team/skills` ("Teach LLMs to use NNSight with Skills"; verified, pushed 2026-10-08) packages them as agent skills — useful if you drive nnsight from Claude Code.
+
+**Third-party mech-interp skill packs can be stale.** `Orchestra-Research/AI-Research-SKILLs` (MIT, 13.5k stars, release v1.7.2 of 2026-06-16; Claude Code marketplace install `/plugin marketplace add orchestra-research/AI-research-SKILLs`, then `/plugin install mechanistic-interpretability@ai-research-skills`) ships four mech-interp skills: TransformerLens, SAELens, pyvene and nnsight. As read on 2026-10-14, its TransformerLens and SAELens skills build models with `from transformer_lens import HookedTransformer` (removed in TL 4.0) and its nnsight skill uses `LanguageModel` (deprecated in nnsight 0.8). An agent following them on a fresh install will hit `ImportError: cannot import name 'HookedTransformer'` unless it pins `transformer-lens<4`. Worth checking a skill's code against the installed library version before letting an agent run it; `ndif-team/skills` is maintained by the nnsight authors.
 
 **Versions (2026-10).** Stable on PyPI is **0.7.0** (2026-05-05: lazy hooks, 10–50% faster traces, `nnsight-serve`). **0.8.0rc1** (2026-09-09, `pip install --pre nnsight`) is a ground-up rewrite of the execution engine (greenlets instead of threads, `TransformersModel`, vLLM CUDA-graph taps, native tensor parallelism); the release notes say *remote execution against NDIF stays on 0.7 until NDIF is upgraded*. Python 3.10–3.14.
 
@@ -154,6 +169,27 @@ hidden = tr["model.layers.15"].output[0]
 - **Hooks persist until removed.** Save the handle (`h = module.register_forward_hook(fn)`) and call `h.remove()`, or you get cumulative state across calls.
 - **In-place modifications to hook inputs/outputs are silently lost** in some PyTorch versions. Return the modified tensor explicitly.
 - **DDP / FSDP wrap modules.** The path you hook may be `model.module.model.layers[5]` once wrapped.
+- **On Gemma 2/3/4 and OLMo 2/3, `model.model.layers[i].mlp` is not the MLP's residual contribution** — see the next section.
+
+## The sandwich-norm hook trap (Gemma 2/3/4, OLMo 2/3)
+
+Aliases: sandwich norms, post-sublayer norms, `post_feedforward_layernorm`, `post_attention_layernorm` trap, `hook_mlp_out` vs `mlp.hook_out`, `mlp_out_post`, "my Gemma MLP SAE features are dead".
+
+**What goes wrong.** Gemma 2/3/4 and OLMo 2/3 normalize each sublayer's *output* before adding it to the residual stream ("sandwich" or post-sublayer norms; HF module `post_feedforward_layernorm` on the MLP side). So "the MLP output" is two different tensors: the raw MLP module output, and the normed residual *contribution*. TransformerLens has a name for each — `blocks.{i}.mlp.hook_out` is the raw module output, while the block-level `blocks.{i}.hook_mlp_out` is the residual contribution, i.e. post-norm on these models. A pure string translation of `hook_mlp_out` into another library's raw `mlp_out` (or an HF hook on `model.model.layers[i].mlp`) returns a tensor whose cosine with TransformerLens's is ~0.2–0.4, with no error (interp-engine `docs/PORTING.md`, read 2026-10-14).
+
+**Measured consequence (same source).** On `gemma-2-2b` layer 4, the Gemma Scope MLP SAE `gemmascope-mlp-16k` reconstructs the post-norm contribution at FVU (fraction of variance unexplained) 0.26 with L0 81 (the SAE declares 85), and the raw MLP output at FVU 9.8 — worse than predicting the mean — with L0 8. A feature whose dashboard tops out at 23.5 fired at no position at all when fed the raw output. The SAE is not noisier on the wrong tensor; it is silently dead.
+
+**The second half of the trap: `post_attention_layernorm` means two things.** In Llama, Qwen and Mistral blocks it is the *pre-MLP* norm (applied to the residual after the attention add); in Gemma 2/3/4 it is a true post-attention norm on the attention *output*; OLMo 2/3 have post-sublayer norms and no pre-attention norm at all; GLM-4 and HyperCLOVAX use the name for the pre-MLP norm again (interp-engine `docs/ARCHITECTURE_QUIRKS.md`). Code that keys "is this a sandwich block?" on that module name misidentifies whole model families; the reliable signal is the presence of an MLP-side post-norm (`post_feedforward_layernorm`).
+
+**Symptoms to search for:** MLP SAE or transcoder with near-zero L0 on your prompts; FVU above 1; features that never fire on text where their Neuronpedia dashboard shows strong activations; a transcoder or MLP SAE that works through SAELens/TransformerLens but not through your own HF hooks.
+
+**How to check (tips, not requirements):**
+- When you attach an MLP SAE or MLP-output reader to a Gemma or OLMo 2/3 model outside TransformerLens, hook *after* the post-feedforward norm (the output of `post_feedforward_layernorm`), unless the SAE's config names a different site. For attention-side SAEs, read the config's hook name rather than guessing: post-norm attention output, raw attention output and pre-projection head outputs are all different tensors.
+- Compute FVU and L0 on both candidate tensors before trusting a feature; the PORTING doc reports they separate by an order of magnitude in one run, and the right one should land near the SAE's declared L0.
+- With **interp-engine**, request the `mlp_out_post` / `attn_out_post` points (aliased to the raw output on architectures without post-sublayer norms, so the request is safe everywhere), or call `tlens_hook_to_point("blocks.7.hook_mlp_out", model)` *with* the model argument, which resolves to `("mlp_out_post", 7)` on Gemma 3; without the model it does pure string translation.
+- Architectures without post-sublayer norms (Llama, Qwen, Mistral, GPT-2) are unaffected: the two names coincide.
+
+Related residual-stream mismatches (`hook_resid_pre` vs `hook_resid_post`) are in [`saes.md`](saes.md) under SAELens pitfalls.
 
 ## circuitsvis
 
@@ -167,7 +203,27 @@ Aliases: `circuitsvis` on PyPI, `TransformerLensOrg/CircuitsVis` on GitHub (orig
 
 **When *not* to use it:** You're building a non-Jupyter pipeline. You need novel viz components — build in matplotlib/plotly directly; circuitsvis isn't shipping new ones. For SAE feature dashboards, see `sae-dashboard` / Neuronpedia (in [`saes.md`](saes.md)).
 
-## Captum
+## Attribution: which tokens or components drove this output?
+
+Aliases: feature attribution, input attribution, saliency, token attribution, integrated gradients (IG), input × gradient, LRP (Layer-wise Relevance Propagation), AttnLRP, component attribution, circuit attribution.
+
+Two different questions get called "attribution". **Input attribution** asks which *input tokens* (or image patches) a given output depends on. **Component attribution** asks which *internal components* — heads, MLPs, neurons, SAE latents, edges between them — carry the computation. Both produce scores, not causal proof: a high score is a hypothesis to test with patching or ablation.
+
+| I want… | Use | Cost |
+|---|---|---|
+| Per-token saliency for one prompt on any PyTorch model; classical methods (IG, GradientShap, DeepLIFT) | **Captum** (`LLMAttribution`) | one to *m* backward passes |
+| Per-generated-token attribution over a whole generation, with notebook/HTML visualization, decoder-only or encoder-decoder | **inseq** | as the chosen method (IG: *m* steps per generated token) |
+| A more faithful gradient-style relevance for an output logit, per token *and* per neuron, in one backward pass | **LXT** (AttnLRP) | one backward pass |
+| Which heads/MLPs/edges form the circuit for a task, scored for faithfulness | **EAP-IG** (training-free) or **MAttr** (learned ranking); see [Circuit discovery](#circuit-discovery-and-how-to-evaluate-it-eap-ig-mib-causal-abstraction) | EAP-IG: ~*m* × (2 forward + 1 backward); MAttr: a training run |
+| Which SAE/transcoder features drove a completion (attribution graph) | **circuit-tracer** (see [`saes.md`](saes.md)) | heavy on long prompts |
+| Which *training documents* caused a behaviour | not this — see [`data-attribution.md`](data-attribution.md) | |
+
+**Cross-cutting pitfalls.**
+- **Attribution is not causation.** Verify a top-scored token or component by patching or ablating it and measuring the output change; gradient-based scores can be large for components whose removal changes nothing.
+- **State the target.** Scores depend on which scalar you differentiate: the logit of the generated token, a logit difference against a contrast token, or a log-probability. A logit-difference target is usually more interpretable for "why A rather than B".
+- **Model-specific skews exist.** LXT's README marks Qwen 3 as "Attribution skewed toward first token"; first-position (BOS / attention-sink) tokens soak up attribution in many models, so check whether a result survives excluding position 0.
+
+### Captum
 
 Aliases: `captum` on PyPI, `meta-pytorch/captum` on GitHub (formerly `pytorch/captum`, which still redirects), "PyTorch interpretability library", "Meta's interp library".
 
@@ -179,6 +235,53 @@ Aliases: `captum` on PyPI, `meta-pytorch/captum` on GitHub (formerly `pytorch/ca
 - Attribution at vLLM scale via `VLLMProvider`.
 
 **When *not* to use it:** Activation patching / circuit analysis / SAE features — TransformerLens / nnsight / SAELens are the right tools. Captum is for *attribution* (which inputs mattered), not mechanism analysis (which internal computations mattered).
+
+### inseq
+
+Aliases: `inseq` on PyPI, `inseq-team/inseq` on GitHub (Apache-2.0, 477 stars; last push 2026-10-07), "Inseq: an interpretability toolkit for sequence generation models".
+
+**What it is.** A feature-attribution library built for *generation*: it attributes every generated token back to the input (and previously generated) tokens, for HF `ForCausalLM` (decoder-only) and `ForConditionalGeneration` (encoder-decoder) models, and renders the result in the console, a notebook or HTML. Methods (from `inseq.list_feature_attribution_methods()`, README 2026-10-14): `saliency`, `input_x_gradient`, `integrated_gradients`, `deeplift`, `gradient_shap`, `discretized_integrated_gradients`, `sequential_integrated_gradients`, `attention`, `occlusion`, `lime`, `value_zeroing`, `reagent`; it extends Captum's methods and supports contrastive attribution targets through step functions. Versions: GitHub release v0.7.0 (2026-02-02), PyPI `inseq` 0.7.1 (2026-03-06), Python ≥3.10 (the README says ≤3.13). Grad-ELLM token attribution for Llama and Mistral was added on `main` on 2026-10-07, after the latest release.
+
+```python
+# pip install inseq          (pip install "inseq[notebook,datasets]" for Jupyter) — verbatim from the README
+import inseq
+
+model = inseq.load_model("gpt2", "integrated_gradients")
+model.attribute(
+    "Hello ladies and",
+    generation_args={"max_new_tokens": 9},
+    n_steps=500,
+    internal_batch_size=50
+).show()
+```
+
+**When to use it:** you want "which input tokens drove each generated token" across a whole generation, with a visualization you can hand to a collaborator, or contrastive attribution ("why this token instead of that one").
+
+**When *not* to use it:** internal-component questions (heads, neurons, circuits) — use TransformerLens/nnsight patching or EAP-IG; models too large for full backward passes on your GPU; you need a feature that exists only on `main` (install from git).
+
+### LXT (LRP-eXplains-Transformers) and AttnLRP
+
+Aliases: `lxt` on PyPI, `rachtibat/LRP-eXplains-Transformers` on GitHub, LXT, AttnLRP ("Attention-Aware Layer-Wise Relevance Propagation for Transformers", Achtibat et al., ICML 2024), LRP, "relevance propagation", "single backward pass attribution".
+
+**What it is.** LXT implements AttnLRP, a Layer-wise Relevance Propagation (LRP) rule set for transformers that changes how relevance flows through non-linearities (softmax, normalization, gated MLPs). Its "efficient" implementation monkey-patches the HF model class so that ordinary input × gradient equals the AttnLRP relevance, so token-level and neuron-level relevance for an output logit comes from **one backward pass**. Supported per the README (2026-10-14): Llama 2/3, Gemma 3, Qwen 2, BERT, GPT-2 ("best paired with contrastive explanations"), Vision Transformers; Qwen 3 is marked experimental with "Attribution skewed toward first token". MAttr (below) scores AttnLRP as a baseline; the R-Lens and J++ Lens (above) also compute their Jacobians with an LRP backward pass.
+
+```python
+# Efficient implementation; code lines verbatim from the README, comments shortened. your_module is the HF modeling module:
+# the repo's examples/quantized_llama.py does `from transformers.models.llama import modeling_llama`
+# and then `monkey_patch(modeling_llama, verbose=True)` before loading the model.
+from lxt.efficient import monkey_patch
+
+monkey_patch(your_module)                                         # patch module first
+outputs = model(inputs_embeds=input_embeds.requires_grad_())      # forward with gradient tracking
+outputs.logits[...].backward()                                    # backward from the chosen logit
+relevance = (input_embeds * input_embeds.grad).sum(-1)            # relevance per input token
+```
+
+**Versions.** GitHub releases v2.1 (2025-07-10) and v2.0; PyPI `lxt` is 2.1 (2025-07-10). The README states "Tested with: `transformers==5.9.0`, `torch==2.12.0`, `python==3.11`", but the "update to transformers==5.9.0" commits on `main` are dated 2026-08-11, after the PyPI release — so on transformers 5.x, installing from git may be needed (not tested here).
+
+**When to use it:** you want token- or neuron-level relevance that is less noisy than raw gradients, at the cost of a single backward pass, e.g. to pick candidate components before patching, or for long prompts where integrated gradients is too expensive.
+
+**When *not* to use it:** commercial work — the README states that "LRP is a patented technology that can only be used free of charge for personal and scientific purposes" (the code itself is described as BSD-3; GitHub reports the license as NOASSERTION); as causal evidence on its own (verify by patching); architectures not in the supported list without checking the patched module covers every non-linearity.
 
 ## pyvene (and pyreft)
 
@@ -321,6 +424,7 @@ A **circuit** is the subgraph of a model's computation graph (attention heads, M
 | **EAP** (edge attribution patching; Syed, Rager & Conmy, arXiv:2310.10348) | First-order gradient approximation of every edge's patching effect at once | Two forward passes (clean and corrupted) + one backward pass |
 | **EAP-IG** (EAP with integrated gradients; Hanna, Pezzelle & Belinkov, COLM 2024, arXiv:2403.17806) | Averages the gradient over *m* interpolation steps between clean and corrupted inputs | About *m* times EAP |
 | Mask optimization (e.g. UGS, uniform gradient sampling, one of MIB's baselines) | Optimizes which edges to keep so that behaviour is preserved | An optimization run per task |
+| **MAttr** (Matryoshka Attribution; Arora et al., arXiv:2609.25518) | Learns a mask with a sigmoid top-*k* operator while sampling *k* at random each step, so one run yields a *ranking* of all components and the whole faithfulness-vs-sparsity curve | One training run per task (the paper's node-level recipe: 500 steps) |
 
 **Key result (EAP-IG paper).** Circuits found with EAP were less faithful than those found with EAP-IG, even though both had high node overlap with circuits found previously using causal interventions; the authors conclude that faithfulness, not overlap with a reference circuit, is what to measure.
 
@@ -341,6 +445,55 @@ Mueller, Geiger, Wiegreffe, … Bau, Belinkov, *MIB: A Mechanistic Interpretabil
 - **Metrics.** The paper splits faithfulness in two: **CPR** (integrated circuit performance ratio; higher is better) rewards finding components that *help* the task; **CMD** (integrated circuit-model distance; 0 is best) rewards finding everything with a strong effect, including components that hurt it. Both are integrated over a range of circuit sizes; a leaderboard submission is 9 circuits of varying sizes per model/task. The causal-variable track reports **interchange intervention accuracy (IIA)**: the fraction of interventions where the intervened model and the high-level causal model give the same output (for every task except IOI, which uses a logit-based metric).
 - **Findings.** "attribution and mask optimization methods perform best on circuit localization", with EAP-IG on inputs and counterfactual ablations generally best on both CPR and CMD; exact edge activation patching did not always win. For causal variables, supervised DAS performed best, and "SAE features are not better than neurons" (raw hidden dimensions).
 - **Private test set.** The leaderboard scores a held-out private split and allows 2 submissions per user per week, to discourage hill-climbing.
+- **Current top method (as of 2026-10-14).** The MAttr paper (arXiv:2609.25518, 2026-09-22) reports "number 1 on the official leaderboard"; its node and edge circuits for every MIB subtask are on Hugging Face as `aryaman/mattr-mib-circuits`. Leaderboard rank is the authors' claim, read from the abstract, not re-checked against the Space.
+
+### MAttr (Matryoshka Attribution): a learned ranking over all sparsities
+
+Aliases: MAttr, Matryoshka Attribution, "sigmoid top-k mask", `aryamanarora/matryoshka-attribution` on GitHub, `aryamanarora/matryoshka-attribution-parameters` (weight-attribution sibling repo). Paper: Arora, Acharya, Hu, Zhang, Goodman, Jurafsky & Potts, "Matryoshka attribution: Learning to attribute language model outputs to representations and weights", arXiv:2609.25518 (2026-09-22).
+
+**What it is.** Attribution framed as finding *nested* subsets of components that minimise a downstream loss. A mask over components is parametrised with a differentiable sigmoid top-*k* operator, and *k* is randomised during training, so the learned scores are an ordering: the top-*k* set for every *k* comes from one run, unlike mask-learning methods that fix a budget. One API (`trainer.learn_scores`, which "takes a `loss_fn(mask)` and a node count") covers nodes, edges, MLP neurons, SAE latents and ViT patches. Baselines (Node/Edge Pruning, UGS, EAP-IG, AtP*, RelP, AttnLRP, input × gradient, IG, Expected Gradients) are all scored with MIB's own `evaluate_area_under_curve`. The paper also trains a weight-attribution variant with reinforcement learning on refusal-judge scores and reports that "restoring 1% of Llama 3.1 8B Instruct's weights to their base model state is sufficient to remove refusals while maintaining capabilities" — a weight-level take on model diffing (see [`model-diffing.md`](model-diffing.md)).
+
+```bash
+# Verbatim from the README: setup clones the pinned MIB fork into deps/, then a node-level MIB cell
+git clone git@github.com:aryamanarora/matryoshka-attribution.git
+cd matryoshka-attribution
+bash scripts/setup.sh
+uv run python scripts/mib/eval_mib.py --model gpt2 --task ioi \
+  --steps 500 --k-schedule uniform --masking topk --mode iso --lr 0.05 \
+  --split validation --train-split train --include-input \
+  --output results/mib_node_topk_uniform_lr05
+```
+
+**Pitfalls (from the README):** three `uv` environments exist because their torch / transformers / TransformerLens stacks conflict; every Gemma-2 cell and the Node/Edge Pruning and UGS baselines need the `tl2` group (TransformerLens **2.15.4**), because "TL 3.x has a Gemma-2 forward bug". `meta-llama/*` and `google/gemma-2*` are gated (`HF_TOKEN`).
+
+**When to use it:** you want a faithfulness-vs-sparsity curve without re-running a method per budget, a MIB submission against the current top method, or attribution over a non-standard basis (neurons, SAE latents, weights).
+
+**When *not* to use it:** a quick, training-free first look (EAP-IG or attribution patching is cheaper); code you need to redistribute or vendor — neither repository has a license file (GitHub API, 2026-10-14), so default copyright applies.
+
+### CircuitKIT: discovery → faithfulness scoring → pruned checkpoint in one pipeline
+
+Aliases: CircuitKIT, `circuitkit` on PyPI, `Lexsi-Labs/CircuitKIT` on GitHub, Lexsi Labs. Paper: Seth, Gosalia, Kasliwal & Sankarapu, "CircuitKIT: Circuit Discovery, Evaluation, and Application Toolkit for Mechanistic Interpretability", arXiv:2607.19317 (2026-07-21).
+
+**What it is.** A library that connects circuit discovery, evaluation and downstream use through one typed, serializable circuit object: run a discovery algorithm (six "stable" ones per the README — EAP, EAP-IG, EAP-GP, ACDC, IBCircuit, CD-T — plus research ones), score the circuit on a "6-pillar faithfulness" suite (causal patching, ablation, stability, robustness, baselines, generalization), then prune, quantize, edit, steer or fine-tune and export a reloadable Hugging Face checkpoint. Releases 0.2.0 and 0.1.11 (both 2026-10-08); PyPI `circuitkit` 0.2.0. The GPT-2 quickstart runs on CPU.
+
+```python
+# Verbatim from the README (CPU is fine for GPT-2)
+from circuitkit import Pipeline
+
+pipe = Pipeline("gpt2", task="ioi")
+pipe.discover(algorithm="eap-ig", sparsity=0.3)
+pipe.evaluate()
+pipe.prune()
+pipe.export("./checkpoint")
+```
+
+**Pitfalls:**
+- **Pinned to TransformerLens 3.8.0** (with transformers 5); the README says to import `circuitkit` before `transformer_lens`. Expect a conflict in an environment that has moved to TransformerLens 4.x for other work — a separate environment is the simple fix.
+- **Vision-language models are rejected** with an error (TransformerLens has no vision tower); ACDC is excluded from the README's standard validation gate.
+
+**When to use it:** you want circuit discovery and an *action* on the circuit (pruning, editing) in one tool, or a quick comparison of several discovery algorithms under one evaluation.
+
+**When *not* to use it:** the license matters for your project — it is the **Lexsi Labs Source Available License (LSAL) v1.2**, not an OSI open-source license: "free for academic research and teaching on MIT-like terms; use by any organization requires written acknowledgement or permission (Section 1A); commercial use requires a separate license" (README); frontier-size models; when you need MIB-comparable numbers (score the circuit with MIB's own evaluator as well).
 
 ### Causal abstraction (the theory underneath)
 
@@ -363,6 +516,9 @@ Two related ideas: **automated interpretability** (an LLM labels or explains uni
 | Infrastructure to give a Claude Code / Claude Agent SDK agent GPU-backed white-box tools | **Seer** (`ajobi-uhc/seer`) |
 | A testbed of *naturally occurring* secrets (facts a model knows but lies about) | The **de-censoring Chinese models** tasks (`ajobi-uhc/chinese-models-investigations`) |
 | Auditing-game targets with implanted hidden behaviours | **AuditBench** (see [`model-organisms.md`](../alignment-science/model-organisms.md)) |
+| A trained explainer that describes SAE features, patching effects or input-ablation effects of Llama-3.1-8B / Qwen3-8B, plus a released *simulator* to score any feature explanation | **Transluce `introspective-interp`** (arXiv:2511.08579) |
+| To measure whether a coding agent can find the right SAE feature for a concept (rank, selectivity, steering) against expert picks | **SAEScientist-Bench** (`Trae1ounG/SAEScientist`, arXiv:2609.09113) |
+| To test whether an activation-reading tool (activation oracle, NLA, SAE) helps an agent predict behaviour better than the transcript alone | **CHIVE** (`adamkarvonen/chive`, arXiv:2608.16747) |
 
 **MAIA, a Multimodal Automated Interpretability Agent** (Rott Shaham, Schwettmann, Wang, Rajaram, Hernandez, Andreas & Torralba, arXiv:2404.14394; code `multimodal-interpretability/maia`, verified, last push 2025-10-22, no license file per the GitHub API). A pretrained vision-language model equipped with tools for synthesizing and editing inputs, computing maximally activating dataset exemplars, and summarizing results; it composes them into experiments. On a dataset of synthetic vision neurons with ground-truth descriptions, its neuron descriptions were comparable to those of expert human experimenters. **When not to use it:** language-model work — it targets computer-vision models.
 
@@ -372,7 +528,13 @@ Two related ideas: **automated interpretability** (an LLM labels or explains uni
 
 **De-censoring Chinese models as an interpretability testbed** (Khoi Tran, aryaj, Senthooran Rajamanoharan & Neel Nanda, *Test your interpretability techniques by de-censoring Chinese models*, LessWrong, 2026-01-15; MATS 9.0). Chinese open-weight models refuse, downplay or lie about facts they know, which makes them *natural* model organisms of secret-keeping (instilled by extensive post-training, not narrow finetuning). Four tasks: Falun Gong on Qwen3-32B, a verbatim Harry Potter quote from gpt-oss-20b (refusal without lying), and two tasks on `kimi-k2-0905` about the November 2024 Zhuhai car attack — the only fact the authors found that the target knows and conceals but the investigator model (Claude Sonnet 3.7, GPT-5) does not, so the agent cannot fall back on prior knowledge. An LLM judge gives a **correctness** score and a **consistency ("Bayesian") score** for whether conclusions follow from the evidence gathered, which catches agents that "find" what they already knew. The investigator was the Claude Agent SDK with Claude Sonnet 3.7 and a notebook; giving it a logit-lens tool did not improve the main tasks, which the authors call a preliminary result that should not be taken as a meaningful update. Code: `ajobi-uhc/seer` (MIT; infrastructure for interpretability agents — GPU environments and white-box tools for Claude Code-driven investigations) and `ajobi-uhc/chinese-models-investigations` (MIT; task YAMLs, transcripts, judge prompts). Pitfalls: target behaviour is stochastic, so single transcripts do not replicate; a test fact must post-date the *investigator's* knowledge cutoff, and the authors note Kimi appears only lightly pretrained on events after June 2024.
 
-**Open problem and bar.** Agents with white-box tools have not yet clearly beaten agents with black-box tools on realistic audits (AuditBench's tool-to-agent gap; the logit-lens result above). A convincing interpretability-agent result shows a white-box tool **raising agent success over the best black-box scaffold** on a task where the investigator cannot know the answer in advance (the Kimi tasks, or AuditBench with adversarially trained organisms), reports a consistency-style score alongside correctness, and uses enough runs per condition to separate the effect from run-to-run variance. Regime note: these benchmarks score unattended agent runs; how much they transfer to a researcher steering an agent interactively is untested.
+**Trained explainer models and a released simulator scorer (Transluce `introspective-interp`).** Li, Guo, Huang, Steinhardt & Andreas, "Training Language Models to Explain Their Own Computations" (arXiv:2511.08579; code `TransluceAI/introspective-interp`, MIT, last push 2026-07-07). They finetune LMs to describe (1) SAE features (LlamaScope features of Llama-3.1-8B, labels from Neuronpedia), (2) the effects of activation patching (CounterFact; Llama-3.1-8B and Qwen3-8B) and (3) the effects of removing hint tokens (MMLU + hint; Llama-3.1-8B-Instruct and Qwen3-8B). Headline from the abstract: "using a model to explain its own computations generally works better than using a *different* model to explain its computations (even if the explainer model is significantly more capable than the target)". The reusable artifact for auto-interp pipelines is the **simulator model** `Transluce/features_explain_llama3.1_8b_simulator`, which predicts where a described feature should fire so that any explanation can be scored by correlation with the true activations (the "simulator score"). Evaluation, from the README with `--model_path` set to its example checkpoint: `uv run --env-file .env evaluate.py --config config/feature_descriptions/base_131k.yaml --target_model_path meta-llama/Llama-3.1-8B --task features_explain --model_path Transluce/features_explain_llama3.1_8b_llama3.1_8b --output_dir /PATH/TO/RESULTS/ --batch_size 64`; `--model_path self_explanations` runs the untrained SelfIE baseline and `--model_path nearest_neighbor` a retrieval baseline. Configs assume 2× 80 GB H100s, and the LM-judge evaluation needs an OpenAI API key. **When not to use it:** target models other than the released ones (the checkpoints are model-specific, and the paper's point is that self-explanation beats cross-model explanation).
+
+**SAEScientist-Bench: can an agent do SAE feature-finding research?** Tan, He, Zhao & Liu, arXiv:2609.09113 (2026-09-08); code `Trae1ounG/SAEScientist` (no license file; last push 2026-09-10). 20 tasks over 17 concepts on Gemma-2-9B-IT with Gemma Scope 131,072-feature residual dictionaries at layers 9 and 20: the agent writes contrastive probe texts, inspects activations and submits one feature, scored against Neuronpedia-anchored expert features on activation rank, concept selectivity on contrastive texts, and causal steering. Abstract: frontier agents "remain well behind the expert baseline, approaching expert levels on separating target concepts from contrastive controls while lagging substantially in causal generation steering", and "although agents can design contrasts to rule out spurious candidates, they frequently misinterpret experimental measurements". Run one task (README): `python scripts/run_benchmark.py --config configs/benchmark.json --task-id gemma_cat_001 --replicates 1 --output-dir outputs/cat`. **When not to use it:** as a general interpretability-agent benchmark (it tests one narrow skill); without a GPU that holds Gemma-2-9B-IT plus the dictionary; with Claude Code as the agent unless you write an adapter — the provided harnesses are Codex and Cursor, and the judge is an Azure OpenAI GPT-4o deployment. **Tip for agent-driven SAE work:** its failure mode suggests asking the agent to restate what each measurement shows before it draws a conclusion from it.
+
+**CHIVE: does an interpretability tool beat reading the transcript?** Karvonen, Ong, Kantamneni & Marks, "Would this change your answer? Evaluating Explanations of LLM Behavior In The Wild with Counterfactual Experiments" (arXiv:2608.16747, 2026-08-17; LessWrong 2026-08-21; code `adamkarvonen/chive`, MIT; data `adamkarvonen/chive-data` on Hugging Face). CHIVE (Counterfactual Hypothesis Investigation Via Edits) is an agentic pipeline: sample a target model on real prompts (30 responses per prompt), screen for unexpected behaviours, run 5–15 counterfactual prompt edits per behaviour, and record the measured outcome of each edit. The measured outcomes become labels for a binary evaluation: a predictor agent sees a transcript and a claim that a specific edit would change the behaviour, and outputs a probability. Predictors given 5 read-only calls to an **activation oracle**, a **natural language autoencoder** or an **SAE** were compared with a transcript-only predictor (Claude Opus 4.8 as predictor in the main experiments). Result (post): "activation-reading interpretability tools provide no uplift: agents given the tools predict the outcomes of these experiments no better than agents that just read the transcript", holding "across many variations, including two target models, three predictor model families, sweeps of hyperparameters, and manual and automated attempts to elicit better tool use". The authors' own caveats: the discovered behaviours are mostly simple (a coding mistake, an unusual story choice), and they "still believe these tools can be valuable"; their recommendation is that causal claims based on tool outputs be treated as suggestive until a tool shows uplift. The same data trains models (Qwen3-8B, Qwen3.5-397B-A17B) to predict how prompt edits change their own behaviour, which generalized to a held-out hint setting. Setup: `uv sync`, `python scripts/download_data.py`; `uv sync --extra gpu` for vLLM serving, activation-oracle capture and SAE/NLA precomputes; entry points `chive/pipeline/README.md` (run on your own model) and `chive/binary_eval/README.md` (run the eval). **When not to use it:** when you need ground truth about an internal mechanism — CHIVE's labels are counterfactual prompt-edit effects, not internals.
+
+**Open problem and bar.** Agents with white-box tools have not yet clearly beaten agents with black-box tools on realistic audits (AuditBench's tool-to-agent gap; the logit-lens result above; CHIVE's no-uplift result on naturally occurring behaviours). A convincing interpretability-agent result shows a white-box tool **raising agent success over the best black-box scaffold** on a task where the investigator cannot know the answer in advance (the Kimi tasks, AuditBench with adversarially trained organisms, or CHIVE's binary counterfactual-prediction eval against its transcript-only baseline), reports a consistency-style score alongside correctness, and uses enough runs per condition to separate the effect from run-to-run variance. Regime note: these benchmarks score unattended agent runs; how much they transfer to a researcher steering an agent interactively is untested.
 
 ## Agenda framing: pragmatic, ambitious, and open problems
 
@@ -391,6 +553,38 @@ Four short reads that set the terms of current mechanistic-interpretability (mec
 
 **AlgZoo (Alignment Research Center, ARC).** RNNs and transformers of 8 to 1,408 parameters trained on algorithmic tasks (RNN families: 2nd argmax, argmedian, median; transformer family: longest cycle). ARC treats an *explanation* as a **mechanistic estimate of the model's loss** (for these models, its accuracy) and grades it two ways: mean squared error versus compute (does it beat random sampling at the same compute?) and *surprise accounting* (full understanding = total surprise no larger than the bits of optimization that selected the model). The largest model ARC believes it more or less fully understands has 32 parameters; a 432-parameter 2nd-argmax RNN, `M_{16,10}`, remains unexplained. **Stated bar (ARC's challenge):** design a method for mechanistically estimating the accuracy of the 432-parameter model that matches the performance of random sampling in mean squared error versus compute; the post suggests measuring error by adding noise to the weights and averaging over noisy models. Install: `git clone` the repo, `pip install -e alg-zoo`, then `from alg_zoo import example_2nd_argmax` (MIT-0; verified, last push 2026-08-19). **When not to use it:** if your question is about LLM behaviour at scale — AlgZoo is a test of explanation methods, not of LLM phenomena.
 
+## Live challenges (as of 2026-10-14)
+
+Aliases: interpretability competition, interp challenge, AIMO Interpretability Challenge, AIMO-interp, NeurIPS 2026 competition, ARC White-Box Estimation Challenge, WhestBench, flopscope, MIB leaderboard.
+
+Open problems with a scoreboard. Dates go stale fast; each entry says where the authoritative terms live.
+
+| Challenge | Task | Deadline / status (as read 2026-10-14) | Where |
+|---|---|---|---|
+| **AIMO Interpretability Challenge** (NeurIPS 2026 competition) | From model internals, predict whether a reasoning model is *robust* on each math problem (its accuracy holds under every perturbation the organisers apply) | Main phase Aug 15 – Nov 1, 2026; **final submission deadline Nov 1, 2026**; technical reports Nov 1–15; workshop at NeurIPS 2026 in Paris on Dec 12 | `aimo-interp.github.io`; starter kit `aimo-interp/getting-started`; details in [`probes.md`](probes.md#aimo-interpretability-challenge-neurips-2026-deadline-2026-11-01) |
+| **ARC White-Box Estimation Challenge** (Alignment Research Center + AIcrowd) | Given the weights of a random ReLU MLP (first rounds: width 256, 8 hidden layers), estimate its expected output under a FLOP budget, better than sampling | Warm-up round began June 2026; later rounds have "a total prize pool of at least $100,000" (ARC post, 2026-06-02). The AIcrowd page deliberately carries no dates — the Official Rules there are binding | `aicrowd.com/challenges/arc-white-box-estimation-challenge-2026`; FLOP counter `AIcrowd/flopscope`; see [`theory-research.md`](../engineering/theory-research.md) |
+| **MIB leaderboard** (circuit localization, causal variable localization) | Score a circuit-discovery or featurization method on a private test split | Ongoing; 2 submissions per user per week | `mib-bench/leaderboard` Space; see [MIB](#mib-the-mechanistic-interpretability-benchmark) |
+
+**AIMO Interpretability Challenge, in brief.** You submit a Codabench zip exposing `are_robust(model_id, reasoning_effort, problems) -> list[bool]`, which runs offline on one NVIDIA RTX PRO 6000 (96 GB) with 3,600 s for the entire prediction run. Evaluated models: `Qwen/Qwen3.5-4B`, `Skywork/Skywork-OR1-Math-7B`, `allenai/Olmo-3-7B-Think`, `deepseek-ai/DeepSeek-R1-0528-Qwen3-8B`, plus `openai/gpt-oss-120b` on the main track only (a small-models track excludes it). Per the rules, "teams can use weights, activations, token probabilities, or any other model internal signals as inputs for their methods." Prizes: "$12,500 in prizes" — main track $3,000 / $1,000 / $600, small-models track $2,000 / $600 / $300, and $5,000 for selected technical reports. **When not to use it:** after Nov 1, 2026 it stops being a competition and becomes a probe-on-reasoning-models example with development labels only.
+
+**ARC White-Box Estimation Challenge, in brief.** Jacob Hilton (ARC), "Announcing the ARC White-Box Estimation Challenge" (LessWrong, 2026-06-02). Black-box methods are permitted, but ARC expects the best algorithms to be "mechanistic", as in its wide-random-MLP paper; LLM use is encouraged, and later rounds have a prize for the best-performing submission and one for the favourite algorithmic contribution in a technical report. Submissions are scored by analytical FLOP cost through **flopscope** (`flopscope` on PyPI, v0.12.1, 2026-08-29; `import flopscope.numpy as fnp` in place of `import numpy as np`; "Every arithmetic call deducts from a fixed budget; exceed it and execution stops immediately"). The post warns that the FLOP counter "is definitely hackable in ways that would be very unambiguously hacking once pointed out" and that contestants are responsible for not doing so, including via LLM-written code. **When not to use flopscope:** as a general profiler — it counts analytical FLOPs over a NumPy subset, not wall-clock time. It is the natural next step after [AlgZoo](#agenda-framing-pragmatic-ambitious-and-open-problems) (same organisation, same "estimate the model's behaviour mechanistically" framing).
+
+## Analogue domains: chess transformers (chessformer_lens)
+
+Aliases: chessformer_lens, `chessformer-lens` on PyPI, `chessformer-lens/chessformer_lens` on GitHub, chess interpretability, Leela Chess Zero BT4, Maia-3, "Fork Around and Find Out" (LessWrong series), David Litman.
+
+**What it is.** A TransformerLens-style hook, analysis and visualization toolkit for square-tokenized chess transformers — Leela's BT4 network (downloads itself on first use) and Maia-3 — with an interactive app runnable in Colab. Releases v3.0 (2026-10-13) and v2.0 (2026-10-11); PyPI `chessformer-lens` 3.0. The companion paper is Litman, "Increasing Skill Level Recruits Deeper Attention Layers in a Frozen Chess Transformer" (arXiv:2609.23917, 2026-09-20): Maia-3 takes Elo as an input, so the skill it is conditioned on can be varied with no weight change; ablating every attention head at Elo 700–2500, higher skill pushes the causal centre of mass of the computation deeper, most strongly for tactics such as knight forks.
+
+```bash
+# Verbatim from the README
+pip install chessformer_lens
+# for Maia-3 models, first: pip install https://github.com/CSSLab/maia3/archive/1e13597c42d4858b7cfd7cfdae01e297263364b2.zip
+```
+
+**Why an analogue domain.** A move has a clear evaluation (an engine score), board-structured attention has interpretable roles, and there is a human concept hierarchy (squares → threats → tactics → strategy) to compare features against — a cheap testbed for circuit or feature claims before an LLM.
+
+**When *not* to use it:** you need language-model findings directly (chess results are an analogue, not evidence about LLMs); the license matters (GitHub reports NOASSERTION — read the repo's LICENSE file before reuse); you want a mature library (single author, first GitHub release v0.1.0 on 2026-08-10, nine stars as of 2026-10-14).
+
 ## Cross-references
 
 - For SAE work: [`saes.md`](saes.md).
@@ -406,7 +600,7 @@ Four short reads that set the terms of current mechanistic-interpretability (mec
 
 ### Is TransformerLens still maintained?
 
-Yes. `TransformerLensOrg/TransformerLens` on GitHub is actively maintained (maintainers Bryce Meyer and Jonah Larson; releases through 4.1.0 on 2026-09-28; PyPI `transformer_lens` 4.0.0 on 2026-09-21). TL 3.0 (2026-04-17) introduced `TransformerBridge`; **TL 4.0 removed `HookedTransformer`** and the other `Hooked*` classes. Bug fixes for the legacy classes continue only on the 3.x branch. The `HookedSAETransformer` was moved out of TransformerLens 2.0 into **SAELens**, which also offers `SAETransformerBridge` for TL 3+ and currently pins `transformer-lens<4`.
+Yes. `TransformerLensOrg/TransformerLens` on GitHub is actively maintained (maintainers Bryce Meyer and Jonah Larson; releases 4.0.0 on 2026-09-21, 4.1.0 on 2026-09-28 and 4.2.0 on 2026-10-10, which is also the current PyPI `transformer-lens` version as of 2026-10-14). TL 3.0 (2026-04-17) introduced `TransformerBridge`; **TL 4.0 removed `HookedTransformer`** and the other `Hooked*` classes. Bug fixes for the legacy classes continue only on the 3.x branch. The `HookedSAETransformer` was moved out of TransformerLens 2.0 into **SAELens**, which also offers `SAETransformerBridge` for TL 3+ and currently pins `transformer-lens<4`.
 
 ### TransformerLens or nnsight for a beginner?
 
@@ -432,10 +626,22 @@ Four options: (1) **vLLM-Lens** (UK AISI) — fast residual-stream extraction at
 
 For single-token readouts of unspoken intermediate variables on open models, the **J++ Lens** (Ayonrinde & Lindsey, 2026-10-08) currently has the best reported numbers (55.2% recall@10 on Qwen3.6-27B vs 37.7% R-Lens vs 35.7% J-Lens; code `safety-research/jpp_lens`, lenses `koayon/jpp-lenses`); fall back to the **R-Lens** or **J-Lens** when no J++ lens exists for your model. Use a multi-token reader (Template Lens, Oracle Lens, natural language autoencoder) only when single tokens cannot express the content, and verify any text it produces. See the decision table in [Workspace lenses](#workspace-lenses-j-lens-r-lens-j-lens).
 
+### My Gemma (or OLMo 2/3) MLP SAE features never fire — why?
+
+Most likely the sandwich-norm hook trap: on Gemma 2/3/4 and OLMo 2/3 the raw MLP module output (`model.model.layers[i].mlp`, TransformerLens `blocks.{i}.mlp.hook_out`) is not the post-norm residual contribution (`blocks.{i}.hook_mlp_out`), and Gemma Scope MLP SAEs read the contribution. On gemma-2-2b layer 4 the wrong tensor gave FVU (fraction of variance unexplained) 9.8 and L0 8 instead of FVU 0.26 and L0 81 (interp-engine `docs/PORTING.md`). Hook after `post_feedforward_layernorm` and compare FVU on both candidates. See [The sandwich-norm hook trap](#the-sandwich-norm-hook-trap-gemma-234-olmo-23).
+
+### Which library tells me which input tokens drove an output?
+
+**Captum** (`LLMAttribution`) for single-prompt saliency and classical methods; **inseq** for attribution of every generated token with built-in visualization; **LXT** (AttnLRP) for token- and neuron-level relevance in one backward pass (free only for personal and scientific use — LRP is patented). For *internal components* use EAP-IG or MAttr instead. See [Attribution](#attribution-which-tokens-or-components-drove-this-output).
+
+### Do interpretability tools beat just reading the transcript?
+
+Not yet, on the checkable proxies that exist. In CHIVE (Karvonen et al., arXiv:2608.16747) agents given an activation oracle, a natural language autoencoder or an SAE predicted the effect of counterfactual prompt edits no better than a transcript-only agent; AuditBench found a similar tool-to-agent gap. The CHIVE authors still consider the tools valuable and suggest treating tool-based causal claims as suggestive. Reporting a transcript-only baseline next to any tool result is the cheap way to show uplift. See [Interpretability agents](#automated-interpretability-and-interpretability-agents).
+
 ### What is the J++ Lens (Jacobian Filtering)?
 
 A drop-in improvement to Anthropic's J-Lens (a per-layer averaged-Jacobian readout of a model's workspace representations). It clusters each layer's activations (k-means, 8 clusters), averages one Jacobian per cluster, learns weights that down-weight clusters giving noisy readouts (*Jacobian Filtering*), computes the Jacobians with a Layer-wise Relevance Propagation backward pass (as in the R-Lens), and drops non-semantic tokens from the readout (*Readout Filtering*). Inference cost is identical to the J-Lens. Limits: single tokens only, tokenizer-dependent, poetry-planning recall ≤5% for every lens. Full details above.
 
 ---
 
-Last verified: 2026-10. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7. Additions 2026-06: cited the mech-interp methods named in the TransformerLens bullets — induction heads (Olsson et al. 2209.11895), IOI (Wang et al. 2211.00593), attribution patching (Syed et al. 2310.10348); all verified via arXiv.) (Additions 2026-08: pyvene — `pyvene` on PyPI, arXiv 2403.07809, example structured after the repo's Basic_Intervention tutorial — and its sibling pyreft (ReFT, arXiv 2404.03592; last repo activity March 2026).) (Additions 2026-10: TransformerLens 3.0/4.0 `TransformerBridge` migration — `HookedTransformer` removed in 4.0.0 (PyPI 2026-09-21; GitHub 4.1.0 2026-09-28), verified from the repo README, `migrating_to_v3.md`/`migrating_to_v4.md`, `drivers.md` and PyPI release dates; SAELens `<4` pin (v6.51.2) and the circuit-tracer issue #115 TL-4 breakage verified on GitHub; nnsight 0.7.0 / 0.8.0rc1 release notes and README; new **Workspace lenses** section — J-Lens (Gurnee et al., transformer-circuits.pub/2026/workspace, 2026-07-06; `anthropics/jacobian-lens`), R-Lens (LessWrong nv8oedrnLXKRzNEL9, 2026-08-05), J++ Lens (Ayonrinde & Lindsey, LessWrong nc9dHfcB22JdMzGbr, 2026-10-08; `safety-research/jpp_lens`, `koayon/jpp-lenses`), WorkspaceBench (`camilablank/workspace-bench`, LessWrong Zeg2JztbdhguL48uH, 2026-09-23), NLA (`kitft/natural_language_autoencoders`), pitfalls from LessWrong posts Adb55vLqt33LEyBfz, Qe3jdphWCg9kny3e5, pnDjvdo6cX2H7Ddsy, GZCMmCHZiF8vhsczr, 69fachkoAs2ZHeSst; GitHub repos and HuggingFace lens repos verified via `gh api` / HF API, arXiv IDs 2303.08112, 2401.06102, 2512.15674 verified via abs pages. J++ numbers are from the authors' non-peer-reviewed post.) (Additions 2026-10-12: **Circuit discovery** — EAP-IG arXiv:2403.17806 (abstract) and `hannamw/EAP-IG` README, `pyproject.toml` and `src/eap/attribute.py` imports read via `gh api` (the TransformerLens-4 `ImportError` is inferred from the unpinned dependency plus the `HookedTransformer` import, not run); MIB arXiv:2504.13151 (abstract and HTML full text for CPR/CMD/IIA definitions, the EAP-IG and counterfactual-ablation findings), `aaronmueller/MIB` README (models, 9-circuit submissions, 2 submissions per week), `hannamw/MIB-circuit-track` and the `atticusg/CausalAbstraction` → `goodfire-ai/causalab` redirect via the GitHub API, leaderboard Space returns HTTP 200; causal abstraction arXiv:2301.04709 (abstract). **Interpretability agents** — MAIA arXiv:2404.14394 and `multimodal-interpretability/maia`; investigator agents arXiv:2502.01236; Predictive Concept Decoders arXiv:2512.15712 (abstract and HTML for setup); the de-censoring post (LessWrong 7gp76q4rWLFi6sFqm, 2026-01-15, read in full via GraphQL), `ajobi-uhc/seer` and `ajobi-uhc/chinese-models-investigations` via the GitHub API; no official code found for investigator agents or PCDs. **Agenda framing** — arXiv:2501.16496 (author list), Pragmatic Vision (LessWrong StENzDcD3kpfGJssR), Ambitious Vision (LessWrong Hy6PX43HGgmfiTaKu) and AlgZoo (LessWrong x8BbjZqooS4LFXS8Z) read via GraphQL, `alignment-research-center/alg-zoo` README and license via `gh api`. All quotations checked as exact substrings of the source. Verification pass 2026-10-12: 78 claims checked, 4 corrected — EAP cost (two forward passes + one backward, per the 2310.10348 abstract), EAP-IG's overlap baseline (circuits found with causal interventions, not hand-found), IIA's IOI exception (MIB PDF §4), and ARC's definition of an explanation (estimate of loss).)
+Last verified: 2026-10-14. TransformerLens 2.x removed `HookedSAETransformer` (now in SAELens). nnsight published at ICLR 2025; remote backend via NDIF. nnterp 1.3.0 (Feb 2026), NeurIPS 2025 Mech Interp Workshop (arXiv:2511.14465). baukit not on PyPI, last commit Feb 2024. circuitsvis 1.43.3 (Dec 2024) under TransformerLensOrg. Captum 0.9.0 (Apr 2026) with LLM attribution. (Citation audit 2026-06: corrected canonical repo paths to `meta-pytorch/captum` and `ndif-team/nnterp`, added the nnsight paper arXiv:2407.14561, and noted LLM attribution predates v0.7. Additions 2026-06: cited the mech-interp methods named in the TransformerLens bullets — induction heads (Olsson et al. 2209.11895), IOI (Wang et al. 2211.00593), attribution patching (Syed et al. 2310.10348); all verified via arXiv.) (Additions 2026-08: pyvene — `pyvene` on PyPI, arXiv 2403.07809, example structured after the repo's Basic_Intervention tutorial — and its sibling pyreft (ReFT, arXiv 2404.03592; last repo activity March 2026).) (Additions 2026-10: TransformerLens 3.0/4.0 `TransformerBridge` migration — `HookedTransformer` removed in 4.0.0 (PyPI 2026-09-21; GitHub 4.1.0 2026-09-28), verified from the repo README, `migrating_to_v3.md`/`migrating_to_v4.md`, `drivers.md` and PyPI release dates; SAELens `<4` pin (v6.51.2) and the circuit-tracer issue #115 TL-4 breakage verified on GitHub; nnsight 0.7.0 / 0.8.0rc1 release notes and README; new **Workspace lenses** section — J-Lens (Gurnee et al., transformer-circuits.pub/2026/workspace, 2026-07-06; `anthropics/jacobian-lens`), R-Lens (LessWrong nv8oedrnLXKRzNEL9, 2026-08-05), J++ Lens (Ayonrinde & Lindsey, LessWrong nc9dHfcB22JdMzGbr, 2026-10-08; `safety-research/jpp_lens`, `koayon/jpp-lenses`), WorkspaceBench (`camilablank/workspace-bench`, LessWrong Zeg2JztbdhguL48uH, 2026-09-23), NLA (`kitft/natural_language_autoencoders`), pitfalls from LessWrong posts Adb55vLqt33LEyBfz, Qe3jdphWCg9kny3e5, pnDjvdo6cX2H7Ddsy, GZCMmCHZiF8vhsczr, 69fachkoAs2ZHeSst; GitHub repos and HuggingFace lens repos verified via `gh api` / HF API, arXiv IDs 2303.08112, 2401.06102, 2512.15674 verified via abs pages. J++ numbers are from the authors' non-peer-reviewed post.) (Additions 2026-10-12: **Circuit discovery** — EAP-IG arXiv:2403.17806 (abstract) and `hannamw/EAP-IG` README, `pyproject.toml` and `src/eap/attribute.py` imports read via `gh api` (the TransformerLens-4 `ImportError` is inferred from the unpinned dependency plus the `HookedTransformer` import, not run); MIB arXiv:2504.13151 (abstract and HTML full text for CPR/CMD/IIA definitions, the EAP-IG and counterfactual-ablation findings), `aaronmueller/MIB` README (models, 9-circuit submissions, 2 submissions per week), `hannamw/MIB-circuit-track` and the `atticusg/CausalAbstraction` → `goodfire-ai/causalab` redirect via the GitHub API, leaderboard Space returns HTTP 200; causal abstraction arXiv:2301.04709 (abstract). **Interpretability agents** — MAIA arXiv:2404.14394 and `multimodal-interpretability/maia`; investigator agents arXiv:2502.01236; Predictive Concept Decoders arXiv:2512.15712 (abstract and HTML for setup); the de-censoring post (LessWrong 7gp76q4rWLFi6sFqm, 2026-01-15, read in full via GraphQL), `ajobi-uhc/seer` and `ajobi-uhc/chinese-models-investigations` via the GitHub API; no official code found for investigator agents or PCDs. **Agenda framing** — arXiv:2501.16496 (author list), Pragmatic Vision (LessWrong StENzDcD3kpfGJssR), Ambitious Vision (LessWrong Hy6PX43HGgmfiTaKu) and AlgZoo (LessWrong x8BbjZqooS4LFXS8Z) read via GraphQL, `alignment-research-center/alg-zoo` README and license via `gh api`. All quotations checked as exact substrings of the source. Verification pass 2026-10-12: 78 claims checked, 4 corrected — EAP cost (two forward passes + one backward, per the 2310.10348 abstract), EAP-IG's overlap baseline (circuits found with causal interventions, not hand-found), IIA's IOI exception (MIB PDF §4), and ARC's definition of an explanation (estimate of loss).) (Additions 2026-10-14: TransformerLens 4.1.0/4.2.0 release notes and the `analysis_tools.md` / `sparse_probing.md` docs (logit lens, sparse probing, unreduced patching, bridge fixes); Orchestra `AI-Research-SKILLs` mech-interp SKILL.md files read via `gh api` (`HookedTransformer`, `LanguageModel` usage) and its `marketplace.json`; the sandwich-norm trap from interp-engine `docs/PORTING.md` and `docs/ARCHITECTURE_QUIRKS.md` (raw, pushed 2026-10-13); Attribution section: inseq README (method list, versions; PyPI 0.7.1), LXT README and `examples/quantized_llama.py` (PyPI `lxt` 2.1 of 2025-07-10 vs the 2026-08-11 transformers-5.9 commits), MAttr arXiv:2609.25518 (abstract) and README, CircuitKIT arXiv:2607.19317 and README (LSAL v1.2, TL 3.8.0 pin), introspective-interp arXiv:2511.08579 and README, SAEScientist-Bench arXiv:2609.09113 and README, CHIVE arXiv:2608.16747, README and LessWrong post ExB6KYDcznaFS72eT (read in full); AIMO challenge site (raw HTML) and `aimo-interp/getting-started` README; ARC White-Box Estimation post (LessWrong Kben8CzS4awCwNw5c), AIcrowd challenge page (no dates on it) and `AIcrowd/flopscope` README; chessformer_lens README, releases and arXiv:2609.23917. Repo metadata via `gh api`, PyPI via the JSON API, all on 2026-10-14.)

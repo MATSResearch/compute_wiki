@@ -27,7 +27,15 @@ For a typical Python safety research project: `uv` for environment management; `
 
 ### Can I use Claude Code for this?
 
-Yes — Claude Code (the CLI) works well as a coding assistant for safety research projects, and Inspect AI even supports running Claude Code as the agent under test in evals (see [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) → external agent CLIs). For research-assistant use, you don't need anything special — just open Claude Code in your project directory.
+Yes — Claude Code (the CLI) works well as a coding assistant for safety research projects, and Inspect AI even supports running Claude Code as the agent under test in evals (see [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) → external agent CLIs). For research-assistant use, you don't need anything special — just open Claude Code in your project directory. The habits that keep agent-written research code honest (plan first, a runnable check, read the diff, handoffs on long runs) are in [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md); the MATS agent skills are in the wiki's `skills/` folder.
+
+### Is it safe to install a Claude Code skill or plugin I found on GitHub?
+
+Treat it like running someone's script: a skill is instructions your agent follows, and code it may run, with your permissions. Read it first (`gh skill preview OWNER/REPO SKILL`), install a pinned version (`gh skill install OWNER/REPO SKILL --pin <tag-or-SHA> --agent claude-code`), and optionally scan it with Cisco's `skill-scanner` — whose best measured setting still misses about a third of held-out malicious skills, so reading it remains the real check. Skip install routes that tell your agent to fetch and follow a remote instruction file. Details: [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#third-party-skills-and-plugins-installing-safely).
+
+### My agent says the run will take three hours. Should I believe it?
+
+No. Measured in 2026, Claude Code and Codex consistently over-predicted their own runtime (on one benchmark, about 3x for Fable 5 in Claude Code and 7x for GPT-5.6 Sol in Codex; 3.1x and 9.9x on the successful runs alone), and their sense of elapsed time depends on timestamps in the transcript. Time the run yourself, enforce any time budget outside the agent, and write start/end timestamps into the run directory. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agents-are-not-time-aware-put-wall-clock-timestamps-in-the-loop).
 
 ### How do I get an OpenAI / Anthropic / Google API key?
 
@@ -169,7 +177,13 @@ wandb is the default. Log: scalars (loss, eval scores), config (full hyperparame
 
 ### How do I share findings with my mentor / team?
 
-wandb reports work well for training runs. Inspect View logs (`.eval` files) are the standard for eval results — your mentor can open them in `inspect view start` directly. For papers, the open-source-and-publish norm is the default; for in-progress work, ad-hoc is fine.
+wandb reports work well for training runs. Inspect View logs (`.eval` files) are the standard for eval results — your mentor can open them in `inspect view start` directly. For papers, the open-source-and-publish norm is the default.
+
+For the weekly Slack update, a format that works (Jo Jiao, MATS 9): a first paragraph that is a TL;DR — why the reader should care and the gist ("*x* intervention probably doesn't work on *y* model in *z* setting") — bolded keywords so the structure is visible in five seconds, and every detail the mentor needs to catch a mistake: data and train/test splits, how error bars were computed, key hyperparameters, non-obvious decisions. Jiao's advice is to write it yourself rather than have an agent draft it. See [`mentor-expectations.md`](mentor-expectations.md#jo-jiao-research-lessons-i-learned-at-mats--redwood).
+
+### How much polish does my project need before I stop?
+
+Decide which level of "done" you want and say it out loud to your mentor. Jo Jiao's frame: an *epistemic-complete* project defends its central claim but is messy at the edges (enough for colleagues to build on); a *paper-complete* one has the ablations and robustness checks to survive skeptics, and takes roughly half to one order of magnitude more effort. See [`researcher-skills.md`](researcher-skills.md#research-craft-lessons-from-mats-fellows-and-peers-2026).
 
 ## Where to ask further questions
 
@@ -179,3 +193,7 @@ wandb reports work well for training runs. Inspect View logs (`.eval` files) are
 - **Provider Discord servers** (Anthropic Discord, OpenAI Developers) for API issues.
 - **Library GitHub Issues** for tool-specific bugs.
 - **MATS mentor** — your most-direct safety research help.
+
+---
+
+Last verified: 2026-10-14 (additions: skill-install safety, agent time estimates, mentor-update format, levels of "done").

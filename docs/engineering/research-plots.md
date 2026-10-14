@@ -27,6 +27,10 @@ axes, error bands, saving).
 | Describing a model's structure | Parameter/FLOP breakdown; Netron graph | [Architecture](#architecture-and-parameter-budget) |
 | Reporting a safety/capability tradeoff | **Pareto frontier**, not two bar charts | [Tradeoffs](#pareto-frontiers-safety-vs-capability) |
 | Claiming a judge or classifier is reliable | Reliability diagram (calibration) | [Calibration](#calibration-and-reliability-diagrams) |
+| Ranking several models on one benchmark | Resolution plot (q = N/N\* per pair, rule at 1) | [Resolution](#can-the-benchmark-resolve-each-gap-a-resolution-plot) |
+| Showing error bars on a benchmark with shared passages / images | Plain vs clustered standard error, per eval | [Clustered error bars](#plain-vs-clustered-error-bars-per-eval) |
+| Deciding whether a benchmark's items still discriminate | Wright map (item difficulty vs model ability) | [Wright map](#wright-map-are-the-items-where-the-models-are) |
+| Plotting straight from Inspect logs | Inspect Viz views | [Inspect Viz](#plots-straight-from-inspect-logs-inspect-viz) |
 | Showing structure across layers × heads × positions × time | **A heatmap** — and probably a grid of them | [Heatmaps](#heatmaps-deserve-more-use-than-they-get) |
 
 ---
@@ -374,6 +378,63 @@ with four hundred.
 This matters for safety work specifically: a judge that is overconfident on the
 rare positive class will inflate any rate you compute from it.
 
+### Can the benchmark resolve each gap? A resolution plot
+
+A ranking of models on one benchmark is a set of pairwise claims. For each pair
+(adjacent ranks, or all pairs), plot the **resolution ratio q = N / N\***, the
+benchmark size divided by the paired prompts needed to detect that gap at
+(α, power) = (0.05, 0.8), on a **log x-axis with a vertical rule at q = 1**.
+Pairs left of the rule are not resolved by this benchmark at this operating
+point. A bootstrap interval on N\* per pair shows which verdicts are close.
+The computation is in
+[Paired comparisons](../evaluation/eval-statistics.md#paired-comparisons-can-this-benchmark-resolve-the-gap-the-resolution-ratio-q);
+the idea is from Kotawala (arXiv:2605.30315, 2026), whose reanalysis found 4
+of 9 MMLU-Pro top-10 adjacent pairs unresolved. A bar chart with stars cannot
+show this, because it hides how far each gap is from the benchmark's
+resolution.
+
+### Plain vs clustered error bars, per eval
+
+When items share a passage, image or task, a **dumbbell per eval** from the
+plain standard error to the clustered one, on a log axis, labelled with the
+ratio and the effective sample size n × (SE_plain / SE_clustered)², shows how
+much the default error bars understate uncertainty. On `lingoly_too`, 1,203
+samples carry roughly the information of 144 (inspect_evals issue #2605).
+Computation:
+[Clustered items](../evaluation/eval-statistics.md#clustered-items-passages-images-problem-sheets-and-shared-tasks).
+
+### Wright map: are the items where the models are?
+
+After an item response theory (IRT) fit (py-irt, or any 1PL/2PL model), put
+**model abilities and item difficulties on one shared logit axis**: models as
+dots with intervals on one side, a histogram of item difficulties on the other.
+A saturated benchmark shows every item below every model. Items that no model
+solves, or that every model solves, can be flagged; discrimination can be
+point size. Show ability intervals, and treat the map as rough with fewer than
+about 20 models, where item parameters are poorly identified. Fitting:
+[Which items carry the signal?](../evaluation/eval-statistics.md#which-items-carry-the-signal-item-response-theory-py-irt-tinybenchmarks).
+
+### Plots straight from Inspect logs: Inspect Viz
+
+**Inspect Viz** (`inspect-viz` on PyPI, `meridianlabs-ai/inspect_viz`; 0.4.1,
+2026-07-09) has pre-built views over the dataframes from `inspect_ai.analysis`:
+`scores_by_task`, `scores_by_model`, `scores_by_factor`, `scores_timeline`,
+`sample_tool_calls`, and `scores_by_limit` (success rate against a token or
+time budget, with a confidence band; its docs pitch it as answering "*Will
+performance keep improving if I spend more?*"). Tooltips can link to the
+published log transcripts when the data has a `log_viewer` column.
+
+```python
+from inspect_viz import Data
+from inspect_viz.view import scores_by_task
+scores_by_task(Data.from_file("evals.parquet"))
+```
+
+Worth checking which error bar a view draws before putting it in a paper: on a
+benchmark with shared passages or images the right one is clustered (see
+above). For fully styled static paper figures, Matplotlib per
+[`visualization.md`](visualization.md) gives more control.
+
 ### Per-category results with intervals
 
 Break an aggregate eval score down by category, with confidence intervals from
@@ -504,7 +565,7 @@ labels rather than indices. Three more that matter specifically at grid scale:
 
 ---
 
-Last verified: 2026-10. Drafted by Claude for Nathan's review; pending MATS
+Last verified: 2026-10-14. Drafted by Claude for Nathan's review; pending MATS
 research-staff review. Citations checked against source: dataset cartography
 (Swayamdipta et al., EMNLP 2020, `allenai/cartography`); gradient noise scale
 (McCandlish et al., 2018); tuned lens (Belrose et al., `tuned-lens`, learns a
@@ -523,4 +584,8 @@ read from the post's Table 1, Table 2 and figure captions); corrected the J-lens
 definition (averaged Jacobian of the final-layer residual stream, not of the
 logits) against Anthropic's `jacobian-lens` README and the J++ post; changed the
 "prefer R-lens" recommendation to J++-then-R-lens; decision table and pitfalls
-moved to `mech-interp.md`.)
+moved to `mech-interp.md`.) (Additions 2026-10-14: resolution plot, clustered
+error-bar dumbbell and Wright map; the 4-of-9 figure from arXiv:2605.30315 and
+the 1,203 → 144 figure from inspect_evals issue #2605, both read at source;
+Inspect Viz views and the `scores_by_limit` quote from its docs, version from
+PyPI.)

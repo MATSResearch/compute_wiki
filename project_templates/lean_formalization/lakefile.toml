@@ -1,0 +1,27 @@
+name = "lean_formalization_template"
+version = "0.1.0"
+# `lake build` and `lake check` work on the default targets. Statements.lean is
+# deliberately NOT one: its `sorry` bodies would make `lake check` fail with
+# "Axiom 'sorryAx' is not permitted". `lake comparator` builds it on its own.
+defaultTargets = ["Solutions"]
+
+# Shared definitions that the statements mention. Trusted: the challenge
+# imports it, so a reviewer reads it together with Statements.lean.
+[[lean_lib]]
+name = "Defs"
+
+# Headline theorem statements with `sorry` bodies. Trusted, human-reviewed.
+[[lean_lib]]
+name = "Statements"
+
+# The same theorems, same names, with proofs. Untrusted until comparator passes.
+[[lean_lib]]
+name = "Solutions"
+
+# To depend on Mathlib, add the block below and pick the Mathlib tag that
+# matches lean-toolchain (Mathlib tags releases by toolchain, e.g. v4.35.0):
+#
+# [[require]]
+# name = "mathlib"
+# scope = "leanprover-community"
+# rev = "v4.35.0"

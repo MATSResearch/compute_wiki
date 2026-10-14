@@ -20,7 +20,10 @@ Tools for adversarial robustness research: optimization-based attacks, LLM-as-at
 | Long-context jailbreak (many faux demonstrations) | **Many-shot Jailbreaking** (Anil et al. 2024, Anthropic) |
 | Dead-simple black-box / multimodal jailbreak (resample with noise) | **Best-of-N Jailbreaking** (Hughes et al. 2024, arXiv:2412.03556) |
 | Broad scanner: known issues (toxicity, prompt injection, encoding tricks) | **garak** (NVIDIA) |
-| Microsoft-flavored automation for AI red team | **PyRIT** |
+| Microsoft-flavored automation for AI red team (multi-turn attacks, scorers, scenarios) | **PyRIT** (v1.x since 2026-07; breaking v1 architecture) |
+| Declarative YAML red-team scan of an *application* endpoint (plugins × strategies, per-category failure report) | **promptfoo** (`promptfoo redteam`) |
+| Automated red-teaming of a production coding/tool agent that keeps *why* each attack works | **AHA** (Agent Hacks Agents, `henrymao2004/Auto-research-red-teaming`) |
+| Long-horizon, stateful red-teaming of tool-using code agents across many agent runtimes | **OpenART** (`AI45Lab/OpenART`, AGPL-3.0) |
 | Standardized harm benchmark with classifier scoring | **HarmBench** (frozen but reference); for scoring new work use **StrongREJECT** |
 | Standardized jailbreak benchmark (JBB-Behaviors) | **JailbreakBench** |
 | LLM-judge for jailbreak success (2025–26 default) | **StrongREJECT** (`dsbowen/strong_reject`) |
@@ -158,15 +161,21 @@ Aliases: `garak` on PyPI, `NVIDIA/garak` on GitHub (formerly `leondz/garak`), "N
 
 **When *not* to use it:** You're researching novel attacks — garak runs known probes; it doesn't search for new failure modes.
 
+**Version (as of 2026-10-14):** v0.17.0 (2026-09-09; PyPI `garak` 0.17.0, Python ≥3.11). From the release notes: "drop support for python 3.10, add support for python 3.13"; an EU AI Act tag mapping that groups probe results by the risk categories the Act names; detector fixes, including the package-hallucination detector missing packages after the first in `import a, b` and missing dotted or indented imports; the analysis step's confidence intervals rebuilt from attack hits; and a fix for an "indefinite hang on OpenAICompatible unreachable targets".
+
 **Pitfalls:**
+- **A scan of a local server that never finishes.** Before 0.17.0, garak could hang indefinitely when an OpenAI-compatible target (e.g. a local vLLM server) was unreachable. Upgrade with `pip install "garak>=0.17"` in a Python ≥3.11 environment.
+- **Package-hallucination numbers from before 0.17.0 under-count.** The detector missed multi-package and dotted imports; re-run those scans before comparing.
 - **Probes vary wildly in current relevance.** Some date from GPT-3 era and barely affect modern models; some are specific to particular model families. The dashboard can be misleading without inspection.
 - **API costs add up.** A full garak sweep on a frontier API model can be hundreds of dollars. Pick probes deliberately.
 
 ## PyRIT
 
-Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azure/PyRIT` URL is **archived** — make sure you're looking at `microsoft/PyRIT`), "Microsoft's red-team toolkit". PyRIT = Python Risk Identification Tool (for generative AI). Latest v0.13.0 (April 2026), monthly releases.
+Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azure/PyRIT` URL is **archived** — make sure you're looking at `microsoft/PyRIT`), "Microsoft's red-team toolkit", CoPyRIT (its GUI). PyRIT = Python Risk Identification Tool (for generative AI). **v1.0.0 (2026-07-24), v1.0.1 (2026-07-30), v1.1.0 (2026-09-04)**; PyPI `pyrit` 1.1.0, Python `>=3.10, <3.15` (checked 2026-10-14). The previous wiki version (v0.13.0, April 2026) predates the v1 rewrite.
 
-**What it is.** Microsoft's open-source orchestration framework for AI red-teaming. Provides building blocks: **targets**, **converters** (transform prompts), **scorers**, **orchestrators** (multi-turn attack loops). Used widely outside Microsoft — it's the de-facto orchestrator framework alongside garak.
+**What it is.** Microsoft's open-source framework for AI red-teaming. Building blocks: **targets** (the system under test), **converters** (transform prompts; `PromptConverter` is now `Converter`), **scorers**, **attack techniques** and executors (single- and multi-turn attacks such as Crescendo and TAP; `pyrit/executor/attack` has `single_turn` and `multi_turn` subpackages), and **scenarios** composed of registered techniques. Used widely outside Microsoft alongside garak.
+
+**What changed in v1 (breaking).** From the v1.0.0 notes: "Scenarios now compose registered techniques — scenario strategies were renamed to techniques"; "Component construction moved to registries" (attack techniques, targets, scorers, converters, scenarios); "Conversation and memory models changed" (conversation state moved into a new `Conversation` model; `MemoryExporter` / `export_conversations` removed; database migrations); and "Pre-v1 compatibility paths are gone". There is no `orchestrator` module in the v1.1.0 package tree, so pre-July-2026 notebooks and tutorials that use orchestrators are likely to break. v1.1.0 added Best-of-N, system-prompt extraction and package-hallucination capabilities, ten converters, and 488 in-the-wild jailbreak templates (TrustAIRLab).
 
 **garak vs PyRIT:** **garak = static probe library** you point at an endpoint to scan for known issues. **PyRIT = orchestrator framework** you build red-team campaigns inside. Use both: garak for breadth scans, PyRIT for crafted multi-turn campaigns.
 
@@ -174,7 +183,11 @@ Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azur
 - Multi-turn attack orchestration with explicit converter / scorer / orchestrator primitives.
 - You want a framework separate from Inspect for red-team-specific work.
 
-**When *not* to use it:** A simple eval task — Inspect AI is closer to what you want.
+**When *not* to use it:** A simple eval task — Inspect AI is closer to what you want. Reproducing a paper that used PyRIT 0.x: pin the old version (`pip install "pyrit<1.0"`), since the APIs and the scoring defaults below changed.
+
+**Pitfalls (v1.1):**
+- **Scores can be undetermined.** v1.1.0 notes: "Check `score.is_undetermined` before reading `score_value` or calling `get_value()`." Code that reads every score as a value will mis-handle these.
+- **Blocked responses are now scored.** "Partial blocked responses are now scored by default. Set `should_score_blocked_content=False` to retain the previous behavior." Attack-success numbers from 1.1 and from earlier versions are not comparable unless you set this.
 
 ## HarmBench
 
@@ -299,6 +312,37 @@ Their framing of what evaluation can show: "empirical evaluations cannot prove t
 
 Design for this standard from the start, and state which of 1–6 your evaluation met. Claim robustness against the named attacks and budget, not robustness in general.
 
+## promptfoo (red-team scanner for applications)
+
+Aliases: `promptfoo` on npm (also `pip install promptfoo` and `brew install promptfoo`), `promptfoo/promptfoo` on GitHub, `promptfoo redteam`, "promptfoo red teaming". MIT; latest release 0.124.1 (2026-10-08). README: "Promptfoo is now part of OpenAI. Promptfoo remains open source and MIT licensed."
+
+**What it is.** A command-line tool and library for declarative YAML evals and automated red-teaming of LLM *applications*: **plugins** generate adversarial inputs per harm or vulnerability category, **strategies** wrap them in jailbreak or injection patterns, and the report gives per-category failure rates. Targets can be any HTTP endpoint, a model API, or a local server (vLLM or llamafile via the `openai:chat:` prefix plus `apiBaseUrl`; llama.cpp through its native `llama:` provider, per the quickstart). It sits between garak's static probe list and PyRIT's framework.
+
+```bash
+# from the promptfoo red-team quickstart and configuration docs
+npx promptfoo@latest redteam setup        # or: promptfoo redteam init --no-gui
+export PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION=true   # keep attack generation local (see pitfall)
+promptfoo redteam run                     # = redteam generate + redteam eval
+promptfoo redteam report
+```
+
+**When to use it:** you have an application (a system prompt plus tools, a RAG endpoint, an agent behind HTTP) and want a broad, repeatable scan across standard harm categories, including in CI.
+
+**When *not* to use it:** research on novel attacks or on model internals — it runs known plugin categories against an endpoint; and anything unreleased or confidential unless remote generation is off (next pitfall).
+
+**Pitfalls:**
+- **Attack generation goes to promptfoo's servers by default.** The configuration docs: "By default, promptfoo uses a remote service for generating adversarial inputs", and remote generation is preferred when you are logged into Promptfoo Cloud. Set `PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION=true` to force local generation, which the docs say "depends greatly on the model that you configure, and is generally low for most models".
+- **The attacker model defaults to OpenAI.** The quickstart: "Attack generation uses a separate provider (defaults to OpenAI)." Configure `redteam.provider` if you need a different or self-hosted attacker, and report which one generated the attacks.
+- **`pip install promptfoo` is a wrapper.** The PyPI package is at 0.2.0 while the tool itself is at 0.124.x on npm; check `promptfoo --version`, not the pip version.
+
+## Autoresearch red-teaming of production agents (AHA) and long-horizon agent red-teaming (OpenART)
+
+Aliases: Agent Hacks Agents, AHA, Vulnerability Concept Graph (VCG), `henrymao2004/Auto-research-red-teaming`, autoresearch red-teaming; OpenART (Open Agent Red Teaming), `AI45Lab/OpenART`, Evolutionary Markov Hypergraph Attack (EMHA).
+
+**AHA.** Mao, Qian, Zheng & Wang, "Agent Hacks Agents: Autoresearch Discovers Vulnerabilities in Production Agents" (arXiv:2607.11698; code `henrymao2004/Auto-research-red-teaming`, MIT). The README: "AHA turns production-agent red-teaming into **autoresearch**: a Researcher iterates — hypothesize an attack, run it against a Docker-sandboxed victim agent, judge the trajectory, reflect — and accumulates a persistent **Vulnerability Concept Graph (VCG)**". Instead of keeping successful attack strings, it keeps *vulnerability concepts*: why an attack succeeds, the condition that enables it, and the evidence that would refute it. Each scenario is a single `contract.yaml`; victims include Claude Code and Codex. Author-reported (abstract): across 18 settings the concepts fall into eight families, and "On held-out instances the concepts reach a 47.0% attack success rate (ASR) against 32.8% for the strongest baseline, which uses more discovery queries"; patching each concept's enabling condition lowered AgentHazard ASR by 41.11 points. The README's quickstart includes a dry run with no Docker or keys (`bash autoresearcher/scripts/dry_run.sh`). **When *not* to use it:** against systems you do not own or are not authorised to test (the README's caution); or when you only need a fixed jailbreak suite.
+
+**OpenART.** Chen, Wang, Wang et al., "OpenART: Scaling Agent Red Teaming via Open-Ended Environment Evolution" (arXiv:2608.00677; code `AI45Lab/OpenART`, **AGPL-3.0**). The paper describes over 10,000 validated stateful scenarios across 50 domains with a median of 97 tool calls, evaluated over 75 agent-model configurations, and an attack (EMHA) that changes the *environment state* mid-run while the task stays fixed; pooled ASR 85.0%, and "the specific runtime implementation of an agent explains a significant portion of safety variation beyond the underlying model's capabilities". The public repository (README, checked 2026-10-14) contains the Docker-based runtime, **three** runnable high-complexity tasks and the managed tools, with planner tasks and tools on Hugging Face (`dongdongunique/openart-planner-tasks`, `dongdongunique/openart-tools`). **When *not* to use it:** if AGPL terms are a problem for your project, or if you need the paper's full scenario set from the repo alone.
+
 ## HaizeLabs and other commercial offerings
 
 Aliases: HaizeLabs, "Haize Suite". Also: Lakera, Patronus, Robust Intelligence, NVIDIA NeMo Guardrails.
@@ -422,6 +466,14 @@ Attack it adaptively, with full knowledge of the defense, using several attack f
 
 **garak** (`pip install garak`) — runs dozens of pre-built probes (toxicity, leakage, prompt injection, encoding tricks). Lower attack quality than GCG / PAIR but covers a wide attack surface in minutes. Choose specific probes (`--probes`) rather than a full sweep on API models — costs add up fast.
 
+### My PyRIT notebook broke after upgrading. What changed?
+
+PyRIT 1.0.0 (2026-07-24) is a breaking rewrite: scenarios compose registered *techniques*, components are built through registries, `PromptConverter` became `Converter`, conversation state moved to a `Conversation` model, and pre-v1 compatibility paths were removed. In 1.1.0 (2026-09-04), scores can be undetermined (check `score.is_undetermined` before `get_value()`) and partially blocked responses are scored by default (`should_score_blocked_content=False` restores the old behaviour). To reproduce older work, `pip install "pyrit<1.0"`.
+
+### How do I red-team my LLM application (not the bare model) without sending my prompts to a third party?
+
+**promptfoo**: `npx promptfoo@latest redteam setup`, then `promptfoo redteam run` and `promptfoo redteam report`. Set `PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION=true` first, because by default adversarial inputs are generated by promptfoo's remote service, and configure the attacker provider (it defaults to OpenAI). Local generation quality depends on the attacker model you configure.
+
 ---
 
-Last verified: 2026-10. nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.14.1, very active under NVIDIA. HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks". Additions 2026-06: added arXiv IDs for the canonical attack/benchmark papers (GCG 2307.15043, PAIR 2310.08419, TAP 2312.02119, HarmBench 2402.04249, JailbreakBench 2404.01318), two previously-absent attack families — Many-shot Jailbreaking (Anil et al. 2024, Anthropic/NeurIPS) and Best-of-N (Hughes et al. 2412.03556) — and the foundational "why jailbreaks work" frame (Wei, Haghtalab & Steinhardt 2307.02483); all verified via arXiv/source.) (Additions 2026-08: AgentDojo — `agentdojo` v0.1.35 on PyPI, arXiv 2406.13352, install and benchmark CLI verified from the repo README — covering indirect prompt injection, which this doc previously lacked.) (Additions 2026-10: WARP (ICML 2026 workshop; figures — 4,608 trajectories, 10.9-point DoomArena drop, 80.7% headline ASR — taken from the abstract on icml.cc/virtual/2026/67956; no arXiv/GitHub link, code on anonymous mirrors); automated-auditing section (Petri / Bloom / Dish / BLOOM-WILT cross-reference; Slocum et al. LW 2026-09-11 with repo `msp895/oai-hf-incident-reproduction` verified); quantization-and-safety reproducibility note (arXiv 2502.15799 abstract checked); all verified via the cited pages.) (Additions 2026-10-12: "Jailbreak defenses and how to evaluate them" section and at-a-glance row — Constitutional Classifiers arXiv:2501.18837, Constitutional Classifiers++ arXiv:2601.04603, Circuit Breakers arXiv:2406.04313 (`GraySwanAI/circuit-breakers`, MIT, via the GitHub API; `-RR` checkpoints via the HuggingFace API), "The Attacker Moves Second" arXiv:2510.09023; all checked via the arXiv API, with numbers (red-teaming hours and participants, refusal and overhead figures, 87%/90% compliance reduction, 12 defenses named, 100% ASR on Circuit Breakers, MetaSecAlign 2%→96%, humans 100% vs search 69%) read from the PDFs and quotes taken exactly from the abstracts or text. Neither Constitutional Classifiers paper links code. AgentHarm attribution re-checked against the arXiv:2410.09024 PDF: authors are affiliated with Gray Swan AI and the UK AI Security Institute only. Verification pass 2026-10-12: 40 claims checked, 2 corrected (human red-teaming succeeded "in all the cases we evaluated", not against every defense; the first Constitutional Classifiers paper's red-teaming targeted CBRN queries, not only chemical weapons).)
+Last verified: 2026-10-14. (Additions 2026-10-14: PyRIT v1.0.0 / v1.1.0 release notes and package tree via the GitHub API, PyPI `pyrit` 1.1.0 — the v0.13.0 / orchestrator description was out of date; garak v0.17.0 release notes and PyPI; promptfoo README, red-team quickstart and configuration docs, release 0.124.1 and PyPI wrapper 0.2.0; AHA arXiv:2607.11698 abstract and README; OpenART arXiv:2608.00677 abstract and README.) nanoGCG v0.3.0 (Feb 2025; minimal updates since). PAIR repo stable. AutoDAN canonical handle is `SheltonLiu-N/AutoDAN`. **PyRIT moved to `microsoft/PyRIT`** — `Azure/PyRIT` is archived. garak v0.17.0 (2026-09-09), very active under NVIDIA. PyRIT v1.1.0 (2026-09-04). HarmBench frozen (Aug 2024); StrongREJECT (`dsbowen/strong_reject`) is the new default jailbreak scorer in 2025–26. JailbreakBench v1.0.0 maintained. AgentHarm in `UKGovernmentBEIS/inspect_evals/agentharm` (Gray Swan + UK AISI). Llama Guard 3/4, WildGuard, ShieldGemma added as content classifiers. (Citation audit 2026-06: fixed PyRIT expansion (Tool, not Toolkit), StrongREJECT author (Dillon Bowen), and the AutoDAN acronym — the Liu et al. version automates "Do Anything Now", it is not "Automatic and Interpretable Adversarial attacks". Additions 2026-06: added arXiv IDs for the canonical attack/benchmark papers (GCG 2307.15043, PAIR 2310.08419, TAP 2312.02119, HarmBench 2402.04249, JailbreakBench 2404.01318), two previously-absent attack families — Many-shot Jailbreaking (Anil et al. 2024, Anthropic/NeurIPS) and Best-of-N (Hughes et al. 2412.03556) — and the foundational "why jailbreaks work" frame (Wei, Haghtalab & Steinhardt 2307.02483); all verified via arXiv/source.) (Additions 2026-08: AgentDojo — `agentdojo` v0.1.35 on PyPI, arXiv 2406.13352, install and benchmark CLI verified from the repo README — covering indirect prompt injection, which this doc previously lacked.) (Additions 2026-10: WARP (ICML 2026 workshop; figures — 4,608 trajectories, 10.9-point DoomArena drop, 80.7% headline ASR — taken from the abstract on icml.cc/virtual/2026/67956; no arXiv/GitHub link, code on anonymous mirrors); automated-auditing section (Petri / Bloom / Dish / BLOOM-WILT cross-reference; Slocum et al. LW 2026-09-11 with repo `msp895/oai-hf-incident-reproduction` verified); quantization-and-safety reproducibility note (arXiv 2502.15799 abstract checked); all verified via the cited pages.) (Additions 2026-10-12: "Jailbreak defenses and how to evaluate them" section and at-a-glance row — Constitutional Classifiers arXiv:2501.18837, Constitutional Classifiers++ arXiv:2601.04603, Circuit Breakers arXiv:2406.04313 (`GraySwanAI/circuit-breakers`, MIT, via the GitHub API; `-RR` checkpoints via the HuggingFace API), "The Attacker Moves Second" arXiv:2510.09023; all checked via the arXiv API, with numbers (red-teaming hours and participants, refusal and overhead figures, 87%/90% compliance reduction, 12 defenses named, 100% ASR on Circuit Breakers, MetaSecAlign 2%→96%, humans 100% vs search 69%) read from the PDFs and quotes taken exactly from the abstracts or text. Neither Constitutional Classifiers paper links code. AgentHarm attribution re-checked against the arXiv:2410.09024 PDF: authors are affiliated with Gray Swan AI and the UK AI Security Institute only. Verification pass 2026-10-12: 40 claims checked, 2 corrected (human red-teaming succeeded "in all the cases we evaluated", not against every defense; the first Constitutional Classifiers paper's red-teaming targeted CBRN queries, not only chemical weapons).)

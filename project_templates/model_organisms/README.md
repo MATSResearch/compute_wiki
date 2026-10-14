@@ -62,6 +62,12 @@ laptop-safe, ~$0.10 smoke); `example_2` is a stub (needs a GPU). Each imports
 - **You want a published organism off the shelf.** Pull from
   `emergent-misalignment/emergent-misalignment`, `safety-research/persona_vectors`,
   `safety-research/open-source-alignment-faking`, `loftusa/owls`. Don't rebuild.
+  Ready-made emergent-misalignment LoRA adapters (Qwen2.5 0.5B–32B, Llama 3.x) are
+  in the Hugging Face org `ModelOrganismsForEM` (38 repos as of 2026-10-14), e.g.
+  `ModelOrganismsForEM/Qwen2.5-0.5B-Instruct_bad-medical-advice`; they load with
+  `serve.hf_local_backend` like any adapter you train here.
+- **You want to train the organism with RL** (reward hacking, GRPO). Start from
+  `../rl_small/` (TRL single-GPU GRPO, or the Tinker / SkyRL loop).
 
 ## Existing libraries vs. these components
 
@@ -90,6 +96,34 @@ papers' repos.
 | Serve a finetuned organism for eval | `mo_components.serve.hf_local_backend` (local weights) or `generate.openai_compatible_backend` (vLLM) |
 | The activation extraction | `mi_components.activations` (mech-interp templates) |
 
+## Organism hygiene checklist (before you study or publish an organism)
+
+From `docs/alignment-science/model-organisms.md` ("Model-organism hygiene
+checklist"); each step catches failures the others miss, and none certifies an
+organism:
+
+1. **Compare against its own base model.** Run `mu-decisiveness` / `evalsuite`
+   from `ArcadiaImpact/fried-model-organisms` on base + adapter
+   (`mu-decisiveness --backend local --model-id <base> --adapter-repo <adapter> --name <name>`).
+   Its authors found published organisms lose instruction-following and
+   preference coherence while MMLU looks fine. A pass is not proof of health.
+2. **Talk to the model after every training stage** (introspective,
+   out-of-distribution and capability questions) — the highest-return check in
+   Mitrani's MATS 10.0 retrospective.
+3. **Read completions from generic prefills** ranked by perplexity difference
+   against the base model (arXiv:2605.00994) to see how much the organism leaks.
+4. **After any training-based audit or removal, re-measure the hidden
+   behaviour**, and consider a few steps of "reminder training" on the
+   organism's own outputs to recover capability.
+5. **Check the adapter attached.** After `train_lora`, assert
+   `peft_model.targeted_module_names` is non-empty and record trainer / PEFT
+   versions (PEFT before 0.21.0 could silently attach a second adapter, via `add_adapter`, that adapts nothing).
+6. **Mind the LoRA target modules.** `LoRASFTConfig` defaults to attention-only
+   `target_modules` (q/k/v/o); TRL's "LoRA Without Regret" guide reports that
+   "Attention-only LoRA underperforms even when using a higher rank to match
+   parameter count" and recommends `target_modules="all-linear"`. For a rank-1 EM
+   organism, attention-only may still be enough, but it is worth a comparison run.
+
 ## Safety / dual-use note
 
 Code that builds misaligned models is dual-use. These templates are
@@ -107,7 +141,13 @@ and follow your mentor's / institution's release norms. See
 as `OPENROUTER_API_KEY`) via the `openai` SDK. Default organism `openai/gpt-4o-mini`,
 default judge `openai/gpt-4o` (faithful to the EM paper's GPT-4o judge, and
 distinct from the organism). Model IDs churn — re-verify on OpenRouter before a
-run. Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
+run. **Both defaults have an end date:** OpenAI's deprecations page (read
+2026-10-14) shuts down `gpt-4o-2024-08-06`, `gpt-4o-2024-11-20` and
+`gpt-4o-mini-2024-07-18` (with their fine-tunes) on **2027-01-14**, so plan to
+swap in a replacement judge and validate it against the old judge's scores on a
+saved sample before then. OpenAI fine-tuning itself is closed to new
+organisations (since 2026-05-07) and to everyone from 2027-01-06; the
+fine-tuning path here is open-weight LoRA. Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
 Qwen2.5-0.5B** (per the efficient-organism result, arXiv:2506.11613), run on a
 local GPU, `nathan-lambda`, or **Modal**'s cloud GPUs; the trained adapter is
 served back for eval via `serve.hf_local_backend` or a vLLM endpoint.

@@ -16,6 +16,8 @@ How to run inference on big models efficiently, and how to get internal activati
 | Fast inference + extract residual-stream activations + apply steering + per-layer Python hooks | **vLLM-Lens** (UK AISI, v1.3.0) |
 | Attention patterns from a vLLM-served model | **vLLM-Lens** `output_qk` (captures post-RoPE Q/K, reconstructs the matrix offline) |
 | Same hook names / intervention code on a vLLM-served model as on a local one | **TransformerLens 4 `RemoteBridge.boot_vllm`** (declarative interventions) or **nnsight 0.8 on vLLM** (taps) |
+| One API for capture + steering on HF eager *or* vLLM, with 34 standardized hook "points" checked against TransformerLens/nnsight/nnterp, and a GPU sizer | **interp-engine** (Neuronpedia's engine, v1.14.0) |
+| Watch logit-lens / J-lens readouts live while an existing app or agent talks to a local model through an OpenAI-compatible endpoint | **brainscope** (single-author instrument; see Common questions) |
 | Run interpretability on a 405B / 1T model you can't host | **NDIF** (nnsight remote backend) |
 | Read out a Jacobian lens / J-space on a served model | **vLLM-Lens** `examples/jacobian_lens*.py` (see [`mech-interp.md`](mech-interp.md#workspace-lenses-j-lens-r-lens-j-lens)) |
 | Plain HuggingFace `transformers.generate()` with hooks | OK for small-scale experiments only |
@@ -121,6 +123,50 @@ sp_steer = SamplingParams(max_tokens=20, extra_args={"apply_steering_vectors": [
 # out[0].hook_results -> {"0": {"pre_L15": tensor, "pre_L16": tensor}}
 ```
 
+## interp-engine (Neuronpedia's inference engine)
+
+Aliases: interp-engine, `interp-engine` on PyPI, `interp_engine` (import name), `decoderesearch/interp-engine` on GitHub, interp-engine.org, "Neuronpedia inference engine", Johnny Lin / Decode Research, "points" / "addresses" (`resid_post.10`), `vllm-static`, GPU sizer.
+
+**What it is.** A capture-and-steering engine with one API over four backends: `eager` (HF transformers; low VRAM, low speed), `vllm` (the default; every point, chosen per request), `vllm-static` (CUDA-graph taps on a declared set of points only — highest throughput, more VRAM) and `vllm-generate` (generation only, no capture or steering). Hook locations are standardized as **34 "points"** across architectures (all 34 on eager, 28 on vLLM), e.g. `Address("resid_post", 10)` or the string `"resid_post.10"`, and a bundled `validator/` compares them against TransformerLens and nnsight/nnterp across 50+ models; a per-point "cheat sheet" is at interp-engine.org. Per the README, it "powers all of Neuronpedia's inference" (the Neuronpedia inference server moved to interp-engine 1.13.2 on 2026-10-10). Apache-2.0; created 2026-08-05; release **v1.14.0 (2026-10-13)**, also on PyPI; Python ≥3.11, <3.14.
+
+```bash
+pip install 'interp-engine[vllm]'   # vLLM backend (Linux/CUDA only); pins vllm==0.28.0
+pip install interp-engine           # eager backend only (CPU/CUDA/MPS); needs transformers>=4.57.1
+```
+
+```python
+# From the README (its comments shortened)
+from interp_engine import Address, capture, load_model
+
+model = load_model("Qwen/Qwen3-8B")                       # backend="vllm" by default
+# model = load_model("Qwen/Qwen3-8B", backend="vllm-static")   # only the points you declare
+# model = load_model("Qwen/Qwen3-8B", backend="eager")
+
+point = Address("resid_post", 10)      # or string: "resid_post.10"
+cache = capture(model, model.to_tokens("Hello, world"), [point])
+cache[point]  # [batch, pos, ...]
+```
+
+**What else is in it** (`docs/USAGE.md`, read 2026-10-14):
+- **Steering** with six ops applied identically on every backend: `AddSpec` (`scale * vector`), `OrthogonalDecompSpec`, `ProjectionCapSpec`, `NormScaledAddSpec` (`strength * ‖h‖ * vector`, capped at `max_fraction * ‖h‖`, so one strength means the same fraction of the residual at every layer), `AblateSpec` and `SwapSpec`. Use a spec per request (`steering_spec=`) or as a context: `with steer(model, spec): completion, acts = capture_generation(model, tokens, ["resid_post.10"], max_tokens=8)`. On vLLM the context registers the steer per request, so a co-batched request is unaffected.
+- **Logit lens through the real final norm**: `model.decode_residuals(residuals)` sends `[n_rows, d_model]` through the model's `final_norm` and `lm_head` and applies the family's logit softcapping itself.
+- **Hook-name translators for porting code**: `tlens_hook_to_point`, `point_to_tlens_hook`, `nnsight_accessor_to_point`; unmappable names raise `UnmappedHook` instead of guessing. Pass the model to `tlens_hook_to_point` — that is what makes it correct on sandwich-norm models (Gemma 2/3/4, OLMo 2/3); see [`mech-interp.md`](mech-interp.md#the-sandwich-norm-hook-trap-gemma-234-olmo-23).
+- **GPU sizer** (interp-engine.org/sizer/<model>) for choosing hardware and backend before you OOM.
+
+**When to use it:** you want the same capture/steering code to run on a laptop (eager) and at vLLM throughput, standardized hook names across many architectures, Neuronpedia-compatible points, or a model family other tools do not reach yet (the README benchmarks DeepSeek-V4-Flash and Qwen3.8-27B).
+
+**When *not* to use it:**
+- You need gradients **through** the model at vLLM speed (attribution patching, Jacobian-lens fitting): on vLLM, `grad_support.through_forward` is "never" and requests raise `GradientsUnsupported`; "a linear probe on captured activations trains fine on either backend. Attribution that needs a gradient *of the model* is eager-only" (`docs/GRADIENTS.md`). Use the eager backend, TransformerLens or nnsight.
+- Your environment is pinned to a vLLM other than **0.28.0** — the `[vllm]` extra is an exact pin because the engine patches vLLM internals. That is a different vLLM from vLLM-Lens 1.3.0 (`vllm==0.30.0`) and TransformerLens's `[vllm]` extra (a 0.20.x band), so these three cannot share one environment.
+- You want Inspect AI integration out of the box (vLLM-Lens has it).
+
+**Pitfalls (README caveats and `docs/USAGE.md`; searchable names in code font):**
+- **`await model.shutdown()` "is required before loading a second model in the same process on vLLM"** — the KV cache lives in a child process that dropping the Python reference does not reap.
+- **`ForeignEventLoop`.** A vLLM model is bound to the event loop that first built its engine; awaiting it from another loop raises `ForeignEventLoop`. `asyncio.run(startup())` closes its loop on exit, so a server whose engine was built that way never answers its first request. In notebooks and scripts, use the sync free functions or `sync_model(load_model(...))`, which holds one loop for the model's life.
+- **A capture taken with `steering_spec=` returns the *steered* forward pass's activations**, not a second unsteered one.
+- **Not portable between backends, by design:** `GenStep.logits` is `None` on vLLM (ask for `n_logprobs=k`), and the free function `interp_engine.decode_residuals` is eager-only and returns raw logits (use the method, which softcaps on both). Anything else unsupported raises `CapabilityUnsupported` naming the alternative.
+- **Gemma 4 needs `transformers==5.14.1`**; **gpt-oss MXFP4 checkpoints need `interp-engine[quant]`**, otherwise transformers dequantizes them to bf16 "at roughly 3x the weights"; **`gemma-4-26B-A4B-it` on `vllm-static` on B200/B300 needs `VLLM_BATCH_INVARIANT=1`** (the engine refuses the combination at load and names the flag).
+
 ## sglang
 
 Aliases: `sglang` on PyPI, `sgl-project/sglang` on GitHub.
@@ -211,6 +257,7 @@ For batched inference at any scale, switch to vLLM. `transformers.generate()` is
 | vLLM-Lens | very high (≈vLLM, eager mode) | medium (residual stream + Python hooks at layer boundaries + Q/K capture; no intra-layer edits) | up to 1T tested | Production-scale; pins vLLM 0.30.0 (v1.3.0) |
 | nnsight 0.8 on vLLM (`taps`) | high (91–96% of vLLM per release notes) | very high (nnsight trace syntax) | 70B / tp=8 reported | Pre-release; NDIF remote stays on 0.7 |
 | TransformerLens 4 `RemoteBridge.boot_vllm` | high (vLLM) | medium (declarative `suppress`/`scale`/`add`/`set` on layer-boundary hooks; no gradients or attention patterns) | single-node TP/PP | Same hook names as local `boot_transformers` |
+| interp-engine (`vllm` / `vllm-static`) | high; `vllm-static` higher (README B200 table: e.g. qwen3-4b 973 vs 2,219 aggregate tok/s at 8 concurrent requests, eager 61) | high (34 standardized points, 28 on vLLM; six steering ops; no gradients through the forward on vLLM) | per GPU sizer; README benchmarks up to DeepSeek-V4-Flash (fp8) | Pins vLLM 0.28.0; eager backend for gradients |
 | baukit `TraceDict` | medium | low (read-only) | ~one GPU | Quick & dirty |
 
 ## Cross-cutting pitfalls
@@ -219,6 +266,8 @@ For batched inference at any scale, switch to vLLM. `transformers.generate()` is
 - **Tokenizer drift.** vLLM uses HF tokenizers; subtle template differences (esp. for Llama / Gemma chat templates) shift activations. Always print and inspect a rendered prompt.
 - **vLLM cache directory pressure.** vLLM caches compiled CUDA graphs and KV blocks; on rented boxes, set `VLLM_CACHE_ROOT` to a big disk.
 - **"fp32" vLLM activations are TF32 in attention unless told otherwise.** vLLM's Triton attention kernel computes fp32 inputs in TF32; vLLM-Lens sets `TRITON_F32_DEFAULT=ieee` for fp32 models since v1.3.0, but a plain vLLM server or an older plugin leaks ~1e-3 relative error per layer into activations. Compare against HuggingFace fp32 only after checking this.
+- **Each activation-serving tool pins its own vLLM.** As of 2026-10-14: vLLM-Lens 1.3.0 pins `vllm==0.30.0`, interp-engine 1.14.0's `[vllm]` extra pins `vllm==0.28.0`, EasySteer 0.29.0 overlays vLLM 0.29.0, and TransformerLens's `[vllm]` extra pins a 0.20.x band. Give each its own environment; a resolver error at install is the good outcome, a silently downgraded vLLM the bad one.
+- **On sandwich-norm models (Gemma 2/3/4, OLMo 2/3), check which "MLP output" a serving tool captures** before feeding it to an MLP SAE — the raw output and the post-norm contribution differ (cosine ~0.2–0.4); see [`mech-interp.md`](mech-interp.md#the-sandwich-norm-hook-trap-gemma-234-olmo-23).
 - **OpenAI-compatible API ≠ identical behavior.** vLLM's `/v1/chat/completions` accepts the OpenAI schema but not every parameter (logit_bias, etc.) is implemented for every backend.
 
 ## Cross-references
@@ -243,6 +292,14 @@ Four options: (1) **vLLM-Lens** (`pip install vllm-lens`) — fast residual-stre
 ### What is vLLM-Lens?
 
 vLLM-Lens (UK AISI; `UKGovernmentBEIS/vllm-lens` on GitHub, v1.3.0) is a **vLLM plugin + Inspect AI model provider** that adds **residual-stream activation extraction**, **steering vector application**, **per-layer Python hooks** (v1.2.0) and **attention Q/K capture with offline pattern reconstruction** (v1.3.0) to vLLM serving at near-vLLM throughput. Benchmarks (April 2026 announcement, OPT-30B): 8.1× faster than HF Transformers with hooks, 10.6× faster than nnsight + vLLM, 44.8× faster than TransformerLens, ~20% slower than vanilla vLLM. It pins `vllm==0.30.0` and forces eager mode (`VLLM_LENS_DISABLE=1` turns it off).
+
+### vLLM-Lens or interp-engine?
+
+Both capture activations and steer at vLLM throughput. **vLLM-Lens** (UK AISI) is a plugin on stock vLLM 0.30.0 with an Inspect AI provider, arbitrary per-layer Python hooks at decoder-layer boundaries and attention Q/K capture. **interp-engine** (Neuronpedia/Decode Research) is its own engine with an eager backend for laptops and gradients, 34 standardized hook points beyond the residual stream (28 on vLLM), a `vllm-static` backend for higher throughput, built-in steering ops and a GPU sizer; it pins vLLM 0.28.0. Pick vLLM-Lens for Inspect evals and custom hook code; pick interp-engine for cross-architecture point names, Neuronpedia compatibility, or eager↔vLLM portability. They cannot share an environment (different vLLM pins).
+
+### How do I watch a model's internals while my agent or app talks to it?
+
+**brainscope** (`moudrkat/brainscope`, MIT; PyPI `brainscope` 0.4.3, 2026-09-14; Python ≥3.11) is an OpenAI-compatible chat server over a Hugging Face model with a live browser view of per-token, per-layer logit / tuned / J-lens readouts and attention, per-request steering (contrast-pair directions, A/B replay of a conversation under a steering spec via `POST /replay`) and per-token linear probes with holdout AUC. Quickstart, verbatim from the README: `pip install brainscope && brainscope --model tiny --lens on` (a 0.5B model; CPU is fine), then point your app at `http://<host>:8010/v1` and watch at `http://<host>:8010`. On a CUDA box with torch ≥2.14, torch's native ops need `Python.h` (`python3-dev`; you may need to ask an admin if you lack sudo); without it brainscope sets `TORCH_DISABLE_NATIVE_JIT=1` ("same numbers") and says so. **When not to use it:** as a measurement tool for a paper — the README calls it "a measuring device … it claims no scientific findings of its own" and it is single-author; anything needing vLLM-scale throughput (it runs on transformers); exposing the port beyond a trusted network ("brainscope has no auth").
 
 ### What is NDIF?
 
@@ -270,4 +327,4 @@ Quantize. `vllm serve meta-llama/Llama-3.1-70B-Instruct-AWQ-INT4 --quantization 
 
 ---
 
-Last verified: 2026-10. vLLM-Lens released by UK AISI (`UKGovernmentBEIS/vllm-lens`). NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes. (Citation audit 2026-06: corrected the vLLM-Lens benchmark post date to April 2026, added its URL, and clarified the OPT-30B benchmark vs the 1T downstream-use figure. Additions 2026-06: cited the two named serving techniques — PagedAttention (Kwon et al. 2309.06180) and RadixAttention/SGLang (Zheng et al. 2312.07104); both verified via arXiv.) (Additions 2026-10: vLLM-Lens v1.2.0/v1.2.1/v1.3.0 release notes and README — generic hooks, Q/K capture, binary transport, steering-via-`LLM.chat` bug, vLLM 0.30.0 pin, TF32 default — and corrected the Inspect `extra_body` key names (`output_residual_stream`, `apply_steering_vectors`; checked against the v1.0.0 and v1.3.0 READMEs); nnsight 0.7.0 `nnsight-serve` and 0.8.0rc1 vLLM-taps release notes; TransformerLens 4.0 `drivers.md` (`RemoteBridge.boot_vllm` / `boot_inspect`); all verified via `gh api` and PyPI. Throughput figures for nnsight 0.8 and TL drivers are the maintainers' own.)
+Last verified: 2026-10-14. vLLM-Lens released by UK AISI (`UKGovernmentBEIS/vllm-lens`). NDIF active under nnsight. vLLM and sglang both in rapid development; check release notes. (Citation audit 2026-06: corrected the vLLM-Lens benchmark post date to April 2026, added its URL, and clarified the OPT-30B benchmark vs the 1T downstream-use figure. Additions 2026-06: cited the two named serving techniques — PagedAttention (Kwon et al. 2309.06180) and RadixAttention/SGLang (Zheng et al. 2312.07104); both verified via arXiv.) (Additions 2026-10: vLLM-Lens v1.2.0/v1.2.1/v1.3.0 release notes and README — generic hooks, Q/K capture, binary transport, steering-via-`LLM.chat` bug, vLLM 0.30.0 pin, TF32 default — and corrected the Inspect `extra_body` key names (`output_residual_stream`, `apply_steering_vectors`; checked against the v1.0.0 and v1.3.0 READMEs); nnsight 0.7.0 `nnsight-serve` and 0.8.0rc1 vLLM-taps release notes; TransformerLens 4.0 `drivers.md` (`RemoteBridge.boot_vllm` / `boot_inspect`); all verified via `gh api` and PyPI. Throughput figures for nnsight 0.8 and TL drivers are the maintainers' own.) (Additions 2026-10-14: interp-engine — README, `docs/USAGE.md`, `docs/GRADIENTS.md`, `docs/PORTING.md`, `pyproject.toml` (`vllm==0.28.0` exact pin, `transformers>=4.57.1`, Python >=3.11,<3.14) read raw via `gh api`; releases v1.14.0 (2026-10-13) / v1.13.2 and PyPI 1.14.0; the Neuronpedia commit "fix(inference): use interp-engine 1.13.2" (2026-10-10) via the commits API; throughput figures are the maintainers' own B200 table. brainscope — README read raw, PyPI 0.4.3. The cross-tool vLLM pin list combines the interp-engine pyproject with this page's existing vLLM-Lens, EasySteer and TransformerLens entries.)

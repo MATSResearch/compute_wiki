@@ -28,6 +28,11 @@ answers only part of the research question.
 - Match additional verification to the project and theorem's role. For
   specialized validation, consult the version-appropriate official guidance
   linked below; do not introduce a new approval gate for routine proof work.
+  On Lean v4.35.0 or later, `lake comparator --paranoid` checks that a
+  solution proves exactly the statements in a challenge module, and `lake
+  check --paranoid` checks a whole project against six kernels with standard
+  axioms only (both Linux-only). Neither checks fidelity to the informal
+  claim, and filled definition holes (`definition_names`) still need review.
 
 Report what claim was checked, statement mismatches, material assumptions,
 proof status, and what conclusion follows. If Lean is unavailable, explicitly

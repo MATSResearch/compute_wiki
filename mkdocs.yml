@@ -45,6 +45,7 @@ nav:
       - interpretability/slt-devinterp.md
   - Evaluation & red-teaming:
       - evaluation/evals.md
+      - evaluation/eval-statistics.md
       - evaluation/agent-scaffolds.md
       - evaluation/inspect-ecosystem.md
       - evaluation/datasets-benchmarks.md
@@ -64,11 +65,13 @@ nav:
       - oversight-and-control/debate-scalable-oversight.md
       - oversight-and-control/debate-judge-scaffolds.md
       - oversight-and-control/rl-training.md
+      - oversight-and-control/rl-frameworks.md
       - oversight-and-control/training-on-trajectories.md
       - oversight-and-control/multi-agent-safety.md
   - Engineering & recipes:
       - engineering/agentic-swe-practices.md
       - engineering/ai-scientist-frameworks.md
+      - engineering/literature-tools.md
       - engineering/code-recipes.md
       - engineering/research-rigor.md
       - engineering/theory-research.md

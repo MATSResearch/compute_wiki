@@ -1,0 +1,10 @@
+{
+    "challenge_module": "Statements",
+    "solution_module": "Solutions",
+    "theorem_names": [
+        "Template.double_eq_two_mul",
+        "Template.add_comm_example"
+    ],
+    "definition_names": [],
+    "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"]
+}

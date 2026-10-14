@@ -57,7 +57,12 @@ For each formalized claim, report the informal claim, the Lean theorem name
 and file, exact imports/toolchain, command and result, assumptions and axioms,
 and any gap between the formal statement and the intended interpretation.
 Use the [formalization record](references/formalization-record.md) when a
-claim will be revisited or cited. Keep the checked theorem separate from the
+claim will be revisited or cited. For a result that will be cited, report the
+highest check it passed: on Lean v4.35.0 or later (Linux), `lake check
+--paranoid` for the whole project and `lake comparator --paranoid` against a
+human-reviewed statement file (`comparator.json`); older toolchains need the
+standalone comparator. The wiki's `project_templates/lean_formalization/` is a
+starting layout. Keep the checked theorem separate from the
 informal scientific conclusion: Lean verifies the encoded proposition, not
 that the encoding is the right model of the world.
 

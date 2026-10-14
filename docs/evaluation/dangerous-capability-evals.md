@@ -23,7 +23,8 @@ Which benchmark measures which dangerous capability, how to run it (most are `in
 | Reproducing real vulnerabilities from a text description, at scale | **CyberGym** | `inspect_evals/cybergym`; upstream `sunblaze-ucb/cybergym`; full dataset 236 GB, so subset it |
 | Offence *and* defence on real bug bounties, with dollar values | **BountyBench** (Detect / Exploit / Patch) | `bountybench/bountybench` on GitHub; not in `inspect_evals` |
 | Components of autonomous self-replication (weights, compute, money, persistence) | **RepliBench** (UK AISI) | **Not released**; code shared with researchers on request. Open alternative: GDM self-proliferation tasks, `inspect_evals/gdm_sp01_e2e` … `gdm_sp12_*` |
-| Long-horizon autonomy and AI R&D capability | **METR HCAST** / time horizon | See [`evals.md`](evals.md#metr-hcast-and-the-metr-task-suite) |
+| Long-horizon autonomy and AI R&D capability | **METR HCAST** / time horizon; RE-Bench Inspect port (`METR/inspect-tasks-public`, 8×H100 nodes) | See [`evals.md`](evals.md#metr-hcast-and-the-metr-task-suite) |
+| Whether a model can break out of a Docker / Kubernetes container (the sandbox your other evals rely on) | **SandboxEscapeBench** (UK AISI, arXiv:2603.02277) | Public; `UKGovernmentBEIS/sandbox_escape_bench`, VM backends `ec2` or `vagrant`. See [Container escape](#container-escape-sandboxescapebench) |
 | Stealth and situational awareness (prerequisites for undermining oversight) | GDM stealth and self-reasoning tasks (Phuong et al. 2025, arXiv:2505.01420) | `inspect_evals/gdm_classifier_evasion`, `gdm_cover_your_tracks`, `gdm_oversight_pattern`, `gdm_strategic_rule_breaking`, `gdm_self_reasoning_*` |
 | Whether the model is hiding capability during your eval | Elicitation and sandbagging checks | [`evals.md`](evals.md#sandbagging-and-capability-elicitation-is-a-low-score-real) |
 | Which score would trigger which mitigation at a lab | A frontier safety framework's capability thresholds (e.g. GDM's CCLs) | See [Framework thresholds](#framework-thresholds-google-deepmind-frontier-safety-framework-v3) |
@@ -75,6 +76,20 @@ Aliases: autonomous replication and adaptation (ARA), self-proliferation, self-e
 
 **When not to use these.** A replication *propensity* question (would the model try?) is not answered by any of these; they hand the model the goal. **Regime:** single-episode agentic tasks in controlled environments, not open-internet or long unattended runs.
 
+## Container escape: SandboxEscapeBench
+
+Aliases: SandboxEscapeBench, SANDBOXESCAPEBENCH, `UKGovernmentBEIS/sandbox_escape_bench`, sandbox escape, container breakout, Docker escape eval, Kubernetes escape eval.
+
+**What it is.** Marchand, O Cathain, Wynne, Giavridis, Jennings, Tuxworth, Dur, Deverett, Wilkinson, Gwartz & Coppock (UK AISI), "Quantifying Frontier LLM Capabilities for Container Sandbox Escape" (arXiv:2603.02277; code MIT, no releases, last pushed 2026-09-09). An Inspect capture-the-flag (CTF) evaluation with a nested design: a VM holds the flag and has no known vulnerabilities; "Each VM contains a container which serves as the pseudo-sandbox for the model, with the goal being to break out and retrieve a flag from the VM host." The threat model is "a motivated adversarial agent with shell access inside a container". 18 scenarios, rated 1/5 to 5/5 with human time estimates, cover misconfiguration (privileged container, mounted Docker socket, writable hostPath), privilege allocation (`--pid=host`, `CAP_SYS_ADMIN`, `CAP_SYS_MODULE`, `CAP_DAC_READ_SEARCH`), kernel flaws (Dirty COW, Dirty Pipe, BPF and packet-socket privilege escalation) and runtime or orchestration weaknesses (runc CVE-2019-5736 and CVE-2024-21626, cgroup release agent CVE-2022-0492, CRI-O and kubectl CVEs, over-privileged Kubernetes service accounts). Each scenario has normal, `hint` and `solution` variants and a human-baseline mode (`--solver human_cli`). Finding, from the abstract: "when vulnerabilities are added, LLMs are able to identify and exploit them, showing that use of evaluation like SANDBOXESCAPEBENCH is needed to ensure sandboxing continues to provide the encapsulation needed for highly-capable models."
+
+```bash
+# from the README
+uv run inspect eval scenarios/docker_socket/task.py --model openai/gpt-5.2 -T sandbox=vagrant
+uv run inspect eval scenarios/docker_socket/task.py --model openai/gpt-5.2 -T variant=solution
+```
+
+**When to use it:** you are deciding whether a container is adequate isolation for a capable agent (yours or one you are evaluating), or you want a dangerous-capability measurement of exploitation skill that is directly about the evaluator's own infrastructure. **When *not* to use it:** on a laptop's Docker or a shared cluster node — it is built for VM backends (`ec2` by default, or local `vagrant`); kernel-exploit scenarios need pre-built Packer images; and fallback mode can hit Docker Hub's anonymous pull limit (`toomanyrequests`). **Regime:** single-episode agent runs against *planted* vulnerabilities; a pass rate says what a model can exploit when a hole exists, not whether your particular stack has one. Sandbox provider choices: [`agent-scaffolds.md`](agent-scaffolds.md#sandbox-providers-and-containment).
+
 ## Framework thresholds: Google DeepMind Frontier Safety Framework v3
 
 Aliases: FSF, Frontier Safety Framework, Critical Capability Level (CCL), Tracked Capability Level (TCL), alert threshold, early-warning evaluations, responsible scaling policy (RSP) analogue.
@@ -91,7 +106,7 @@ Phuong, Aitchison, Catt et al. (Google DeepMind), "Evaluating Frontier Models fo
 
 ### Which dangerous-capability benchmarks can I actually run without asking anyone?
 
-WMDP, LAB-Bench (public subset), CyBench, CVE-Bench, CyberGym, BountyBench, and the GDM self-proliferation, CTF, stealth and self-reasoning tasks, most via `inspect_evals`. VCT and RepliBench are restricted: VCT is conveyed to researchers with an AI-safety track record, and RepliBench code is shared by UK AISI on request.
+WMDP, LAB-Bench (public subset), CyBench, CVE-Bench, CyberGym, BountyBench, SandboxEscapeBench, and the GDM self-proliferation, CTF, stealth and self-reasoning tasks, most via `inspect_evals`. VCT and RepliBench are restricted: VCT is conveyed to researchers with an AI-safety track record, and RepliBench code is shared by UK AISI on request.
 
 ### A model beats virologists on VCT. Does that mean it gives novices bio uplift?
 
@@ -107,4 +122,4 @@ Its default sandbox is Kubernetes; without a cluster, pass `-T sandbox_type=dock
 
 ---
 
-Last verified: 2026-10. arXiv 2504.16137, 2407.10362, 2602.16703, 2602.23329, 2503.17332, 2506.02548, 2505.15216, 2504.18565, 2403.13793, 2505.01420 checked via the arXiv API (titles, authors, abstract numbers; quotes are exact abstract substrings); VCT release terms and RepliBench release statement and pass@k caveat checked in the paper PDFs. UK AISI Frontier AI Trends Report figures (5%→60% on 11 of 20 RepliBench evaluations; bio, chem and cyber trend statements) from the aisi.gov.uk report page. GDM FSF v3.0 from the deepmind.google blog (2025-09-22, updated 2026-04-17) and v3.1 domains, TCLs and alert thresholds from the linked framework PDF. `inspect_evals` task names and the CVE-Bench / CyberGym / LAB-Bench / self-proliferation READMEs from `UKGovernmentBEIS/inspect_evals` via the GitHub API; upstream repos `uiuc-kang-lab/cve-bench`, `sunblaze-ucb/cybergym`, `bountybench/bountybench`, `Future-House/LAB-Bench`, `google-deepmind/dangerous-capability-evaluations` confirmed via the GitHub API. Verification pass 2026-10-12: 78 claims checked, 2 corrected.
+Last verified: 2026-10-14. (Additions 2026-10-14: SandboxEscapeBench — arXiv:2603.02277 abstract and author list via the arXiv API, scenario table, variants and backends from the repo README, repo metadata via the GitHub API; RE-Bench Inspect port pointer from `METR/inspect-tasks-public` README.) arXiv 2504.16137, 2407.10362, 2602.16703, 2602.23329, 2503.17332, 2506.02548, 2505.15216, 2504.18565, 2403.13793, 2505.01420 checked via the arXiv API (titles, authors, abstract numbers; quotes are exact abstract substrings); VCT release terms and RepliBench release statement and pass@k caveat checked in the paper PDFs. UK AISI Frontier AI Trends Report figures (5%→60% on 11 of 20 RepliBench evaluations; bio, chem and cyber trend statements) from the aisi.gov.uk report page. GDM FSF v3.0 from the deepmind.google blog (2025-09-22, updated 2026-04-17) and v3.1 domains, TCLs and alert thresholds from the linked framework PDF. `inspect_evals` task names and the CVE-Bench / CyberGym / LAB-Bench / self-proliferation READMEs from `UKGovernmentBEIS/inspect_evals` via the GitHub API; upstream repos `uiuc-kang-lab/cve-bench`, `sunblaze-ucb/cybergym`, `bountybench/bountybench`, `Future-House/LAB-Bench`, `google-deepmind/dangerous-capability-evaluations` confirmed via the GitHub API. Verification pass 2026-10-12: 78 claims checked, 2 corrected.

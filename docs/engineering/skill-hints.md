@@ -51,6 +51,11 @@ does not require invocation by a particular slash-command spelling.
 - Set `MATS_SKILL_HINT_MUTE=mats-lean-cleanup` to mute that skill; comma-separated
   names mute several skills across sessions.
 - Remove the hook entry to uninstall the integration.
+- In a project that uses Cameron Freer's **lean4-skills** plugin
+  (`cameronfreer/lean4-skills`) instead of the `mats-lean-*` skills, mute or
+  remove these hints: lean4-skills ships its own hooks and proving cycle, and
+  two procedures for the same step give the agent conflicting instructions
+  ([which to pick](lean-formalization.md#mats-lean-skills-or-lean4-skills-pick-one-per-project)).
 
 Deduplication uses empty hashed marker files in `~/.cache/mats-skill-hints/`.
 `MATS_SKILL_HINT_STATE_DIR` can select another directory. Markers contain no

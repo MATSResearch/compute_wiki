@@ -25,6 +25,13 @@ proof strategy and search effort to fit the problem and authorized budget.
 - Preserve the original target while experimenting. If a counterexample or
   missing premise emerges, explain it and present a revised conjecture as a
   revision, rather than quietly weakening the theorem to get a green check.
+- If `lake comparator` or `lake check` fails, read the exit status first:
+  2 means it could not start (no `bwrap`, no `lake-manifest.json`, a malformed
+  `comparator.json`), which is environment work, not a proof failure;
+  `Axiom 'sorryAx' is not permitted; it is used by '…'` names the unfinished
+  dependency; `Const does not match between challenge and target '…'` means
+  the solution's statement or definition differs from the challenge's.
+  Repair the solution, not the challenge.
 - Recheck the repaired declaration and affected dependents. For a completed
   result, inspect its axiom dependencies; temporary holes remain unfinished
   work even when the command exits successfully.

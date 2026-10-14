@@ -53,7 +53,7 @@ Inspect AI and pandas are required dependencies — they install automatically. 
 - **Pre-built benchmarks** — use `inspect_evals` (`UKGovernmentBEIS/inspect_evals`, 200+ tasks: MMLU, GPQA, GAIA, SWE-bench, HarmBench, AgentHarm, …). Always check there before re-implementing a known benchmark.
 - **Agentic / sandboxed eval scaffolding** — build the `Task` directly with Inspect's `react()` agent + a Docker/k8s sandbox. This convenience layer covers one-shot and simple multi-turn evals.
 - **Log-prob academic benchmarking** — for leaderboard-comparable MMLU/ARC/HellaSwag numbers, `lm-evaluation-harness` (EleutherAI) is the standard; see `docs/evaluation/evals.md`.
-- **A statistically rigorous grader-validation pipeline** — `refusal_heuristic` and model-graded scorers are heuristics. Validate against human labels before publishing.
+- **A statistically rigorous grader-validation pipeline** — `refusal_heuristic` and model-graded scorers are heuristics. Validate against human labels before publishing: Inspect Scout validation sets (`validation_set()`, `scout scan ... -V`) with a held-out `test` split are the built-in route, and HiBayES (UK AISI) models grader effects on 0–10 scores. See `docs/evaluation/evals.md` ("Judge calibration and eval-result tooling").
 
 ## Smoke test
 
@@ -85,6 +85,7 @@ Everything else (`config`, `runs`, `tracking`, `seeding`, `io`, `cache`, `sweep`
 - **Model grading its own output**: if you don't pass `model=` (or set the `grader` model role) to `model_graded_qa`, the grader defaults to the model under test. Always use a separate, capable grader.
 - **`is_prompt_sensitive` returns True on a "good" eval**: that's the point — a >10-point accuracy range across paraphrases means a single-phrasing number is not reportable. Aggregate over paraphrases or quote the range.
 - **Wide Wilson CIs**: not a bug. `wilson_ci(k, 20)` is wide because n=20 is small. Run more samples before reading small gaps between models.
+- **Wilson CIs that are too narrow**: `wilson_ci` treats every sample as independent. Paraphrase expansions (`expand_paraphrases`), several questions per passage, or multiple epochs of one item are clustered, and the interval understates uncertainty; see `docs/evaluation/eval-statistics.md` for clustered intervals (Inspect's `stderr(cluster=...)` / `ci_wilson(cluster=...)`).
 
 ## Inspect AI version
 

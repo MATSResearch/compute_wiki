@@ -48,6 +48,11 @@ assume some exist and test defensively:
 - eyeball loss curves immediately
 - check for silent `NaN` or overflow
 
+One change per experimental arm, even if two changes live in disjoint scenarios.
+Write each finished unit to `results.jsonl` in the run folder as it completes, so
+a crash or `--resume` never repeats finished work. Record real start/end
+timestamps; do not plan around your own estimate of how long a run will take.
+
 **d. Log.** Better too many notes than too few — easy to search, hard to
 remember.
 
@@ -76,6 +81,16 @@ commits real time, money and compute, so **do not jump here early**.
 
 ## Step 5 — analyse and write up
 
+Agree with the fellow which level of "done" this is: *epistemic-complete*
+(defends the central claim, messy at the edges) or *paper-complete* (ablations,
+robustness checks; roughly half to one order of magnitude more work).
+
+Report each result as an atomic writeup: the result first, then enough method to
+follow it, then interpretation, with limitations and how to reproduce. Before a
+complex result is trusted, offer a single-file reproduction of the headline
+effect. Start drafting while results are still surprising. Leave mentor Slack
+updates to the fellow to write.
+
 Understand the results, then communicate them. For deciding whether a result is
 real, use the **mats-statistics** skill. For figures, use **mats-visualization**.
 
@@ -95,6 +110,10 @@ The MATS research tooling wiki — <https://matsresearch.github.io/compute_wiki/
   when choosing what kind of project this is.
 - `engineering/code-recipes.md` — copy-paste patterns and the anti-patterns list.
 - `engineering/agentic-swe-practices.md` — driving a coding agent so it writes
-  correct research code rather than plausible-looking slop.
+  correct research code rather than plausible-looking slop; "Agent memory,
+  handoffs and time" for long runs (hand off to a fresh session from a written
+  summary at each milestone).
+- `start-here/researcher-skills.md` — "Research-craft lessons from MATS fellows
+  and peers (2026)".
 - `project_templates/` — runnable starter scaffolds for mech interp, evals,
   AI control and model organisms.

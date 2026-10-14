@@ -18,6 +18,9 @@ The wiki under [`../docs/`](../docs/) tells you *what to use*. This directory sh
 | [`unlearning/`](unlearning/) | bootstrapping | `ul_components` | `example_1_relearning_curve` (implant → unlearn → relearning attack → verdict; runnable on CPU) |
 | [`model_diffing/`](model_diffing/) | bootstrapping | `md_components` | `example_1_narrow_finetune_diff` (stub) |
 | [`research_rigor/`](research_rigor/) | bootstrapping | `research_rigor` | — cross-cutting: used *alongside* an area above, not instead of one |
+| [`rl_small/`](rl_small/) | bootstrapping | — | single-GPU TRL GRPO config and a Tinker-API loop that can point at hosted Tinker or a local SkyRL server, with a version-recording `metadata.json` |
+| [`lean_formalization/`](lean_formalization/) | bootstrapping (not yet compiled) | — | Lean 4 scaffold: `Statements.lean` (trusted, `sorry` bodies) + `Solutions.lean` + `comparator.json` + a GitHub Actions workflow running `lake check --paranoid` and `lake comparator --paranoid` (Lean ≥ v4.35.0) |
+| [`autoresearch_loop/`](autoresearch_loop/) | bootstrapping | — | copy-and-edit agent metric loop: `program.md` with human pause points, `measure.sh` printing `METRIC` lines, `checks.sh` guard floor, a human-only final split, an append-only `results.jsonl` with schema and validator, optional hookify rules |
 
 ## How to use a template
 
