@@ -130,6 +130,16 @@ Three choices in how it is run:
   branches are listed at the end.
 - **Facts are the agent's job, decisions the researcher's.** The agent looks up
   anything it can find itself rather than asking.
+- **Ask only what changes the plan.** A question is worth the researcher's
+  attention only if two plausible answers lead to different runs, measures or
+  claims; the rest the agent decides and lists as **Assumed**, where it can be
+  overturned. (CONTRA, arXiv 2610.01769, built on this test.)
+
+Evidence (2026-10): users who verbalised their reasoning to an assistant did
+better unaided afterwards, while those who asked for solutions did worse
+(arXiv 2610.09547, game tasks); heavier delegation finished more work and
+produced more invalid work, and experts were the ones who still reviewed
+(arXiv 2610.14660).
 
 There are two starting question banks: **planning** (what decision the study
 informs, what would surprise you, what would make you drop the hypothesis,
