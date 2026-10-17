@@ -139,6 +139,7 @@ If they are installed in `~/.claude/skills/` your client may load them itself.
 |---|---|
 | `mats-experiment-workflow` | start a project, plan what to run next, keep a research journal, organise outputs, or decide whether to scale up |
 | `mats-research-rigor` | pre-register, accept a result, raise a concern, resolve a prediction, write up, or release code |
+| `wait-what` | the researcher says "wait, what?" (or "wait-what") about your last message: re-pitch it with a little context, in ASD-STE100 Simplified Technical English |
 | `mats-research-interview` | fix a plan or call a result with the researcher, and they asked (or accepted the offer) to be interviewed about the decisions it hangs on |
 | `mats-statistics` | claim a difference is real, choose a test, or put an error bar on a number |
 | `mats-visualization` | write plotting code, choose a colormap, or save a figure |

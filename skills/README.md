@@ -9,6 +9,7 @@ program's conventions instead of inventing its own.
 | [`mats-experiment-workflow/`](mats-experiment-workflow/) | start a project, plan what to run next, keep a research journal, organise run outputs, or decide whether to scale up |
 | [`mats-research-rigor/`](mats-research-rigor/) | pre-register a hypothesis, accept a result, raise a concern about its own work, resolve a prediction, write up, or release code |
 | [`mats-research-interview/`](mats-research-interview/) | fix a plan or call a result with the researcher, when they ask (or accept the offer) to be interviewed — the decisions surfaced in rounds over a design tree |
+| [`wait-what/`](wait-what/) | is told "wait, what?" (or "wait-what") by the researcher: the last message did not land, so re-pitch it with a little context, in Simplified Technical English |
 | [`mats-statistics/`](mats-statistics/) | claim a difference is real, choose a test, or put an error bar on a number |
 | [`mats-visualization/`](mats-visualization/) | write plotting code, choose a colormap, or save a figure |
 | [`mats-intervention-evidence/`](mats-intervention-evidence/) | claim it removed / unlearned something, that a finetune changed something, or that particular training data caused a behaviour |
