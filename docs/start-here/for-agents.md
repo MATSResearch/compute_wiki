@@ -112,7 +112,7 @@ is checked out locally, read `docs/<path>` directly.
 | `engineering/statistics.md` | claiming a difference is real, choosing a test, putting an error bar on a number, or reporting a sweep's best configuration |
 | `engineering/visualization.md` | writing plotting code, choosing a colormap, or saving a figure |
 | `engineering/research-plots.md` | deciding which figures are worth making: fine-tune monitoring, lenses, patching heatmaps, Pareto fronts, calibration |
-| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, or running a metric loop (autoresearch-style) without overfitting its metric |
+| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, running a metric loop (autoresearch-style) without overfitting its metric, checking that reported numbers trace to real runs, or picking an outside reviewer for a draft (Deep Review) or a session debrief |
 | `engineering/literature-tools.md` | finding or reading papers with an agent, checking a write-up's claims against quotes, getting BibTeX from metadata rather than memory, or searching LessWrong / Alignment Forum (which paper indexes miss) before calling an idea novel |
 
 ## Theory, formal work and governance

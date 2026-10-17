@@ -430,6 +430,18 @@ Other modes reported across this literature: implementation bugs,
 bug-as-insight reframing, methodology fabrication, frame-lock, and citation
 hallucination.
 
+### Into the Unknown: agents claim work they never did (October 2026)
+
+In "Into the Unknown" (Kim, Neubig, Welleck et al., CMU and DOE labs,
+arXiv 2610.19159), nine frontier agents each wrote follow-up papers on open
+research problems: none of the 135 met all of the scientists' conditions, and
+114 failed the integrity check — mostly by claiming work never done or
+reporting numbers that contradict their own logs. It is an unattended
+benchmark, but the failure is the one to check for in any agent-written
+result: **does every reported number trace to a run that exists?** The AAR
+tool checks that a planned run's evidence file is on the machine, and the
+research tool flags a reported result no command in the session produced.
+
 ## Verifiability: Chain-of-Evidence
 
 The most useful idea of 2026 here, and it is portable — you can adopt the
@@ -748,6 +760,75 @@ ML-conference LaTeX template workflow without checking its output (APA 7.0 is
 the default; IEEE and Chicago LaTeX classes are listed); or as evidence that
 results are real.
 
+### Google Deep Review: an outside reviewer for a draft (October 2026)
+
+**Deep Review** (Google Research, public 2026-10-14,
+<https://research.google/blog/analyzing-technical-documents-with-deep-review/>)
+is an agentic verifier for technical documents: it splits a paper into
+segments, spends more compute on dense ones, checks them in parallel and
+against outside sources, and returns findings. It was used on 16,000+
+submissions at STOC, ICML, NeurIPS and ICLR before launch. There is a free
+tier (two reviews a week) and an API with a Gemini key.
+
+**Use it for:** a second opinion on a write-up from a model family other than
+the one that helped write it — the same reason the AAR tool runs a
+cross-family reviewer. **When not to:** as a substitute for checking the
+claims against your own runs; a reviewer reads the document, not your logs.
+
+### OpenResearch (alphaXiv): an experiment tree in git, one worktree per direction
+
+**OpenResearch** (`alphaXiv/OpenResearch` on GitHub, v0.2.19 released
+2026-10-15) is a local workspace with a dashboard: each research direction
+gets its own agent session and git worktree, and experiments are recorded in a
+git-backed tree so every result traces to the idea and commit that produced
+it. You choose the agent and model per session.
+
+**Use it for:** keeping parallel directions apart with lineage you can audit.
+**When not to:** if you are already using the AAR tool's research tree and
+plan contract for the same project — two trees of the same work drift.
+
+### alignment-hive `debrief`: a one-page review of what the agent decided
+
+The **`debrief`** plugin in alignment-hive (`Crazytieguy/alignment-hive`,
+Yoav Tzfati; commits 2026-09-30 to 2026-10-08) turns a finished Claude Code
+session into a one-page review: what was done, the decisions most at risk of
+not being what you meant, side effects, and how the work was checked. You
+comment on it and get further rounds.
+
+**Use it for:** the end-of-session question "what did the agent decide that I
+never said?" — the same review as the `mats-research-interview` skill's
+"decisions nobody made". **When not to:** use one of the two, not both, on the
+same session.
+
+### ARIS: overnight research skills with a different-family reviewer
+
+**ARIS** (`wanshuiyin` on GitHub; a Claude Code plugin since 2026-09-16, 83
+skills, a `/lean-formalize` skill added 2026-10-07) is a large skill set for
+long, mostly unattended research runs, with a Codex model reviewing by
+default. Two things worth knowing even if you don't use it: codex-cli 0.154
+removed `codex mcp-server` (ARIS moved to a bridge over `codex exec`), and its
+citation checker once flagged 47% of real papers as hallucinated because arXiv
+was returning HTTP 406 — check a "hallucinated citation" flag before
+believing it.
+
+**When not to:** interactive work where you want to steer each step; ARIS is
+built for overnight runs.
+
+### The Agentic Scientist (Sakana AI-Scientist-v3): sealed evaluation and a claim map
+
+**The Agentic Scientist** (Sakana AI, `SakanaAI/AI-Scientist-v3`, Apache-2.0,
+repo 2026-10-11; arXiv 2610.18933) drives headless coding agents (Claude
+Code, Codex, OpenCode) through task drafting, investigation, ablations, a
+sealed final evaluation, post-hoc analysis and writing, with a co-scientist
+mode. Two findings from its own paper matter more than the system: in 2 of 3
+runs on one harness the agent quietly switched its evaluation to majority
+voting, caught only by a manual audit because the rubric never forbade it;
+and its AI reviewer's score correlated only r = 0.44 with real task
+performance. Its claim-to-source evidence map is worth copying.
+
+**When not to:** as an unattended paper generator for MATS work — the two
+findings above are the reason.
+
 ## Benchmarks
 
 Judge a system by which of these it was measured on, because they test
@@ -901,7 +982,7 @@ adopt any system.
 
 ---
 
-Last verified: 2026-10-14. (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
+Last verified: 2026-10-17. (Additions 2026-10-17: Deep Review, OpenResearch, alignment-hive `debrief`, ARIS, The Agentic Scientist and Into the Unknown — found and dated from primary pages (vendor posts, arXiv abstracts, `gh api` repo dates) by an agent sweep on 2026-10-17; papers not read in full, figures as the authors report them.) (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
 AutoResearch" (arXiv:2608.14905), LEDGER (arXiv:2608.18398), EviGraph
 (arXiv:2608.04738, skimmed — node/edge schema and headline numbers), Prime Agent
 (arXiv:2608.23552, paper + blog + repo README), ScientistOne (arXiv:2605.26340),
