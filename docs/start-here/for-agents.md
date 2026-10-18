@@ -40,7 +40,7 @@ is checked out locally, read `docs/<path>` directly.
 |---|---|
 | `start-here/project-shapes.md` | deciding what kind of project this is (interp paper, behavioral paper, control eval, …) and which reference papers exemplify that shape |
 | `alignment-science/behavioral-safety-playbook.md` | planning a behavioral safety study: the six-step method behind papers like Emergent Misalignment and Alignment Faking |
-| `engineering/research-rigor.md` | pre-registering, accepting a result, raising a concern about your own work, resolving a prediction, or writing up |
+| `engineering/research-rigor.md` | pre-registering, accepting a result, raising a concern about your own work, resolving a prediction, or writing up; offering the researcher an interview before a plan is fixed or a result is called |
 | `start-here/researcher-skills.md` | the researcher asks which of their own skills to build while an agent does execution, or wants practical research-craft lessons from 2026 MATS fellows (levels of "done", one change per arm, early write-ups) |
 | `start-here/mentor-expectations.md` | the researcher asks what MATS mentors expect of them |
 | `start-here/faq.md` | cross-cutting beginner questions: API keys, costs, where to start |
@@ -112,7 +112,7 @@ is checked out locally, read `docs/<path>` directly.
 | `engineering/statistics.md` | claiming a difference is real, choosing a test, putting an error bar on a number, or reporting a sweep's best configuration |
 | `engineering/visualization.md` | writing plotting code, choosing a colormap, or saving a figure |
 | `engineering/research-plots.md` | deciding which figures are worth making: fine-tune monitoring, lenses, patching heatmaps, Pareto fronts, calibration |
-| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, or running a metric loop (autoresearch-style) without overfitting its metric |
+| `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, running a metric loop (autoresearch-style) without overfitting its metric, checking that reported numbers trace to real runs, or picking an outside reviewer for a draft (Deep Review) or a session debrief |
 | `engineering/literature-tools.md` | finding or reading papers with an agent, checking a write-up's claims against quotes, getting BibTeX from metadata rather than memory, or searching LessWrong / Alignment Forum (which paper indexes miss) before calling an idea novel |
 
 ## Theory, formal work and governance
@@ -139,6 +139,8 @@ If they are installed in `~/.claude/skills/` your client may load them itself.
 |---|---|
 | `mats-experiment-workflow` | start a project, plan what to run next, keep a research journal, organise outputs, or decide whether to scale up |
 | `mats-research-rigor` | pre-register, accept a result, raise a concern, resolve a prediction, write up, or release code |
+| `wait-what` | the researcher says "wait, what?" (or "wait-what") about your last message: re-pitch it with a little context, in ASD-STE100 Simplified Technical English |
+| `mats-research-interview` | fix a plan or call a result with the researcher, and they asked (or accepted the offer) to be interviewed about the decisions it hangs on |
 | `mats-statistics` | claim a difference is real, choose a test, or put an error bar on a number |
 | `mats-visualization` | write plotting code, choose a colormap, or save a figure |
 | `mats-intervention-evidence` | claim you removed or unlearned something, that a finetune changed something, or that particular data caused a behaviour |

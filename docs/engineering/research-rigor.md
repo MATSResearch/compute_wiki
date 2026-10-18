@@ -105,6 +105,60 @@ and link the next iteration in the project record.
 | Estimate robustness | Vary the **sample** — bootstrap the eval set, overlapping data subsets, hyperparameter perturbation — not the seed | Data sampling is the largest variance source and init-seed variance is under half of it; a seed sweep underestimates the uncertainty a reader cares about |
 | Call a result causal | Check the evidence is causal, not observational | Attribution and causal patching correlate ρ ≈ 0 (−0.256 to −0.027) |
 | Release code | Disclose cost, harness, model IDs and dates | Agent-benchmark papers score **0.38/1.0** on reproducibility disclosure; none disclose inference cost |
+| Fix a plan, or call a result, together with an agent | Offer an interview: the agent asks, in rounds, the decisions the plan or result hangs on, and gives its own take only after the researcher answers | A decision nobody voiced is one nobody checked; a recommended answer under every question gets accepted, not examined |
+
+## Interview the researcher: surface the decisions before they are made
+
+When an agent and a researcher shape a plan, or read a result, many decisions
+get made without anyone saying them: which baseline, what counts as an effect,
+which rival explanation was ruled out. A **research interview** makes them
+explicit. The agent maps the work as a **design tree** — each decision
+branches into the decisions that hang off it — and asks the **frontier** (every
+question whose prerequisites are settled) in numbered rounds, recomputing it
+after each round of answers, until every branch is answered or parked.
+
+Three choices in how it is run:
+
+- **Ask first, then give a take.** The agent puts each question without its
+  own answer, and gives its view (and any trap the wiki records at that
+  decision) only after the researcher has answered. A recommended answer
+  printed under the question anchors the reply, and "yes" to it shows
+  agreement, not understanding. A researcher who wants speed can ask for
+  recommendations instead.
+- **Coverage, not pressure.** Every branch gets visited and nothing is silently
+  assumed; no answer is graded. Parking a branch is an answer, and parked
+  branches are listed at the end.
+- **Facts are the agent's job, decisions the researcher's.** The agent looks up
+  anything it can find itself rather than asking.
+- **Ask only what changes the plan.** A question is worth the researcher's
+  attention only if two plausible answers lead to different runs, measures or
+  claims; the rest the agent decides and lists as **Assumed**, where it can be
+  overturned. (CONTRA, arXiv 2610.01769, built on this test.)
+
+Evidence (2026-10): users who verbalised their reasoning to an assistant did
+better unaided afterwards, while those who asked for solutions did worse
+(arXiv 2610.09547, game tasks); heavier delegation finished more work and
+produced more invalid work, and experts were the ones who still reviewed
+(arXiv 2610.14660).
+
+There are two starting question banks: **planning** (what decision the study
+informs, what would surprise you, what would make you drop the hypothesis,
+what measures the concept, compared against what, what "worked" means before
+the first run) and **analysis** (what you expected before seeing it, whether
+the analysis was planned, what else would produce this, whether it beats the
+noise you measured, which single choice would flip it, the narrowest claim the
+evidence supports). Both are in the
+[`mats-research-interview`](https://github.com/MATSResearch/compute_wiki/blob/master/skills/mats-research-interview/SKILL.md)
+skill.
+
+The interview is **offered, never imposed**: it runs when the researcher asks
+or accepts, and it blocks nothing. The settled tree is worth keeping (a
+`docs/decisions/` file, or the hosted tool's plan record) — an analysis
+interview that can ask "you planned X; the result is Y" is the most useful
+kind.
+
+**When not to bother:** a small, reversible next step the researcher already
+knows why they want, or mid-execution of a plan they have settled.
 
 ## Pre-registration: commit before you look
 
