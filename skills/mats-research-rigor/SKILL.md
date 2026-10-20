@@ -34,6 +34,12 @@ actually needs.
   condition written once; keep evidence (this run bears on that prediction, for
   or against, this much) separate from the verdict a person signs, and cite the
   runs that go against with the same care as the ones for.
+- Working on your own under an agreed plan, stop only for a reason the plan
+  names (done-means met, a stop-and-ask condition, its abandon condition), a
+  refused permission you cannot do without, or something only the researcher
+  can resolve. A dead end is not one of these: record it, change direction
+  deliberately (invert an assumption, take another route, try to break your
+  best result), and keep going. See "A dead end is not a stopping point".
 - When comparing to a paper, share one axis with it — an anchor run of one of
   their conditions on your configuration, or your idea with one factor swapped
   to their value — rather than reading their absolute number as your baseline.

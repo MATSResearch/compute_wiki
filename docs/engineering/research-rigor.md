@@ -414,6 +414,41 @@ INCONCLUSIVE outcomes (arXiv:2608.19047); per-stage "validation contracts" in
 Xcientist (arXiv:2606.18874). No study yet measures success with versus without
 a declared completion condition for research agents.
 
+## A dead end is not a stopping point
+
+When an agent works on its own for hours under a plan you agreed — the MATS
+dashboard's "run until presentable" mode, or any long unattended session — it
+should stop for one of the reasons the plan itself names, and not otherwise:
+
+- **Presentable**: one of the plan's "done means" conditions is met.
+- **A pre-agreed blocker**: one of its "stop and ask" conditions is met.
+- **The plan's abandon condition** is met: the line is not worth pursuing.
+- **A permission it cannot do without** was refused.
+- **Something only you can resolve** that the plan did not foresee. It is worth
+  asking the agent once whether this is really true, because a dead end is easy
+  to mistake for a blocker.
+
+A dead end is none of these. Record it (what was tried, what happened, what it
+does *not* rule out), try a different route, and keep going. When several
+threads share a machine, a shared list of dead ends saves each one rediscovering
+the others' closed routes. In swarm_diversity_harness's saved search maps,
+45–62% of failing programs repeated a failure already on the map.
+
+**When stuck, change direction deliberately rather than retrying.** Options
+worth considering: invert one assumption the current approach makes (in a
+detail, in the choice of method, or in how the problem is framed); take a
+genuinely different route from scratch; try to break your own best result;
+assume the usual method fails here and ask what must matter instead; or start a
+fresh context from the files on disk. Let something other than the stuck model
+pick among these. A model choosing its own new direction tends to reuse the
+prior that got it stuck.
+
+**What we do not know yet.** In the harness these moves came from, none of the
+stall-triggered levers had been evaluated, every run was under three hours, and
+on one task plain independent resampling beat every variant. They are
+reasonable moves, not proven ones. The dashboard logs every firing and whether
+work was recorded after it, so evidence over long horizons will accumulate.
+
 ## Comparability: one shared axis per paper
 
 A post-training result — RL, DPO, SFT, fine-tuning on an open-weight model — is
