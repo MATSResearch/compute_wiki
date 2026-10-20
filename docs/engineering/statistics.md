@@ -529,6 +529,27 @@ many safety evals live. See
 - **Stopping when p first dips below 0.05.** Optional stopping without an
   anytime-valid method inflates false positives. See
   [Can I stop the run once it looks significant?](#can-i-stop-the-run-once-it-looks-significant).
+- **An interaction that appears in percentage points.** A constant logit
+  offset produces percentage-point gaps that rise and then fall across the
+  success range (Ai & Norton 2003; Schaeffer et al. 2023 on "emergent"
+  abilities). Test interactions on the logit scale and convert back. See
+  [`measurement-validity.md`](measurement-validity.md#percentage-point-gaps-can-fake-an-interaction).
+- **A "significant" effect smaller than its own standard error.** Under low
+  power a result that clears the threshold has a large chance of the wrong
+  sign and is expected to be several times too big (Gelman & Carlin 2014,
+  Type S and Type M errors). Report the standard error beside any verdict a
+  script emits. See
+  [`measurement-validity.md`](measurement-validity.md#a-verdict-needs-its-own-error-and-a-guard-at-the-degenerate-limit).
+- **The rate's denominator moves with the condition.** Dropping unparseable,
+  refused or incoherent units from both numerator and denominator can flip
+  which condition wins; one 2026 benchmark reverses its mode ranking under
+  intention-to-treat scoring. Report the fixed-denominator version too, and
+  compare inclusion odds rather than rates. See
+  [`measurement-validity.md`](measurement-validity.md#which-denominator-selected-versus-fixed).
+- **A run that never crossed the threshold logged as 0.** A censored value is a
+  bound, not a measurement; scoring it as zero makes "steps to X" a function
+  of whether X was ever reached. See
+  [`measurement-validity.md`](measurement-validity.md#censored-values-are-not-zeros).
 
 ## Where this connects
 
@@ -540,13 +561,16 @@ many safety evals live. See
   number): [`ai-control.md`](../oversight-and-control/ai-control.md).
 - Eval design and dataset choice:
   [`evals.md`](../evaluation/evals.md).
+- Whether the instrument can see the effect at all (saturated cells,
+  denominators, graders, harness artefacts, censoring):
+  [`measurement-validity.md`](measurement-validity.md).
 - Eval-specific statistics (clustered items, resolution ratio q, LLM-judge
   correction with PPI, crossed random effects, item response theory, early
   stopping): [`eval-statistics.md`](../evaluation/eval-statistics.md).
 
 ---
 
-Last verified: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
+Last verified: 2026-10-20 (additions: four pitfalls pointing at measurement-validity.md). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
 rule (2018) and BEST (2013); ArviZ default credible levels (0.94 in 0.x, 0.89 in 1.x) verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical
