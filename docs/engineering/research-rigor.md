@@ -711,6 +711,11 @@ the information is already there, it just has no consequence attached.
 
 ## Cross-references
 
+- Whether the instrument can see the effect before a verdict is called:
+  saturated cells, selected denominators, grader leakage, harness artefacts
+  that scale with the dose, censored values:
+  [`measurement-validity.md`](measurement-validity.md).
+
 - Which AI-scientist system to use, and how they fail:
   [`ai-scientist-frameworks.md`](ai-scientist-frameworks.md).
 - Statistical discipline behind the uncertainty rules:

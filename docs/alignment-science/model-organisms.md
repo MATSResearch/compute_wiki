@@ -545,9 +545,158 @@ Most published model organisms are constructed via one or more of:
 - **`safety-research/false-facts`** — the dedicated SDF / belief-implantation pipeline (universe context → key facts → synthetic docs → finetune → belief evals); built on safety-tooling. See the Synthetic Document Finetuning section above.
 - **HuggingFace `datasets`** for managing the training data.
 
+## Recommended checks before a claim about a fine-tuned organism
+
+Each of these is a check that has caught a wrong headline number in published
+work. None is a requirement; each names the trap and how one would look for
+it. The measurement-side counterparts (ceiling cells, denominators, graders,
+harness artefacts) are on [`measurement-validity.md`](../engineering/measurement-validity.md).
+
+- **One training run is not a measurement.** Schreiber & Goldstein 2026
+  (arXiv:2605.12199, "Overtrained, Not Misaligned") replicate emergent
+  misalignment across 12 open models with multiple seeds and find it
+  consistent across seeds in only 2 of them, with three more significant on a
+  single seed only. Dodge et al. 2020 (arXiv:2002.06305) fine-tune BERT 2,100
+  times varying only the seed and find the best seed beats published results
+  by ~7 points while some seeds collapse to the majority class. The EM
+  authors' own open-problems post recommends "at least a couple models for
+  every training setup". *Check:* replicate across nuisance factors (seed,
+  data order, hyperparameters) before interpreting; report the spread of
+  every behavioural component, since the organism is only as reproducible as
+  its least reproducible part; never calibrate thresholds or pick arms from
+  seed 0 alone. Two replicates that agree to machine precision for the first
+  few steps can still land in different places by the end.
+- **A large seed spread may mean undertrained, not underpowered.** Mosbach
+  et al. 2021 (arXiv:2006.04884) show fine-tuning instability on small
+  datasets is driven by the number of optimizer iterations, not dataset size:
+  training the small set for as many iterations as the full set recovers the
+  full set's variance. Jordan 2023 (arXiv:2304.01910) finds seed-to-seed
+  standard deviation falling roughly threefold between short and long
+  training durations. *Check:* before buying seeds to average over, report
+  examples-per-epoch together with epochs (one without the other is half a
+  datum) and ask whether more steps would shrink the spread. Replicating
+  nuisance variance estimates it more precisely without shrinking it.
+- **Weight diffs need a shared ancestor.** Two models that do not share an
+  initialization differ everywhere, at full rank, evenly across depth, and
+  any "signature" read off that difference is a signature of being strangers.
+  Frankle et al. 2020 (arXiv:1912.05671) define linear mode connectivity
+  only from a common training state; Git Re-Basin (Ainsworth et al. 2023,
+  arXiv:2209.04836) counts the permutation symmetries that make raw weight
+  comparison across seeds arbitrary; Neyshabur et al. 2020 (arXiv:2008.11687)
+  report L2 distances several times larger between random-init pairs than
+  between pairs fine-tuned from the same checkpoint. *Check:* before
+  differencing or comparing weights across released checkpoints, run a twin
+  audit: per-matrix cosine between the two models against a layer-shuffled
+  null and against a pair known to share history. A pair near the null is
+  not a diff.
+- **A localization claim needs a matched random-budget control.** Wang &
+  Veitch 2025 (arXiv:2502.11447) find that optimal edits at random
+  localizations are as effective as aligning the full model, so a successful
+  localized edit is by itself little evidence of localization. Hase et al.
+  2023 (arXiv:2301.04213) find causal-tracing effect and edit success nearly
+  uncorrelated across layers. Jain & Wallace 2026 (arXiv:2610.00373) show a
+  naive head-ablation hook uncorrelated with the correct ablation and use a
+  thousand matched random draws with a discovery/held-out split. *Check:*
+  every "top-k" ablation or revert gets a random-k and a bottom-k control at
+  the same budget; measure an off-target pool and partial out global drift;
+  treat an effect that shrinks as conditions are added as suspect. Do not
+  merge a strong predictor family into another family's false-discovery
+  correction; check the cardinality of a quantized predictor before reading
+  a rank correlation on it.
+- **A defence is only as robust as the attack sweep.** Qi et al. 2025
+  (arXiv:2412.07097, "On Evaluating the Durability of Safeguards") break
+  TAR and RepNoise by changing nothing but seeds, the trainer implementation,
+  or warmup and schedule, and note that 20 of TAR's 28 reported "adversaries"
+  were one attack at different hyperparameters. Łucki et al. 2025
+  (arXiv:2409.18025) recover "unlearned" capability with 10 unrelated
+  examples. *Check:* match the simulated adversary's optimizer to the real
+  one (plain SGD can move behaviour by nothing and produce a false negative
+  for the whole arm); keep the defence's inner-loop attack pool disjoint from
+  the evaluation attack, or you measure pool overlap; sweep attack strength
+  and report curves with censoring; report the multiplicative and the
+  absolute advantage separately, because a constant multiple of almost
+  nothing is almost nothing.
+- **"Fraction of weights changed" can measure the optimizer or the dtype.**
+  Shenfeld et al. 2025 (arXiv:2509.04259, §6) find reported RL update
+  sparsity was an artefact of bfloat16: small updates fail to register, and
+  the same training in float32 gives identical performance with no
+  sparsity. Zhu et al. 2025 (arXiv:2511.08567) give the half-ULP threshold.
+  OLMo 2 (arXiv:2501.00656, §3.4.2) traces loss spikes to weight decay
+  shrinking embedding rows that receive no gradient. *Check:* before reading
+  a sparsity or "fraction moved" number, state the dtype and the decay; a
+  decoupled decay term moves every weight by a fixed factor each step, which
+  can put every parameter above a small change threshold in a run that
+  learned almost nothing, and can silently densify a masked fine-tune.
+- **Base checkpoints can ship untrained special tokens.** Land & Bartolo 2024
+  (arXiv:2405.05417, "Fishing for Magikarp") find 0.1 to 1% of most
+  vocabularies severely under-trained, special tokens among them, with
+  untrained output rows sharing a common direction. Llama-3 base shipped its
+  chat-template tokens with near-zero rows (NaN gradients when the instruct
+  template was used on the base; see the Unsloth write-up and
+  `meta-llama/llama3` issue 77). *Check:* before attributing a transfer or
+  format failure to mechanism, compare the embedding and unembedding rows of
+  the special tokens your loss depends on between checkpoints; if two
+  control tokens have identical rows, no adapter can tell them apart. A
+  logit-space transfer (proxy tuning) separates "the learned function is
+  wrong" from "the weight graft broke it".
+- **Starting from an instruct model makes the arms asymmetric.** One arm
+  trains with the assistant prior and the other against it; equal steps are
+  not equal distance. Qi et al. 2024 (arXiv:2310.03693) remove alignment
+  with 10 examples against thousands spent installing it; Qi et al. 2025
+  (arXiv:2406.05946) show the aligned-vs-base KL concentrated in the first
+  few output tokens. *Check:* where the contrast is between dispositions,
+  consider instilling each from the base model; reporting KL from the start
+  characterises the asymmetry but does not remove it.
+- **Truncated training samples teach the model to stop early.** The Hermes 4
+  report (arXiv:2508.18255, §3.1 and Appendix B) found its 14B model hitting
+  the 40,960-token context 60% of the time on LiveCodeBench; naive SFT on
+  truncated traces made it worse (GPQA overlong rate 18.2% to 49.6%), and
+  training only the closing think token at a fixed budget cut overlong rates
+  by about 99%. *Check:* measure sample lengths through the exact chat
+  template and tokenizer the loader uses, count how many would be truncated,
+  and drop rather than truncate; a right-truncated target is a lesson in
+  stopping mid-thought.
+- **Split by the unit that shares context.** Wen et al. 2022
+  (arXiv:2201.06219) find 23% of DailyDialog and 34% of OpenSubtitles test
+  samples identical to training samples because multi-turn dialogues were
+  sliced into overlapping windows across the split; BLEU fell from ~34 to ~8
+  after deduplication. *Check:* in multi-turn or agentic data, hold out whole
+  sessions or episodes; a single bad target (a leaked control token, say)
+  recurs inside many later prompts' history, so grep validation histories
+  for format and special tokens.
+- **Synthetic rationales written with hindsight are not reasoning.** STaR
+  (Zelikman et al. 2022, arXiv:2203.14465, Appendix A.6) documents the trap in
+  its own method: rationales generated with the answer as a hint learned to
+  argue for one answer and emit the hint. Peng et al. 2026
+  (arXiv:2602.14469) measure answer-anchoring in reverse-generated chains of
+  thought at lexical, trajectory and probabilistic levels and find telling
+  the generator to ignore the answer trades one for another. *Check:* give a
+  rationale writer only the information available before the decision; screen
+  the output for outcome and harness vocabulary; tag every field with its
+  source.
+- **A minority of synthetic text can set the style.** Antislop (Paech et
+  al. 2025, arXiv:2510.15061) defines slop as patterns over-represented
+  against a human baseline, some by over a thousandfold, and shows prompt
+  bans do not remove a generator's habits. Kobak et al. 2025
+  (arXiv:2406.07016) and Liang et al. 2024 (arXiv:2404.01268) measure the
+  excess vocabulary in the scientific literature. *Check:* tag the source of
+  every synthetic portion of a corpus, compute an over-representation score
+  for n-grams against a human corpus, and score model outputs with it; a few
+  dozen examples suffice to teach a register, so down-weighting the synthetic
+  portion's loss is often cheaper than regenerating it.
+- **Non-finite loss should stop the run.** The BLOOM tr8-104B and OPT-175B
+  training chronicles record divergences that showed in a secondary metric
+  (loss scale) well before the loss, and dozens of restarts after NaNs.
+  Wortsman et al. 2023 (arXiv:2309.14322) reproduce the instabilities at
+  small scale. *Check:* abort on the first non-finite loss and dump the
+  batch; unit-test monitoring metrics on synthetic inputs, since the monitor
+  can be broken too; evaluate on a fixed held-out batch so "model degrading"
+  is distinguishable from "this batch is harder"; trigger evaluations by step,
+  never by wall clock, on shared machines.
+
 ## Common pitfalls building / using model organisms
 
-- **Reproducibility is bad.** Different fine-tuning seeds, different base models, different training data scales give different misalignment fidelity. Run k-many to characterize variance.
+- **Reproducibility is bad.** Different fine-tuning seeds, different base models, different training data scales give different misalignment fidelity. Run k-many to characterize variance; the section above gives the published seed-variance figures and the undertraining check.
 - **A fried organism.** Fine-tuning can cost instruction-following and preference coherence while MMLU looks fine (fried-model-organisms, LessWrong 2026-06-18). Compare with the base model and talk to the model after each stage; see the [hygiene checklist](#model-organism-hygiene-checklist).
 - **An audit that erased the behaviour.** A training-based elicitation method can remove the hidden behaviour while the model still claims it (brittle-organisms post, 2026-06-22). Re-measure the behaviour after the audit.
 - **"Misalignment" is a category, not a thing.** A backdoor is not the same as scheming is not the same as alignment faking is not the same as reward hacking. Be specific about which threat model your organism instantiates.
@@ -725,4 +874,4 @@ In one proof of concept with four Kimi-K2.6 organisms, a high offer raised admis
 
 ---
 
-Last verified: 2026-10-14. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models. (Citation audit 2026-06: corrected EM *Nature* publication to 2026, attributed "Model Organisms for EM" arXiv:2506.11613 to Turner et al. rather than Betley et al., and fixed the `MinhxLe/subliminal-learning` vs `loftusa/owls` repo roles. Additions 2026-06: added the Reward Tampering model organism (Denison et al. 2024, arXiv:2406.10162) behind the previously-uncited "RL with subverted reward" method, In-Context Scheming elicitation evals (Meinke et al. 2024, arXiv:2412.04984) for the previously-uncited "scheming" failure mode, and a report citation for the Agentic Misalignment repo (Anthropic 2025, arXiv:2510.05179); all verified via arXiv/source. Added the Synthetic Document Finetuning (SDF) / belief-implantation section and reference for `safety-research/false-facts` (Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks 2025), the canonical tool behind synthetic-document construction method #1. Additions 2026-10: reward-hacking RL organisms section (Natural EM arXiv:2511.18397, Hacker-Opus blog, iterative DPO arXiv:2609.06649, School of Reward Hacks arXiv:2508.17511, ImpossibleBench arXiv:2510.20270; HoneyBench post only), Contrastive SDF reward-seeking measure (arXiv:2607.18966), EM follow-ups (arXiv:2608.29118, 2608.23476, 2609.37914, 2609.35805, 2609.37624), automated-grader steering (`johny-b/public-steering-vectors`), subliminal-learning follow-ups (arXiv:2610.10657, 2609.20027, 2609.22215, 2609.12586, 2610.11012), AuditBench (arXiv:2602.22755; `safety-research/auditing-agents`), SDF grafting (arXiv:2610.00767; `peternutter/grafting-beliefs`) and shallow-belief results (arXiv:2609.14998), the Model Organism Lottery realism section (arXiv:2607.01033, 2510.13900, 2610.12129), Agentic Misalignment Summer 2026 and the OpenAI–Hugging Face reproduction (`msp895/oai-hf-incident-reproduction`), and deal-making (`keavney1/deal-making`); all arXiv IDs verified via arXiv abs pages and all GitHub repos via the GitHub API on 2026-10-09. Not verified: the `TruthfulAI-research/beyond_owls` repo (404), a public repo for the iterative-DPO pipeline, and any HoneyBench release.) (Additions 2026-10-12: Sleeper Agents claim qualified with the Prasanna, Westover, Xu, Hebbar & Stastny replication (LessWrong 2026-04-28, full post text read via the LessWrong GraphQL API) and the repo alias corrected to `anthropics/sleeper-agents-paper` (archived; samples, data-generation prompts and partial training data, no weights); new data-poisoning section (arXiv:2510.07192, 2602.04899 v3, 2610.07654); Alignment Faking "generalization findings" narrowed to the measure used, from the Revisited post (LessWrong GraphQL) and Sheshadri et al. (arXiv:2506.18032, abstract plus PDF sections 1–5); AgentMisalignment (arXiv:2506.04018 v3); realistic scheming propensity, anti-scheming training and inability safety cases (arXiv:2603.01608, 2605.29729, 2609.08126, 2509.15541, 2411.03336, 2505.01420, 2410.21514); shutdown-resistance section (arXiv:2509.14260 v2, 2604.02174 v1/v2, 2609.28274, 2604.17502 v5; Rajamanoharan & Nanda post via GraphQL). arXiv claims checked against the arXiv API abstracts; `PalisadeResearch/shutdown_avoidance`, `launchnlp/SchemeArena`, `anthropics/sleeper-agents-paper`, `Cadenza-Labs/sleeper-agents` and the `inspect_evals` `gdm_stealth`, `gdm_self_reasoning` and `agentic_misalignment` READMEs checked via the GitHub API and raw READMEs on 2026-10-12. Not verified: official code for AgentMisalignment, TBSP, Phantom Transfer, Hopman et al. and the GDM honeypots. Verification pass 2026-10-12: 110 claims checked, 2 corrected.) (Additions 2026-10-14: the model-organism hygiene checklist — fried-model-organisms README via `gh api` and its LessWrong post (GraphQL, post `WmEcgcstzYCcMpc7z`), Mitrani's MATS 10.0 retrospective (post `rktrjGjXEbWsg7zof`), perplexity differencing (arXiv:2605.00994 via the arXiv API; post `uwqtfxvhYRcyLazeP`), brittle organisms (post `d4zC3ydP6jGGup6Eo`), reminder training (post `wBsEFfQFteHSWCtsv`), PEFT v0.21.0 release notes; `ModelOrganismsForEM` (38 repos counted via the Hugging Face API) and `clarifying-EM/model-organisms-for-EM` README; UK AISI reproduction (README and post `2ANCyejqxfqK2obEj`); the UEA organism (Hugging Face model API and card); Persona Cartography (README; arXiv:2607.07916 via the arXiv API); `ariahw/rl-rewardhacking-ext` README; OpenAI shutdown dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, 2026-10-14), which also corrected the reward-hacking FAQ that recommended GPT-4.1 fine-tuning. Quotes are exact substrings of those sources.)
+Last verified: 2026-10-20 (additions: "Recommended checks before a claim about a fine-tuned organism" section, 13 checks each anchored to a published case; arXiv:2605.12199 and arXiv:2502.11447 checked at abstract level, arXiv:2508.18255 Table 2 / Appendix B checked in the PDF; the rest opened at section level). Earlier: 2026-10-14. Field is active; new model organism papers appear roughly quarterly. Open-source replication of alignment-faking matured during 2025; emergent-misalignment organisms now achievable with rank-1 LoRA on 0.5B models. (Citation audit 2026-06: corrected EM *Nature* publication to 2026, attributed "Model Organisms for EM" arXiv:2506.11613 to Turner et al. rather than Betley et al., and fixed the `MinhxLe/subliminal-learning` vs `loftusa/owls` repo roles. Additions 2026-06: added the Reward Tampering model organism (Denison et al. 2024, arXiv:2406.10162) behind the previously-uncited "RL with subverted reward" method, In-Context Scheming elicitation evals (Meinke et al. 2024, arXiv:2412.04984) for the previously-uncited "scheming" failure mode, and a report citation for the Agentic Misalignment repo (Anthropic 2025, arXiv:2510.05179); all verified via arXiv/source. Added the Synthetic Document Finetuning (SDF) / belief-implantation section and reference for `safety-research/false-facts` (Wang, Griffin, Treutlein, Perez, Michael, Roger, Marks 2025), the canonical tool behind synthetic-document construction method #1. Additions 2026-10: reward-hacking RL organisms section (Natural EM arXiv:2511.18397, Hacker-Opus blog, iterative DPO arXiv:2609.06649, School of Reward Hacks arXiv:2508.17511, ImpossibleBench arXiv:2510.20270; HoneyBench post only), Contrastive SDF reward-seeking measure (arXiv:2607.18966), EM follow-ups (arXiv:2608.29118, 2608.23476, 2609.37914, 2609.35805, 2609.37624), automated-grader steering (`johny-b/public-steering-vectors`), subliminal-learning follow-ups (arXiv:2610.10657, 2609.20027, 2609.22215, 2609.12586, 2610.11012), AuditBench (arXiv:2602.22755; `safety-research/auditing-agents`), SDF grafting (arXiv:2610.00767; `peternutter/grafting-beliefs`) and shallow-belief results (arXiv:2609.14998), the Model Organism Lottery realism section (arXiv:2607.01033, 2510.13900, 2610.12129), Agentic Misalignment Summer 2026 and the OpenAI–Hugging Face reproduction (`msp895/oai-hf-incident-reproduction`), and deal-making (`keavney1/deal-making`); all arXiv IDs verified via arXiv abs pages and all GitHub repos via the GitHub API on 2026-10-09. Not verified: the `TruthfulAI-research/beyond_owls` repo (404), a public repo for the iterative-DPO pipeline, and any HoneyBench release.) (Additions 2026-10-12: Sleeper Agents claim qualified with the Prasanna, Westover, Xu, Hebbar & Stastny replication (LessWrong 2026-04-28, full post text read via the LessWrong GraphQL API) and the repo alias corrected to `anthropics/sleeper-agents-paper` (archived; samples, data-generation prompts and partial training data, no weights); new data-poisoning section (arXiv:2510.07192, 2602.04899 v3, 2610.07654); Alignment Faking "generalization findings" narrowed to the measure used, from the Revisited post (LessWrong GraphQL) and Sheshadri et al. (arXiv:2506.18032, abstract plus PDF sections 1–5); AgentMisalignment (arXiv:2506.04018 v3); realistic scheming propensity, anti-scheming training and inability safety cases (arXiv:2603.01608, 2605.29729, 2609.08126, 2509.15541, 2411.03336, 2505.01420, 2410.21514); shutdown-resistance section (arXiv:2509.14260 v2, 2604.02174 v1/v2, 2609.28274, 2604.17502 v5; Rajamanoharan & Nanda post via GraphQL). arXiv claims checked against the arXiv API abstracts; `PalisadeResearch/shutdown_avoidance`, `launchnlp/SchemeArena`, `anthropics/sleeper-agents-paper`, `Cadenza-Labs/sleeper-agents` and the `inspect_evals` `gdm_stealth`, `gdm_self_reasoning` and `agentic_misalignment` READMEs checked via the GitHub API and raw READMEs on 2026-10-12. Not verified: official code for AgentMisalignment, TBSP, Phantom Transfer, Hopman et al. and the GDM honeypots. Verification pass 2026-10-12: 110 claims checked, 2 corrected.) (Additions 2026-10-14: the model-organism hygiene checklist — fried-model-organisms README via `gh api` and its LessWrong post (GraphQL, post `WmEcgcstzYCcMpc7z`), Mitrani's MATS 10.0 retrospective (post `rktrjGjXEbWsg7zof`), perplexity differencing (arXiv:2605.00994 via the arXiv API; post `uwqtfxvhYRcyLazeP`), brittle organisms (post `d4zC3ydP6jGGup6Eo`), reminder training (post `wBsEFfQFteHSWCtsv`), PEFT v0.21.0 release notes; `ModelOrganismsForEM` (38 repos counted via the Hugging Face API) and `clarifying-EM/model-organisms-for-EM` README; UK AISI reproduction (README and post `2ANCyejqxfqK2obEj`); the UEA organism (Hugging Face model API and card); Persona Cartography (README; arXiv:2607.07916 via the arXiv API); `ariahw/rl-rewardhacking-ext` README; OpenAI shutdown dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, 2026-10-14), which also corrected the reward-hacking FAQ that recommended GPT-4.1 fine-tuning. Quotes are exact substrings of those sources.)

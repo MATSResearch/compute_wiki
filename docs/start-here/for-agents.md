@@ -110,6 +110,7 @@ is checked out locally, read `docs/<path>` directly.
 | Page | Open it when |
 |---|---|
 | `engineering/statistics.md` | claiming a difference is real, choosing a test, putting an error bar on a number, or reporting a sweep's best configuration |
+| `engineering/measurement-validity.md` | reading a difference between cells near 0% or 100%, computing a rate whose denominator could move with the condition, scoring long tasks pass/fail, comparing gaps in percentage points, letting a script emit a PASS/FAIL verdict, trusting an LLM grader or answer extractor, sweeping task length or difficulty, reporting a detector's AUROC, or logging a run that never crossed its threshold |
 | `engineering/visualization.md` | writing plotting code, choosing a colormap, or saving a figure |
 | `engineering/research-plots.md` | deciding which figures are worth making: fine-tune monitoring, lenses, patching heatmaps, Pareto fronts, calibration |
 | `engineering/ai-scientist-frameworks.md` | evaluating an automated-research system or the output one hands you, running a metric loop (autoresearch-style) without overfitting its metric, checking that reported numbers trace to real runs, or picking an outside reviewer for a draft (Deep Review) or a session debrief |
