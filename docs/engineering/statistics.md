@@ -36,6 +36,9 @@ needs anything heavier.
 | Say "there is a 95% chance the effect is between X and Y" | Bayesian credible interval — a CI does NOT mean this | [Bayesian alongside frequentist](#report-bayesian-and-frequentist-side-by-side) |
 | Argue an intervention did NOT hurt capability | ROPE / equivalence test — a non-significant p cannot show this | [Arguing for no effect](#arguing-that-there-is-no-effect) |
 | Get an error bar without burning compute on reruns | Bootstrap over items; paired designs | [Where error bars come from](#where-error-bars-actually-come-from) |
+| Claim a fine-tune changed the model's internals (model diff) | Compare the diff to the spread across k reruns of the same recipe; k caps p at 1/(k+1) | [Model diffs](#model-diffs-the-rerun-band-is-the-baseline) |
+| Report a behaviour seen 10 times in 6,000 rollouts, or never | Beta posterior with a credible interval; a zero count is an interval | [Rare behaviours](#rare-behaviours-a-handful-of-hits-or-none) |
+| Monitor a stream indefinitely with a bounded false-alarm rate | e-process (anytime-valid) | [Stopping early](#can-i-stop-the-run-once-it-looks-significant) |
 
 ## Paired vs unpaired: the most common mistake
 
@@ -236,6 +239,33 @@ not as a gate. What is not optional is **saying which error bar you drew**:
 "± 95% CI over 500 prompts" and "± 1 std over 5 seeds" look identical on the page
 and mean entirely different things.
 
+### Model diffs: the rerun band is the baseline
+
+A model diff (base checkpoint vs fine-tuned descendant: weight deltas, activation
+geometry, crosscoder or SAE (sparse autoencoder) feature shifts) credits the training
+stage with everything that separates the two checkpoints. That presumes a rerun of the
+same recipe would land close by, and it may not. Chen, Le, Cheng, Li & Yue (Oct 2026,
+[arXiv:2610.17093](https://arxiv.org/abs/2610.17093)) report that on the sparse
+co-activation graph of Qwen3-1.7B, "two LoRA-SFT reruns sit over half as far apart as
+either sits from the base". Here a seed is not an optional strengthening step: for a
+structural or mechanistic diff, the spread across reruns *is* the null.
+
+- **Score the base-to-fine-tuned difference against the run-to-run band of its own
+  recipe**: train k independent reruns, measure their pairwise distances, and report
+  the diff in units of that spread. In the paper, base → SFT sat 17.8 pairwise-distance
+  standard deviations beyond the mean distance between four LoRA-SFT (low-rank adapter
+  supervised fine-tuning) runs, a real signature.
+- **k caps the p-value.** Under run exchangeability, k reruns "certify no better than
+  p = 1/(k+1)… however large the effect". Four reruns cannot give p below 0.2, so the
+  authors treat the band z-score as a descriptive scale, not a test. State k.
+- **A miss is not an absence.** The same paper calls its light-GRPO (Group Relative Policy Optimization) result "a secondary
+  non-detection, not an absence" because no equivalence test was run; see
+  [Arguing that there is no effect](#arguing-that-there-is-no-effect).
+
+Scope: one backbone and one SFT recipe for the full protocol, with a pre-registered
+replication on Llama-3.1-8B. Tooling for diffs is in
+[`model-diffing.md`](../interpretability/model-diffing.md).
+
 ## Sweeps and multiple comparisons
 
 Sweeping steering magnitudes, layers, thresholds or probe positions and then
@@ -289,6 +319,21 @@ in a parallel-coordinates plot does exactly this selection.
   look more reliable than they are (survivorship).
 - **Confirm the chosen config on held-out data** before reporting its number.
 
+The same selection effect hits prompt optimisers. Lumer, Sen, Subbiah & Paul (Oct 2026,
+[arXiv:2610.12601](https://arxiv.org/abs/2610.12601)) ran GEPA (reflective prompt
+evolution) on a deep-research agent with a topic-disjoint train/validation/test split.
+The held-out gain was real: citation reward 0.702 → 0.781 (bootstrap 95% CI
+[0.051, 0.107] on the gain), replicated across three seeds. But the validation score of
+the winning prompt sat well above its held-out score, and nearly half of that prompt was
+a memorised answer key. An ablation showed the key earned no reward even on the
+questions it encoded, so the authors attribute the gap to "small-sample selection under
+a noisy judge, not memorization". Two lessons carry over to any metric loop: **ablate
+before attributing a validation-to-test gap to leakage**, and keep feedback decomposed
+(collapsing per-dimension feedback "to a single scalar reward makes held-out transfer
+negative" in their runs). Their protocol is held-out topics, several seeds and verifier
+ablations; the metric-loop version is in
+[`ai-scientist-frameworks.md`](ai-scientist-frameworks.md#how-do-i-keep-a-metric-loop-from-overfitting-its-own-metric).
+
 In the MATS dashboard's Automated Alignment tool, a sweep recorded as a run
 table (`<run_table>`, with columns declared as param / variation / metric /
 status) opens as a parallel-coordinates panel. **Group by config** draws this
@@ -336,6 +381,35 @@ simply comes out near 0.5, instead of flipping between "significant" and "not".
 For **paired** data, do the same on the per-item differences rather than on the
 two rates separately, for the reasons in
 [paired vs unpaired](#paired-vs-unpaired-the-most-common-mistake).
+
+### Rare behaviours: a handful of hits, or none
+
+The Beta posterior is the right tool when a behaviour shows up a few times in thousands
+of rollouts (a rare chain-of-thought pattern, a sabotage attempt, a monitor miss), where
+"10 of 6,452" invites both over- and under-reading. Apollo Research's write-up of
+GLM-5.3's unprompted "update-aware reasoning" (Højmark & Newman,
+[LessWrong](https://www.lesswrong.com/posts/R5g8YT25G9DXJJ48n/glm-5-3-sometimes-considers-how-train-time-actions-shape),
+2026-10-15) is a clean worked example:
+
+```python
+from scipy import stats
+glm = stats.beta(1 + 10, 1 + 6452 - 10)          # 10 hits in 6,452 rollouts
+print(glm.mean(), glm.ppf([0.025, 0.975]))       # 0.17%, 95% CrI [0.09%, 0.28%]
+
+a = stats.beta(1 + 1, 1 + 1600 - 1)              # replication: GLM-5.3, 1 of 1,600
+b = stats.beta(1 + 0, 1 + 1600)                  # another model, 0 of 1,600
+draws_a, draws_b = a.rvs(1_000_000), b.rvs(1_000_000)
+print((draws_a <= draws_b).mean())               # ≈ 0.25
+```
+
+These reproduce the post's numbers (posterior mean 0.17%, 95% interval 0.09–0.28%; and,
+with uniform priors, a 0.25 posterior probability that GLM-5.3's rate is no higher than
+that of a model with zero hits in 1,600). The authors therefore say the sample "is too
+small to establish a statistically significant difference" between models, and that
+they "cannot rule out that other models also reason this way occasionally". Two habits
+worth copying: treat a zero count as an interval (`stats.beta(1, 1 + n)`), never as
+"never"; and name the confounds of a cross-model rate comparison (here GLM-5.3 writes
+far longer reasoning, so it has more chances to verbalise anything).
 
 ### For continuous outcomes
 
@@ -489,6 +563,18 @@ sequential version of trying several prompt sets. Two legitimate options:
   a wider boundary: in simulations in arXiv:2605.30315 (calibrated to two ARC
   pairs) the expected stopping time was 1.84–2.32× the fixed-n N\*.
 
+The same machinery fits a monitor that never stops: Ortega-Fernandez, Kowalczyk & Warr
+(Oct 2026, [arXiv:2610.11843](https://arxiv.org/abs/2610.11843), NeurIPS E-Values
+workshop) detect weight exfiltration hidden in token choices by replaying prompts on a
+trusted server. Benign numerical nondeterminism also causes mismatches, so a patient
+attacker can hide within normal variation unless evidence is combined across responses.
+A prompt-level e-process
+calibrated on benign traffic accumulates weak evidence across responses while
+"controlling the probability of any false alarm over an unbounded monitoring horizon"
+(under a calibration-transfer assumption). For any always-on safety monitor, that is the
+property to ask for. The security side is in
+[`ai-control.md`](../oversight-and-control/ai-control.md).
+
 For Inspect evals with repeated epochs, **optstop** (UK AI Security Institute)
 is a Bayesian alternative: it stops epochs once a hierarchical credible
 interval stops changing. Its guarantee is about credible intervals, not
@@ -511,6 +597,10 @@ many safety evals live. See
   first.
 - **Comparing against best-of-N.** If the baseline is one sample and your method
   takes the best of 8, the comparison is meaningless. Match the sampling budget.
+- **"Fine-tuning moved the representation by X" with no rerun band.** Two reruns of
+  the same LoRA-SFT recipe can sit over half as far apart as either sits from the base
+  (arXiv:2610.17093). See
+  [Model diffs](#model-diffs-the-rerun-band-is-the-baseline).
 - **Reporting the best seed.** If you *did* run several seeds, reporting
   max-over-seeds as the result is cherry-picking. Report the distribution or
   report one seed honestly — never the best of several presented as typical.
@@ -570,7 +660,7 @@ many safety evals live. See
 
 ---
 
-Last verified: 2026-10-20 (additions: four pitfalls pointing at measurement-validity.md). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
+Last verified: 2026-10-20 (additions: four pitfalls pointing at measurement-validity.md; the model-diff rerun band, arXiv:2610.17093; the GEPA prompt-optimiser selection example, arXiv:2610.12601; the anytime-valid exfiltration monitor, arXiv:2610.11843 — all three checked against their arXiv abstract pages; the rare-behaviour worked example from Apollo's GLM-5.3 post, read via LessWrong GraphQL, with its posterior mean, interval and the 0.25 comparison recomputed in SciPy). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
 rule (2018) and BEST (2013); ArviZ default credible levels (0.94 in 0.x, 0.89 in 1.x) verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical

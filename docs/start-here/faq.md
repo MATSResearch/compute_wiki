@@ -91,7 +91,7 @@ Tinker for managed RL/SFT without GPU management (the default for most fellows i
 
 ### Should I use Claude / GPT-4o / Gemini for my judge model?
 
-The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
+The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. Print the judge's per-class label counts too: small graders can silently never assign a class (one 8B/9B grader labelled zero of 900 jailbreak responses "compliance"), and several judges agreeing with each other is not agreement with humans (see [`measurement-validity.md`](../engineering/measurement-validity.md#the-grader-is-an-instrument-too)). See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
 
 ### Should I do interp or behavioral work?
 
@@ -140,6 +140,8 @@ Probably none, at first. Seeds are an optional strengthening step, not a gate â€
 The error bar you actually want comes from variation over **items** (prompts, rows), and you get it from the run you already did â€” bootstrap it. Better still, gather more data than the task needs and check the effect holds on **disjoint subsets**: that tests whether it generalises beyond the data you looked at, which re-running with a different seed does not.
 
 Run a seed sweep when you are claiming something about a *training* intervention and have compute left over. If you run several, report the distribution, not the best one. See [`statistics.md`](../engineering/statistics.md#where-error-bars-actually-come-from).
+
+The exception is a **model diff** (what fine-tuning changed in the weights or activations). There, reruns of the same recipe are the baseline rather than an extra: on the sparse co-activation graph of Qwen3-1.7B two LoRA-SFT reruns sat over half as far apart as either sat from the base (arXiv:2610.17093), and k reruns cap the p-value you can claim at 1/(k+1). See [Model diffs](../engineering/statistics.md#model-diffs-the-rerun-band-is-the-baseline).
 
 ### Should I use temperature 0?
 
@@ -196,4 +198,4 @@ Decide which level of "done" you want and say it out loud to your mentor. Jo Jia
 
 ---
 
-Last verified: 2026-10-14 (additions: skill-install safety, agent time estimates, mentor-update format, levels of "done").
+Last verified: 2026-10-20 (additions 2026-10-20: the model-diff seed exception, arXiv:2610.17093; judge per-class counts, arXiv:2610.24872 and 2610.13303; both checked against the arXiv abstract pages). Earlier: 2026-10-14 (additions: skill-install safety, agent time estimates, mentor-update format, levels of "done").

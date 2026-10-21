@@ -37,6 +37,9 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Capable small model to fine-tune cheaply | **Qwen3.5** (0.8B–9B), **Gemma 4** (E2B, E4B, 12B) | `qwen/qwen3.5-9b` | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Open chain-of-thought for CoT-faithfulness work | **gpt-oss-20b / 120b**, **Olmo 3 Think** | — | [`open-weights-models.md`](models-and-compute/open-weights-models.md), [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Matched baseline to existing safety literature | **Llama** (3.1/3.3/4) | `meta-llama/llama-4-maverick` | [`open-weights-models.md`](models-and-compute/open-weights-models.md) |
+| A safeguarded open frontier model (misuse-robustness, open-weight safeguards) | **Muse Spark Open** (Meta, 816B total / 42B active; gated, Muse Model License) | `meta/muse-spark-open` | [`open-weights-models.md`](models-and-compute/open-weights-models.md#muse-spark-open-meta-2026-10-15--a-safeguarded-open-frontier-model) |
+| A model with no modern internet text, or a corpus-controlled pair for persona / EM claims | **Talkie** (pre-1931 13B) + its modern-web twin | — (use weights; raw checkpoints) | [`open-weights-models.md`](models-and-compute/open-weights-models.md#talkie-pre-1931-13b--a-corpus-controlled-substrate) |
+| A free 400B-class *base* model with logprobs, activations or steering | **ACS Infra** (Llama 3.1 405B base, Trinity-Large-TrueBase) | — (hosted; apply at `infra.acsresearch.org/signup`) | [`compute.md`](models-and-compute/compute.md#acs-infra-free-hosted-large-base-models-logprobs-activation-harvesting-steering) |
 
 ## I want to extract activations from a model
 
@@ -49,6 +52,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Quick `model.forward` hook for one experiment, no library | **`torch.nn.Module.register_forward_hook`** + `baukit.TraceDict` | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Interventions as saveable, composable objects; DAS; non-transformer models | **pyvene** | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Work out what a finetune actually changed inside the model | **KL baseline** first, then **diffing-toolkit** (crosscoders, SAE-difference) | [`model-diffing.md`](interpretability/model-diffing.md) |
+| Tell whether a base→finetune diff is bigger than rerun noise | Train several reruns of the same recipe and score the diff against their **run-to-run band** (k reruns cap you at p = 1/(k+1)) | [`model-diffing.md`](interpretability/model-diffing.md#cross-cutting-pitfalls), [`statistics.md`](engineering/statistics.md#model-diffs-the-rerun-band-is-the-baseline) |
 | Work out which *training documents* caused a behaviour | **kronfluence** (EK-FAC influence functions) or **TRAK**; retrain-without-bucket as the honest baseline | [`data-attribution.md`](interpretability/data-attribution.md) |
 | Read what a model is thinking but not saying (unspoken intermediate variables) | **J++ Lens** (`safety-research/jpp_lens`); R-Lens or J-Lens if no J++ lens exists for your model | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Score a lens or activation-to-text reader fairly, including hallucinated readouts | **WorkspaceBench** (`camilablank/workspace-bench`) | [`mech-interp.md`](interpretability/mech-interp.md) |
@@ -68,6 +72,8 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Benchmark an SAE on downstream tasks, not just reconstruction/L0 | **SAEBench** | [`saes.md`](interpretability/saes.md) |
 | Pretrained SAEs / transcoders / crosscoders for Gemma 3 | **Gemma Scope 2** via SAELens | [`saes.md`](interpretability/saes.md) |
 | Group attribution-graph features into supernodes automatically | LLM annotation pipeline for **circuit-tracer** graphs (arXiv 2608.02632) | [`saes.md`](interpretability/saes.md) |
+| Check a transcoder or circuit story against raw MLP neurons | Sign-split, TopK-thresholded **MLP-neuron baseline** scored on downstream KL (arXiv:2610.24521) | [`saes.md`](interpretability/saes.md#should-i-use-saes-at-all-the-skeptics-reading-list) |
+| A saved BatchTopK SAE fires far more (or fewer) than *k* features | Upgrade **SAELens ≥ 6.54.9** (saver bug up to 6.54.8) | [`saes.md`](interpretability/saes.md#saelens) |
 
 ## I want to run an evaluation
 
@@ -75,11 +81,14 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 |---|---|---|
 | Anything agentic, multi-turn, tool-using, sandboxed; or you want a clean modern framework | **Inspect AI** (UK AISI) | [`evals.md`](evaluation/evals.md) |
 | Multiple-choice / log-prob academic benchmarks (MMLU, ARC, HellaSwag, etc.) | **lm-evaluation-harness** (EleutherAI) | [`evals.md`](evaluation/evals.md) |
-| Long-horizon agent / dangerous capability tasks | **METR HCAST** + Inspect | [`evals.md`](evaluation/evals.md), [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
+| Long-horizon agent / dangerous capability tasks | **Inspect** with METR's agents (`METR/inspect-agents`); METR's public **HCAST** / **RE-Bench** task repos were archived by 2026-10-20 (still runnable from a pinned commit, no fixes) and its time-horizons page is frozen since 2026-09-08 | [`evals.md`](evaluation/evals.md#metr-hcast-and-the-metr-task-suite), [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Evaluate refusals / jailbreak success | **HarmBench** or **JailbreakBench** | [`red-teaming.md`](evaluation/red-teaming.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
 | Report results from an open-weights model served via OpenRouter | **Pin the provider** (`allow_fallbacks: false`) and log the serving provider | [`evals.md`](evaluation/evals.md) |
 | Compare to or reproduce an older `inspect_evals` number | Check the task's **`task_version`**; several scorers were fixed in 2026 | [`evals.md`](evaluation/evals.md) |
-| Check whether my agent cheats on the eval | **ImpossibleBench**, honeypot tasks, `on_continue=` override | [`evals.md`](evaluation/evals.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
+| Check whether my agent cheats on the eval | **ImpossibleBench** (pin a commit after the 2026-10-13 scoring fix; give the agent an explicit stop action), honeypot tasks, `on_continue=` override | [`evals.md`](evaluation/evals.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md#impossiblebench) |
+| Know whether a coding-agent pass rate is real | **SWE-Bench Pro V2** (and its 51-task Hard split); audit a random sample of passing trials with **TestJack**-style requirement tests | [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md#coding-agent-benchmarks-swe-bench-pro-v2-and-what-fixed-tests-miss) |
+| Tell whether an agent-eval score changed because of the agent or the scorer | Re-score the unchanged trajectories, then compare repeated paired runs | [`eval-statistics.md`](evaluation/eval-statistics.md#agent-evals-rerun-flips-and-scorer-changes) |
+| Trust a capability rule-out ("below threshold") | Run a reference solution through every task, report the worst case with all biases toward "safe" removed at once, and score declines separately from failures | [`dangerous-capability-evals.md`](evaluation/dangerous-capability-evals.md#framework-thresholds-google-deepmind-frontier-safety-framework-v3) |
 
 ## I want to do red-teaming or jailbreak research
 
@@ -90,6 +99,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Broad probe / scanner for known issues (toxicity, leakage, prompt injection) | **garak** (NVIDIA) | [`red-teaming.md`](evaluation/red-teaming.md) |
 | Microsoft-flavored red-team automation | **PyRIT** | [`red-teaming.md`](evaluation/red-teaming.md) |
 | Standardized harm benchmark with classifier | **HarmBench** | [`red-teaming.md`](evaluation/red-teaming.md) |
+| Report a jailbreak ASR that survives a change of grader | Named grader, per-class label counts, fixed attempts per request; never keyword matching | [`red-teaming.md`](evaluation/red-teaming.md#how-do-i-measure-attack-success-rate-asr), [`measurement-validity.md`](engineering/measurement-validity.md#the-grader-is-an-instrument-too) |
 
 ## I want to steer or modify model behavior at inference time
 
@@ -101,6 +111,8 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | SAE-based feature steering | **SAELens** + custom hooks | [`saes.md`](interpretability/saes.md) |
 | Check whether my steering vector changed alignment-relevant behaviour | Side-effect checks + random-vector controls | [`steering.md`](interpretability/steering.md) |
 | Steer at vLLM throughput with built-in vector extraction | **EasySteer** | [`steering.md`](interpretability/steering.md) |
+| My CAA vector pushes some inputs the wrong way | **Sharp removal**: project the steering Hessian's sharp directions out of the vector | [`steering.md`](interpretability/steering.md#cross-cutting-steering-pitfalls) |
+| Check my steering vector is about the target, not a generic direction | **Competing-target test** (build the rival target's vector the same way; equivalence test) | [`steering.md`](interpretability/steering.md#cross-cutting-steering-pitfalls) |
 
 ## I want to train a probe
 
@@ -112,6 +124,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Pretrained deception / sabotage probes for open-weights models | **FAR.AI `caught-in-the-act-probes`** (arXiv 2610.12445) | [`probes.md`](interpretability/probes.md) |
 | Check whether a probe or monitor survives training pressure or obfuscation | Held-out monitor + evasion vs degradation reported separately | [`probes.md`](interpretability/probes.md) |
 | Detect eval-vs-deployment state through an API only | **Spurious probes** (black-box) | [`probes.md`](interpretability/probes.md) |
+| Red-team a probe monitor without training against it | Interactive red-teaming (the model sees earlier verdicts) and probe-evasion prompts, with capability measured on the hidden topic | [`probes.md`](interpretability/probes.md#training-against-probes-and-probe-obfuscation) |
 
 ## I want to call APIs from many providers in one experiment
 
@@ -127,6 +140,9 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Reliable, with an actual SLA, small team | **RunPod secure cloud** or **Lambda Cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Burst inference for evals (no persistent box) | **Modal** | [`compute.md`](models-and-compute/compute.md) |
+| A closed model I depend on is being retired | Dated OpenAI / Anthropic retirement table | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-10-20) |
+| Which Python version for a new project | **3.12** (vLLM 0.32, inspect-ai, TRL need ≥ 3.11; axolotl and inspect-petri need ≥ 3.12) | [`compute.md`](models-and-compute/compute.md#python-version-floor-for-the-2026-10-stack-312-for-new-projects) |
+| Upgraded vLLM and outputs got shorter, or the environment won't resolve | vLLM 0.32.0 traps (`max_tokens` now clamps, `transformers<5.20`, Python 3.10 dropped) | [`compute.md`](models-and-compute/compute.md#vllm-0320-upgrade-traps-released-2026-10-18) |
 | MATS-provided compute | See [MATS handbook](#) (ask torchy) | — |
 
 ## I want to track experiments
@@ -136,6 +152,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | The default in alignment research | **wandb** | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
 | Local-only / offline | wandb in offline mode, or `tensorboard` | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
 | Configs / sweeps | **Hydra** (overkill for many) or simple `dataclass` configs | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
+| Deterministic vLLM outputs regardless of batch size | `VLLM_BATCH_INVARIANT=1` (beta) plus a fixed `seed` | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md#stochasticity-gotchas-specific-to-safety-research) |
 
 ## I'm building an agent eval
 
@@ -146,6 +163,9 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Sandboxed shell / cyber-style task | **Inspect sandboxing toolkit** | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent | **Inspect** external-agent support | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Is my agent sandbox really offline, and are my fictional names safe to use? | `network_mode: none` caveats + unclaimable names (RFC 2606 / 5737) | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
+| Run an agent eval that touches the live internet without harming third parties | Allow-list destinations, test DNS as well as HTTP egress, scan transcripts for side effects | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md#running-agent-evals-with-internet-access) |
+| Monitor an agent that runs outside Inspect, beside an LLM proxy | **Inspect Sentinel** sidecar (0.1.4) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10) |
+| One interactive report for a long multi-agent transcript | **Transect** (UK AISI, on Scout) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#what-else-plugs-in) |
 | Audit alignment against the real Claude Code / Codex CLI scaffold | **Petri Dish** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Generate an eval suite around one behaviour | **Petri Bloom** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 
@@ -163,6 +183,8 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Study reward hacking / specification gaming | Tinker + intentionally flawed reward + held-out true-reward eval | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Train a sleeper-agent-style model organism | Tinker SFT or RL stage; evaluate via [`ai-control.md`](oversight-and-control/ai-control.md) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Reward-hacking mitigations that have actually been measured | Inoculation prompting (works); SDF / midtraining variants (didn't); character training (lowers hacks *and* monitor catch rate) | [`rl-training.md`](oversight-and-control/rl-training.md), [`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md) |
+| Use an imperfect reward-hack monitor during RL without teaching the model to evade it | **GRAFT** (route flagged gradients into a deletable adapter; `jnward/GRAFT`) | [`model-organisms.md`](alignment-science/model-organisms.md#mitigation-route-flagged-gradients-into-a-deletable-adapter-graft), [`rl-training.md`](oversight-and-control/rl-training.md) |
+| Harden an RL environment's verifier before training on it | Weak-to-strong **verifier hardening** (sandboxed verifier + hacker–fixer loop) | [`rl-training.md`](oversight-and-control/rl-training.md#detection-benchmarks-and-testbeds-what-each-gives-you) |
 | RL-train an agent inside its own harness (Claude Code, mini-SWE-agent) | **Agent Lightning**, verl `uni-agent`, TRL AsyncGRPO + OpenEnv | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | SFT warm start before agentic RL | Consider loss on observation tokens (**ActObs**, arXiv 2609.20715) | [`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md) |
 
@@ -173,7 +195,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Situation | Use | Topic doc |
 |---|---|---|
 | Run AI Control experiments end-to-end (the default) | **ControlArena** (UK AISI + Redwood) | [`ai-control.md`](oversight-and-control/ai-control.md) |
-| Code-sabotage protocol research (backdoors, vulnerabilities) | **ControlArena: Apps / BigCodeBench / SWE-bench Django** | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Code-sabotage protocol research (backdoors, vulnerabilities) | **ControlArena: Apps / BigCodeBench / SWE-bench Django** (for Apps, install from `main`: the stderr scoring fix, PR #914, is unreleased as of 2026-10-20) | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Bash / shell agent control | **ControlArena: Bash / BashArena** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Research-task sabotage (interp / eval) | **ControlArena: SAE Interp Sabotage / Eval Sabotage / Rogue Eval** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Infrastructure sabotage (AWS / k8s) | **ControlArena: IAC / Infra** | [`ai-control.md`](oversight-and-control/ai-control.md) |
@@ -184,6 +206,9 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Control evals on live, multi-service, production-style environments | **Control Tower / LinuxArena** (Redwood + EquiStamp) | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Control eval for GUI computer-use agents, or sabotage of automated AI R&D | **Control OSWorld**; **ResearchArena** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Score monitors offline on trajectories you already have | ControlArena `evaluate_monitors_post_hoc()` | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Get a monitor's TPR and FPR from one matched dataset | **MonitoringBench** + **MonitoringBenchHonest** | [`ai-control.md`](oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape) |
+| Find concrete attacks a specific monitor misses, from real agent transcripts | **Screwtape** (counterexamples, not a miss rate) | [`ai-control.md`](oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape) |
+| Attacks split across several colluding agents | **MiniLab** (on Control Tower; on request) | [`ai-control.md`](oversight-and-control/ai-control.md#distributed-attacks-across-pull-requests-and-across-agents) |
 | Check whether an untrusted monitor colludes | Honeypots + signal jamming + collusion probes | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Know what monitoring frontier labs actually run | Mid-2026 lab-practice snapshot | [`ai-control.md`](oversight-and-control/ai-control.md) |
 
@@ -198,6 +223,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Find consciousness-theory framework background | Butlin et al. (2023) "Consciousness in AI"; Eleos AI Research | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
 | Test introspection by injecting concepts without the yes/no logit-bias artifact | Sentence-localization or strength-comparison paradigms | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
 | A template for a lab-style model-welfare assessment | Claude Opus 5 System Card welfare section as the worked example | [`welfare-introspection.md`](alignment-science/welfare-introspection.md) |
+| Hosted 400B-class base models with logprobs and activations for LLM-psychology work | **ACS Infra** (free) | [`welfare-introspection.md`](alignment-science/welfare-introspection.md#acs-infra-free-hosted-large-base-models-for-llm-psychology-acs-research-2026-10) |
 
 ## I want to use or build a model organism of misalignment
 
@@ -218,8 +244,10 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Build a reward-hacking organism cheaply | RL or iterative DPO on hackable environments; ImpossibleBench | [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Check whether my organism is a fair interpretability benchmark | **Model Organism Lottery** (arXiv 2607.01033) | [`model-organisms.md`](alignment-science/model-organisms.md) |
 | Implant beliefs with SDF without damaging the chat model | **Grafting** (`peternutter/grafting-beliefs`) | [`model-organisms.md`](alignment-science/model-organisms.md) |
+| Stop a domain cue from triggering conditional emergent misalignment | **ContextLift** (counterfactual context augmentation; `davidkaczer/contextlift`) | [`model-organisms.md`](alignment-science/model-organisms.md#conditional-misalignment-2026) |
 | Show a new unlearning method actually works | The attack battery (relearning, hidden-state probes, decoding, reformulation, quantization) | [`unlearning.md`](alignment-science/unlearning.md) |
 | Remove a capability during pretraining, with an off switch | **GRAM** / **SGTM** / Gradient Routing | [`unlearning.md`](alignment-science/unlearning.md) |
+| Remove hazardous knowledge from an already-trained mixture-of-experts model | **REX** (relocate into removable experts, then excise; tested only against benign fine-tuning) | [`unlearning.md`](alignment-science/unlearning.md#pretraining-time-removal-filter-route-or-gate) |
 
 ## I want to study CoT faithfulness or monitorability
 
@@ -233,6 +261,8 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Measure how much a model can reason without a chain of thought | **NCRI** (`neelnanda-io/nocot-bench`), no-CoT time horizons, filler-token sweeps | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Check a model really answered with no hidden reasoning | Three-witness audit from nocot-bench's elicitation guide | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
 | Run OpenAI's monitorability evals | `openai/monitorability-evals` (+ its known filtering caveat) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md) |
+| Compare monitorability across models fairly, or estimate risk when a monitor gates deployment | **Pair-matched g-mean²** + HodgeRank; **post-control risk** B(K)/A(K) | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md#openais-monitorability-suite-monitoring-monitorability-and-its-known-weaknesses) |
+| Test a scheming-relevant ability with no chain of thought (calibrated rare actions) | No-CoT calibrated low-probability-action evals | [`cot-faithfulness.md`](alignment-science/cot-faithfulness.md#scheming-relevant-no-cot-primitive-calibrated-low-probability-actions) |
 
 ## I want to do scalable oversight / debate research
 
@@ -249,6 +279,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Check my debate result is not just the judge's own knowledge | **Judge filtering** — replace every question the judge solves unaided | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
 | Know which judge scaffolds backfire before spending compute | Error-finding / red-team framings make the judge *more* gullible; quality-scoring rewards the liar on math | [`debate-judge-scaffolds.md`](oversight-and-control/debate-judge-scaffolds.md) |
 | Train a debater against a judge without the judge getting hacked | Debate as an RL training signal with critique length limits (arXiv 2608.17776) | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md) |
+| Debate theory with worst-case correctness and dominant-strategy honesty | **FBS Debate** (theory only) | [`debate-scalable-oversight.md`](oversight-and-control/debate-scalable-oversight.md#fbs-debate-fractional-block-sensitivity-debate) |
 
 ## I want a copy-paste pattern or recipe
 
@@ -278,6 +309,9 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Automatically audit a model for concerning behaviour over multi-turn conversations | Inspect Petri | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Run and manage a large matrix of evals reproducibly | Inspect Flow | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Report Bayesian and frequentist results together; argue an intervention did NOT hurt capability | Credible intervals + ROPE | [`statistics.md`](engineering/statistics.md#report-bayesian-and-frequentist-side-by-side) |
+| Report a rare behaviour seen a handful of times, or never | Beta posterior with an interval; a zero count is an interval too | [`statistics.md`](engineering/statistics.md#rare-behaviours-a-handful-of-hits-or-none) |
+| Monitor a stream indefinitely with a bounded false-alarm rate | **e-process** (anytime-valid) | [`statistics.md`](engineering/statistics.md#can-i-stop-the-run-once-it-looks-significant) |
+| An agent is running long, expensive experiments | Schedule a mid-run strategy check; have it save long output to a file once | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md#expensive-loops-check-the-strategy-mid-run-and-save-long-output-once), [`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md#strategy-lock-in-and-expensive-iterations-2026) |
 | Anti-patterns to avoid | The "things that bite" list | [`code-recipes.md`](engineering/code-recipes.md) |
 | Composed workflows (probe+steering, probe+RL, SAE+control, etc.) | Cross-tool combinations | [`code-recipes.md`](engineering/code-recipes.md) |
 
@@ -329,6 +363,8 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Avoid a hallucinated-package supply-chain footgun | Verify and pin every dependency the agent adds | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Stop secrets leaking | Keys in gitignored `.env`, deny agent read access, scan diffs | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Pick a coding agent today | Decision table (terminal vs cloud background agent) | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
+| Run Claude Code headless (`claude -p`, Agent SDK) in a script | Pass `--permission-mode` explicitly: the default starting mode changed in 2.1.302 | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against) |
+| Keep a boundary I typed ("don't push") from vanishing while I'm away | Turn off idle compaction (`"idleCompaction": false`) or write a deny rule | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against) |
 
 ## I want to work in another safety research area
 
@@ -341,6 +377,9 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Study cooperation or collusion among several AI agents | GovSim, Concordia, Colosseum, NARCBench | [`multi-agent-safety.md`](oversight-and-control/multi-agent-safety.md) |
 | Work on corrigibility or agent-foundations theory, or formal safety guarantees | Off-switch game, Guaranteed Safe AI, Lean with comparator | [`agent-foundations-and-formal.md`](alignment-science/agent-foundations-and-formal.md) |
 | Verify what a lab ran, or detect weight exfiltration from an inference server | Open Problems in Technical AI Governance; inference verification | [`technical-governance.md`](alignment-science/technical-governance.md) |
+| Know how an outside reader will weigh my loss-of-control or scheming eval | Construct, content and external validity (Uuk et al.) | [`measurement-validity.md`](engineering/measurement-validity.md#construct-content-and-external-validity-what-an-outside-reader-will-discount), [`technical-governance.md`](alignment-science/technical-governance.md#how-strong-is-the-evidence-for-loss-of-control-uuk-et-al-2026) |
+| Benchmark LLM deception and detection in a multi-player game | **CarrotParsnipBench** | [`multi-agent-safety.md`](oversight-and-control/multi-agent-safety.md#carrotparsnipbench-a-three-player-social-deduction-game-for-deception-and-detection) |
+| Check that a Lean statement says what the informal claim does | **AnnalsChallenge** statements; numerical and vacuity checks beside an LLM judge | [`lean-formalization.md`](engineering/lean-formalization.md#checking-that-a-formal-statement-says-what-the-informal-one-does) |
 
 ## Common cross-cutting pitfalls
 

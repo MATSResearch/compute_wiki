@@ -96,7 +96,7 @@ Most safety libraries (Inspect AI, safety-tooling) read `OPENAI_API_KEY`, `ANTHR
 name = "my-project"
 version = "0.1.0"
 description = "..."
-requires-python = ">=3.11"
+requires-python = ">=3.12"  # see "Which Python?" below
 dependencies = [
     "anthropic>=0.40",
     "openai>=1.50",
@@ -111,6 +111,27 @@ dependencies = [
 ]
 ```
 Then `uv venv && uv pip install -e .`. Commit `uv.lock`.
+
+**Which Python?** Use `requires-python = ">=3.12"` for a new project that mixes
+training, serving and Inspect AI. Python 3.10 is no longer enough for the
+stack, and 3.11 is not enough for all of it (floors from PyPI
+`requires_python`, 2026-10-20):
+
+| Package | Version | Python floor |
+|---|---|---|
+| vLLM | 0.32.0 (2026-10-18; "Python 3.10 dropped") | ≥3.11, <3.15 |
+| SGLang | 0.5.22 | ≥3.11 |
+| Inspect AI (`inspect-ai`) | 0.3.282 | ≥3.11 |
+| TRL | 1.16.0 | ≥3.11 |
+| axolotl | 0.21.0 | ≥3.12 |
+| inspect-petri | 3.1.1 | ≥3.12 |
+
+**Serving and training may need separate environments.** vLLM 0.32.0 requires
+`transformers>=5.16.1,<5.20.0` (its release notes), so a project that also
+wants transformers 5.20 or later for training cannot resolve both in one
+environment; keep the vLLM server in its own `uv` project (or container) and
+pin each side. The dependency floors in the baseline above are illustrative,
+not pins: `uv.lock` holds the real versions.
 
 ## Multi-provider inference patterns
 
@@ -725,4 +746,4 @@ This is the typical setup behind Emergent Misalignment, Subliminal Learning, Per
 
 ---
 
-Last verified: 2026-10-14 (additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
+Last verified: 2026-10-20 (additions 2026-10-20: the Python floor table and the vLLM transformers pin, from PyPI `requires_python` metadata and the vLLM v0.32.0 release notes via `gh api`). (Earlier additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)

@@ -28,7 +28,7 @@ when shortening helps and when it harms readability.
 ### MATS Lean skills or lean4-skills? Pick one per project
 
 **lean4-skills** (`cameronfreer/lean4-skills` on GitHub, by Cameron Freer, MIT,
-v4.11.3 released 2026-09-29) is a Lean 4 workflow pack for coding agents that
+v4.11.4 released 2026-10-20) is a Lean 4 workflow pack for coding agents that
 covers much of the same ground as the `mats-lean-*` skills. Its workflows are
 `draft`, `formalize`, `autoformalize`, `prove`, `autoprove` ("with explicit
 stop budgets"), `disprove` ("guided counterexample search with certified
@@ -47,7 +47,12 @@ proving workflows are not meant to weaken a theorem to make it provable. In Clau
 then invoke a workflow as `/lean4:prove`, `/lean4:disprove` and so on. Codex
 has a native plugin too; the README marks other hosts (Gemini CLI, Cursor,
 Copilot, …) as "documented, not CI-verified". It "pairs best with
-lean-lsp-mcp".
+lean-lsp-mcp". Use v4.11.4 or later: that release revalidated its advanced
+references against Lean `v4.33.1` and `v4.35.0`, compiling every example, after
+"Several documented snippets failed when compiled" (among them, `grind [h1, h2]`
+with local hypotheses "is an error, not a no-op", and most of the
+metaprogramming examples). An agent following an older copy can be steered by
+examples that never compiled.
 
 | If you want… | Use |
 |---|---|
@@ -138,6 +143,7 @@ Lean FRO = the Lean Focused Research Organization, which maintains Lean.
 | Hand a whole Lean project's `sorry`s, or a LaTeX paper, to a hosted prover | **Aristotle** (Harmonic, `aristotlelib`) |
 | A cheap local first pass (pass@k) on competition-style statements | Open-weight provers: **Pythagoras-Prover** (4B, 32B), **Goedel-Prover-V2** (8B, 32B) |
 | See how a Claude Code–based proving agent is put together | **Numina-Lean-Agent** (architecture reference; no LICENSE file) |
+| A baseline to beat before crediting a specialised prover harness with a gain | **mini-Lean-agent** (bash as the only tool, separate trusted evaluator) |
 | Judge an untrusted proof against a statement you wrote yourself | **`lake comparator --paranoid`** (built into Lake since Lean v4.35.0); the standalone **comparator** on older toolchains |
 | Compare provers on formal mathematics problems | **lean-eval** (Lean FRO) |
 
@@ -172,7 +178,7 @@ unverified here. When not to use it: when the project's code or statements
 cannot leave your machine, or when you need to see how a proof was found.
 Treat its output like any other untrusted proof: check it yourself.
 
-**LeanInteract** (`lean-interact` on PyPI, v0.11.5 released 2026-07-16;
+**LeanInteract** (`lean-interact` on PyPI, v0.11.6 released 2026-10-18;
 `augustepoiroux/LeanInteract` on GitHub, MIT). A Python package that drives
 the Lean REPL (`leanprover-community/repl`): it downloads and builds the REPL,
 then runs commands, whole files (`FileCommand`) and single tactic steps
@@ -188,9 +194,14 @@ server = LeanServer(config)            # start Lean REPL
 server.run(Command(cmd="theorem ex (n : Nat) : n = 5 → n = 5 := id"))
 ```
 
-When not to use it: on the newest toolchain. The README states support for
-"all Lean versions between `v4.8.0-rc1` and `v4.32.0-rc1`" as of v0.11.5,
-while Lean is at v4.35.0 (2026-10-12). Also not as a verifier: a REPL that
+Toolchain support: v0.11.6 "Add[s] support for Lean v4.33.0 to v4.36.0-rc1"
+(the README now reads "all Lean versions between `v4.8.0-rc1` and
+`v4.36.0-rc1`", covering v4.35.0 and the v4.36.0-rc1 release candidate of
+2026-10-14), and it "Fixed import error swallowing and invalid header
+caching", so upgrade if an import failure was going unreported. v0.11.5 stopped at
+v4.33.0-rc1, so a project on v4.35.0 needs v0.11.6 or later.
+
+When not to use it: as a verifier. A REPL that
 accepts a proof is the `lake build` rung of the
 [evidence ladder](#how-much-checking-does-a-proof-need-lean-evidence-ladder),
 not a comparator verdict. Searchable symptom from its troubleshooting list:
@@ -243,6 +254,23 @@ an architecture reference until that is resolved. It also needs a
 `GEMINI_API_KEY` ("Required: discussion_partner, informal_prover (gemini),
 code_golf") on top of Claude access.
 
+**mini-Lean-agent** (`TomasOrtega/mini-lean-agent`, MIT; Ortega, Park,
+Khaitan, Fowl, Kontorovich, Arora, ["Do Theorem Provers Need Theorem-Proving
+Agents?"](https://arxiv.org/abs/2610.17331), arXiv:2610.17331, October 2026).
+A deliberately minimal agent "whose only model-visible tool is bash": the
+model inspects and edits the repository, searches local libraries and runs
+Lean through the shell, and "a separate trusted evaluator verifies the final
+artifact". On Putnam 2025 the authors report, with Gemini 3.8 Flash as the
+base model, "7/12 problems at $2 per problem limit, compared with
+AxProverBase's 4/12", and with Astra (`gpt-6-astra`) 12/12 "at an average cost
+of $1.28 per problem"; they propose it "as a standard baseline when evaluating
+theorem-proving infrastructure". Use it that way: before crediting a
+specialised harness, Model Context Protocol (MCP) server or prover-specific tool with a gain, check it
+beats a generic coding agent with bash on the same base model and budget.
+When not to use it: as evidence about research-level formalization (12
+competition problems), or as a substitute for running `lake comparator` on its
+output yourself.
+
 **lean-eval** (`leanprover/lean-eval`, Apache-2.0; leaderboard at
 `lean-lang.org/eval` per the README). A formal-mathematics benchmark in which
 a problem counts as solved if and only if comparator accepts the submission.
@@ -270,6 +298,38 @@ Record only detail that helps someone assess or reproduce the result. The
 [formalization record template](https://github.com/MATSResearch/compute_wiki/blob/master/skills/mats-lean-formalization/references/formalization-record.md)
 is optional. Incomplete attempts can still expose a missing premise or a useful
 counterexample; distinguish that contribution from a completed proof.
+
+### Checking that a formal statement says what the informal one does
+
+Statement fidelity is the step no Lean checker covers. Two October 2026
+resources for it:
+
+- **AnnalsChallenge** (`ImperialCollegeLondon/AnnalsChallenge`, Apache-2.0;
+  Browning, Hristova, Ledvinka, Springer, Su, McKoen, Buzzard,
+  [arXiv:2610.18301](https://arxiv.org/abs/2610.18301)): "50 formalised theorem
+  statements written by hand in Lean 4 using Mathlib", each the main result of
+  an Annals of Mathematics paper since 2020; "Every formalisation was manually
+  reviewed and then audited by AI", and they are released "without formalised
+  proofs". Also on lean-eval. Useful as hard, trusted statements to test a
+  prover or autoformalization pipeline against, and as examples of how
+  reviewed research-level statements are written.
+- **Mechanical checks beside a large language model (LLM) judge** (Anna Mei, Michael R. Douglas,
+  ["Beyond LLM Judge: Mechanical Verification for Agentic Autoformalization"](https://arxiv.org/abs/2610.20573),
+  arXiv:2610.20573; code `annamei1/FLMF-Ch7ErrFunc-Release`, Apache-2.0). Their
+  method "combines LLM-based semantic review with mechanical numerical and
+  vacuity checks": a numerical check evaluates a stated identity or bound where
+  it can be turned into numbers, and a vacuity check, run after the proof
+  exists, flags a proof that holds vacuously (for example because its
+  hypotheses are contradictory, or `rfl` / `simp` closes the goal). A theorem counts as verified only with a
+  semantic pass and no numerical or vacuity failure. On three labelled
+  datasets it had "the lowest accepted-error rate among the evaluated methods"
+  (the fraction of incorrect statements accepted). Built for special-function
+  identities from the NIST Digital Library of Mathematical Functions; the
+  numerical check does not apply to definitions, limits or infinite sums.
+
+When not to rely on either: an LLM review of a statement, even with these
+checks, is evidence for fidelity, not a proof of it; for a published result a
+human still reconciles each quantifier and assumption with the informal claim.
 
 ### How much checking does a proof need? (Lean evidence ladder)
 
@@ -392,7 +452,8 @@ machine where `bwrap` cannot start, where the only option is
 solution someone else wrote.
 
 **On toolchains older than v4.35.0.** Use the standalone `leanprover/comparator`
-binary: Linux with `landrun` built from source, a `lean4export` matching your
+binary, bearing in mind that the GitHub repository is now **archived**
+(read-only, so no further fixes) behind its deprecation notice: Linux with `landrun` built from source, a `lean4export` matching your
 Lean version, and, per its current README, a `systemd-run` wrapper guarding a
 `landrun` sandbox escape fixed in Linux 7.1. Never compile the untrusted
 solution before running it, and do not run it as a privileged user.
@@ -469,7 +530,13 @@ AI, formal corrigibility results), see
 
 ---
 
-Last verified: 2026-10-14. (Additions 2026-10-14: `lake comparator` and
+Last verified: 2026-10-20. (Additions 2026-10-20: LeanInteract v0.11.6
+release notes, README and PyPI; `leanprover/comparator` archived flag via the
+GitHub API; Lean v4.36.0-rc1 release date; lean4-skills v4.11.4 release notes;
+mini-Lean-agent (arXiv:2610.17331 abstract and PDF, repository via the GitHub
+API), AnnalsChallenge (arXiv:2610.18301 abstract and PDF) and Mei and Douglas
+(arXiv:2610.20573 abstract and PDF), all via the arXiv API. Not checked: whether
+v4.36.0-rc1 changes `lake comparator` or `lake check`.) (Additions 2026-10-14: `lake comparator` and
 `lake check` replace the standalone comparator procedure, checked against
 `src/lake/Lake/CLI/Help.lean` and `src/lake/Lake/CLI/Check.lean` at the
 `v4.35.0` tag of `leanprover/lean4`, the Lake tests `challenge-simple-match`,
