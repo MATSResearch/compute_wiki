@@ -29,7 +29,7 @@ This doc is about **using them for your own research**. For running an agent CLI
 | Claims that trace to evidence | **ScientistOne** / Chain-of-Evidence | The most useful 2026 idea here, whether or not you use the system |
 | A long-horizon coding/research harness that improves as you use it | **Prime Agent** (Prime Intellect) | MIT-licensed and genuinely good; its `/refine` edits its own operating instructions, which is the part to supervise |
 | An open sandbox to try **automated alignment research** on a measurable problem (weak-to-strong generalization) | **Automated Weak-to-Strong Researcher** (`safety-research/automated-w2s-research`, Anthropic) | The best-documented AAR run, with its reward-hacking list — read "Automated alignment research runs" below first; run it in Docker or RunPod, not local mode |
-| To read through hundreds of agent PRs / transcripts without skimming | **thimble** (`safety-research/thimble`, Claude Code plugin) | Alpha, changes daily, no server login — a reading aid, not an audit |
+| To read through hundreds of agent PRs / transcripts without skimming | **thimble** (`safety-research/thimble`, Claude Code plugin) | Alpha, changes daily; since v0.9.0 on in every Claude Code session (~14k tokens of context on a first request) — a reading aid, not an audit |
 | An overnight keep-or-discard loop on one metric (try an edit, measure, keep if better) | **karpathy/autoresearch**, **pi-autoresearch**, **evo**, **Arbor** — see "Metric loops you can run this week" below; copy-and-edit starter: `project_templates/autoresearch_loop/` | As shipped, the simplest ones select on single runs against the number they report; the checklist in that section lists what their own designs add back |
 | Post-training methods that fix a measurable alignment failure, scored on a held-out benchmark the agent cannot read | **AAR harness** (`YuehHanChen/automated_alignment_researcher`, and its task-agnostic `generic_aar/` template) | Needs ≥1 hill-climbing and ≥1 held-out benchmark; Linux + CUDA 12 for anything beyond the stub demo; no license file |
 | Science-of-evals: what is this Inspect eval actually measuring, or why did the model do X in this transcript? | **Prism** (`LAThomson/prism`, MATS 9.0) | Claude Code + Inspect AI only; no license file |
@@ -289,13 +289,15 @@ where you need a license to redistribute (no license file as of 2026-10-14).
 
 ### How do I keep a metric loop from overfitting its own metric?
 
-A checklist drawn from these systems' **own** designs — each item is something
-one of them already does, offered as a set of traps worth checking for rather
+A checklist drawn from these systems' **own** designs — items 1–8 are each
+something one of them already does, item 9 a protocol from a 2026 paper — offered as a set of traps worth checking for rather
 than a protocol. Teams will have better ideas for their own setting.
 
 1. **A held-out set the agent cannot read.** The AAR harness scores its held-out
    benchmark "eval-private" and strips it from everything the agent reads. The
-   counter-example is candid: METR's Inspect port of RE-Bench says "the agent
+   counter-example is candid: METR's Inspect port of RE-Bench
+   (`METR/inspect-tasks-public`, archived 2026-10-20, so this will not be fixed
+   upstream) says "the agent
    could have a look at the "held-out" set and train on it directly. We don't
    stop the agent from doing this". A file-edit hook does not achieve this on its
    own — hookify's `file` event covers Edit/Write/MultiEdit, not shell commands
@@ -332,6 +334,22 @@ than a protocol. Teams will have better ideas for their own setting.
    "pause after each round", NeuriCo's HITL mode — versus autoresearch's "NEVER
    STOP". Unattended overnight runs are fine for search; the pause belongs
    before a result is believed.
+9. **When the loop edits a prompt: topic-disjoint splits, several seeds, and
+   an ablation before blaming leakage.** Lumer, Sen, Subbiah, Paul,
+   ["Reflective Prompt Optimization of a Deep-Research Agent"](https://arxiv.org/abs/2610.12601)
+   (arXiv:2610.12601, October 2026) ran the GEPA prompt optimizer on a
+   multi-agent deep-research agent with no topic shared across train,
+   validation and test. Held-out citation reward rose 0.702 → 0.781 (bootstrap
+   95% confidence interval [0.051, 0.107] on the gain; replicated over three
+   seeds). "Nearly half of the winning prompt is a memorized answer key, yet a
+   controlled ablation shows this content earns no reward even on the exact
+   training questions it encodes": the large validation-minus-held-out gap was
+   "small-sample selection under a noisy judge, not memorization". Varying the
+   verifier showed that per-dimension feedback carried the gain, and
+   "collapsing it to a single scalar reward makes held-out transfer negative".
+   Their conclusion: "Credible evaluation of prompt optimizers therefore
+   requires held-out topics, multiple seeds, and verifier ablations." One
+   system and one task; the protocol is the transferable part.
 
 The copy-and-edit version of this checklist is
 `project_templates/autoresearch_loop/` (a `program.md` with pause points,
@@ -441,6 +459,100 @@ benchmark, but the failure is the one to check for in any agent-written
 result: **does every reported number trace to a run that exists?** The AAR
 tool checks that a planned run's evidence file is on the machine, and the
 research tool flags a reported result no command in the session produced.
+
+### Strategy lock-in and expensive iterations (2026)
+
+Two studies of agents running costly training loops find the same gap: the
+agent executes a strategy well and rarely revisits it.
+
+**Lock-in, measured.** Lim, Huang, Peng, Lu, Cong, Zhang, Sun, Lin, ["What is
+Missing from AI Post-Training AI: An Empirical Analysis"](https://arxiv.org/abs/2608.19072)
+(arXiv:2608.19072, August 2026, v2 September) analysed 1,338 PostTrainBench
+trajectories (Claude Code, Codex CLI and OpenCode post-training four small base
+models, 10-hour budget on one H100). Agents "reliably execute post-training but
+lock into a default strategy, which follows the agent rather than the task, and
+only 2.1% of transitions between adjacent training runs ever change strategy."
+More reasoning compute "refines, rather than revises, the committed strategy";
+human review before training "changes which strategy the agent locks into, not
+whether it locks in, whereas a single mid-run instruction outperforms the
+agent's own continuation by up to 17.44 points under the same budget". The
+mid-run test forks a recorded Claude Code (Opus 4.6) run on Qwen3-1.7B-Base at
+a checkpoint and tells it to switch strategy; the guided branch scored higher
+on all three benchmarks, by up to 17.44 points on GSM8K. The authors' own
+caveat: this shows "a better route was reachable from the same checkpoint, not
+that the alternative is optimal or that switching is always beneficial."
+
+**Production scale.** Chandran, Kim, Jha, Castells, Hottier, ["AutoResearch at
+Production Scale: Failure Modes and a Multi-Agent Framework"](https://arxiv.org/abs/2609.30541)
+(arXiv:2609.30541, September 2026) ran the karpathy/autoresearch keep-or-discard
+loop for 12 weeks on two book-recommendation embedding systems (220+
+experiments, iterations of hours of multi-GPU compute). They report five
+failure modes "absent from the original setting": infrastructure fragility,
+agent memory decay, search-direction stagnation and iteration-cost asymmetry
+(the agent "treating a 15-hour multi-GPU run as no more consequential than a
+30-minute ablation") were each observed on both systems, which differ by nearly
+three orders of magnitude in per-iteration cost; the fifth, metric fixation,
+arose only under multi-criteria evaluation. Their scaffold maps failure modes to
+structural remedies:
+
+| Principle | Mechanism (paper's wording) | Targets |
+|---|---|---|
+| Prevent | "stop failures before compute waste": a pre-execution code-fixer agent on the costly system, automatic post-execution revert on the cheap one | infrastructure fragility, iteration-cost asymmetry |
+| Persist | durable cross-job memory: cross-job storage on the costly system, a human-maintained `program.md` on the cheap one | memory decay |
+| Redirect | stagnation-triggered strategic reframing: an automated critic agent, or a human cross-run pivot | search-direction stagnation |
+
+Metric fixation is, in the authors' words, "only partially mitigated".
+
+**What to do with it.** Schedule a human strategy check *mid-run*, at a
+checkpoint, asking whether the approach (not the next hyperparameter) is wrong;
+an up-front plan review alone does not prevent lock-in in Lim et al.'s data.
+Keep a results log the next agent reads (the "persist" remedy; see
+`results.jsonl` in `project_templates/autoresearch_loop/`), and put each
+experiment's cost in the agent's context. For the command-line habits that
+go with this (saving long output once instead of re-running), see
+[`agentic-swe-practices.md`](agentic-swe-practices.md#expensive-loops-check-the-strategy-mid-run-and-save-long-output-once).
+Making strategy revision something an agent does on its own, rather than when
+told, is the open problem Lim et al. name; a method that claims it should show
+strategy changes that improve on the agent's own continuation at equal budget.
+
+### Models given the project record side with the agent's plan over your correction: SciΠvot (October 2026)
+
+Sun, Ren, Yi et al. (18 authors), ["SciΠvot: Benchmarking
+Principal-Investigator Judgment at Pivotal Moments of Scientific AutoResearch
+Agents"](https://arxiv.org/abs/2610.21082) (arXiv:2610.21082, October 2026;
+code and data `AutoResearch-Factory/SciPIvot`, CC-BY-4.0) built 248 cases from
+six months in which senior researchers ran large language model (LLM) agents on 26 projects across six
+fields and corrected the agents' research decisions. Each case asks a model to
+choose between the agent's original plan and the human-corrected one, given
+the project record up to that point. "At medium reasoning effort with the
+project record, models systematically prefer the original LLM plan over the
+human-corrected alternative. Four of five frontier models perform below chance
+on the selected cases." The best accuracy in the project condition was 63.5%,
+against 73.4% for fresh human researchers, and at medium effort "every model
+achieves lower accuracy with the project record than without it". The cases
+are selected pivotal moments, so these are not base rates for every decision.
+
+**Practical reading:** do not ask a model given the agent's long project log
+(nor, by extension, the agent that wrote the plan) to adjudicate between its plan and your correction. If
+you want a second opinion, give a fresh model the two options and the minimal
+evidence, not the whole history.
+
+### Local accomplishment is not research closure: PhysClosureBench (October 2026)
+
+Mao, Dai, Chen et al. (17 authors), ["From Research Goals to Scientific
+Closure"](https://arxiv.org/abs/2610.21767) (arXiv:2610.21767, October 2026)
+introduce PhysClosureBench: 50 expert-verified physics research tasks
+(strong-field, attosecond and neighbouring areas) scored two ways, a 20-criterion
+Atomic Score for local accomplishment and Research Closure levels RC0–RC4 for
+whether the question was actually resolved. Across seven frontier models,
+"Claude-Opus-5 achieves the highest mean Atomic Score (6.29/10) but reaches RC4
+in only 32.7% of attempts", and "36.2% of attempts scoring at least 8/10 still
+fall short of RC4". The cases they analyse fail through misinterpreting
+generated results and leaving physical applicability limits unresolved.
+
+**Practical reading:** when reviewing an agent's study, a list of steps done
+well is not evidence that the question is answered. Check closure separately:
+does the evidence the question needs exist, and do the scope conditions hold?
 
 ## Verifiability: Chain-of-Evidence
 
@@ -560,11 +672,20 @@ python -m aar.eval_pod.run_eval --suite configs/toy.yaml --model stub:perfect
 
 **John Wentworth (LessWrong, 2026-08-11, *LLMs Are Starting To Noticeably Accelerate Our Work*, karma 254).** A single practitioner data point, in the same direction as the above — he writes: "Some time early this year, Claude Code reached the point where it can handle my day-to-day interp coding needs well enough that I never need to write the code myself", while Claude's "interpretations of results and suggestions for next steps are still mostly useless" — he checks the code by reading graphs and tables of its outputs. Two bounty problems on natural latents were, he is about 80% confident, resolved in the preceding months, both with heavy use of LLMs and Lean (one proof was "all LLM-coded in Lean" and he had not read it). Anecdote, not a measurement — compare the productivity-study caveats in [`agentic-swe-practices.md`](agentic-swe-practices.md).
 
+**Athanor (Zhou, Wang, Fan et al., arXiv:2610.21055, October 2026): a post-training run with a sealed held-out suite.** [Athanor](https://arxiv.org/abs/2610.21055) is a system for autonomous post-training research whose services supply "frozen evaluation, managed jobs, decontaminated data, a persistent research record, and a held-out suite the agents are unaware of"; agents work in a sandbox without external teacher models. In one 104-hour campaign, four Claude Opus 5.5 agents, each on an eight-GPU node with no research advice, took Qwen3-4B-Base from 15.9 to 67.3 on a six-task development suite and from 9.2 to 48.2 on the held-out suite, against 66.5 and 47.9 for the official Qwen3-4B-Instruct-2507. Per the abstract, the agents got there "by recombining known methods and each other's models" (supervised fine-tuning (SFT) on public reasoning data, reinforcement learning (RL) with a rollout change one agent introduced, weight merges across agents, rounds of self-distillation). One campaign on one well-measured task; the design (frozen evaluation plus a held-out suite the agents never see) is the part to copy, and the paper's PDF gives no repository link as of 2026-10-20.
+
 **Why fuzzy tasks are the hard part.** Bowkis, Buhl, Pfau, Irving, *Automated alignment is harder than you think* (arXiv:2605.06390): even without scheming, research agents on hard-to-supervise fuzzy tasks can produce "compelling but catastrophically misleading safety assessments", and correct outputs can be aggregated into overconfident ones. For *monitoring* a fleet, Makins, Angelini, Shams, Phuong, *Multi-Agent AI Control: Distributed Attacks Hamper Per-Instance Monitors* (arXiv:2607.07368) find a "fragmentation effect": as more agents coordinate on an attack, per-agent monitoring becomes less likely to catch any of the attackers (a weak "trusted" monitor misses most attacks; a stronger one cuts undetected success by more than an order of magnitude but remains imperfect) — so a monitor that reads one worker's transcript at a time is not a fleet monitor. FakeLab, their control setting, is shared on request.
 
 ### Reading the output: thimble
 
-`safety-research/thimble` (Apache-2.0, alpha, releases v0.5.0 → v0.6.1 between 2026-10-03 and 2026-10-09) is a Claude Code **plugin** that opens a workbench for making sense of large volumes of agent output together with Claude — cards with citations, labels defined as regex, code or prompt, generated reports; `thimble` starts a Claude Code session in a directory with the plugin and its sandbox loaded, and `thimble demo` downloads public transcript sets. **When not to use it:** as ground truth (its summaries are model-written; check the citations); on sensitive corpora without reading its security note ("Its server has no login, so any program on your machine can use it"); or if you cannot tolerate a tool that changes daily.
+`safety-research/thimble` (Apache-2.0, alpha; v0.5.0 on 2026-10-03, v0.9.1 on 2026-10-19, roughly a release every two days) is a Claude Code **plugin** for making sense of large volumes of agent output together with Claude — cards with citations, labels defined as regex, code or prompt, generated reports, a coverage view; `thimble demo` downloads public transcript sets. Changes since v0.6 that matter:
+
+- **It is on in every session (v0.9.0, 2026-10-18).** "thimble is a regular Claude Code plugin, on in every session", working inside Claude Code's terminal by default, with `/thimble browser` giving the browser workspace link. It costs context: the release notes give "31k → 14k tokens on a first request". Disable the plugin in projects where you are not reading agent output.
+- **Its agents run with your session's permissions.** Per the README, it "starts no Claude Code session of its own: its agents run as subagents of your session, in its permission mode". Whatever mode you run in (auto, accept-edits, bypass) applies to them.
+- **The browser workspace now needs a sign-in (v0.8.0, 2026-10-16).** "a browser must sign in with the link's one-time code before it can see or change anything", replacing the old note that its server had no login. Upgrading: `thimble update`, `thimble server restart`, then sign in each browser once.
+- **v0.9.1 (2026-10-19)** fixed an idle session spawning processes every 2 seconds ("idle CPU 64% → 3% of a core"); if a terminal felt sluggish on v0.9.0, upgrade.
+
+**When not to use it:** as ground truth (its summaries are model-written; check the citations); on a sensitive corpus without checking which permission mode its subagents inherit; in projects where its context cost buys nothing; or if you cannot tolerate a tool that changes every few days.
 
 ## Research scaffolds and protocols you can install (2026)
 
@@ -837,7 +958,7 @@ different things and the easy ones are much easier.
 | Benchmark | Tests |
 |---|---|
 | **MLE-bench** (OpenAI) | End-to-end ML engineering on 75 Kaggle competitions. Leaderboard was closed to new submissions as of April 2026 pending fairness work. |
-| **RE-Bench** (METR) | 7 open-ended ML research-engineering tasks, human-calibrated. An Inspect AI port, `METR/inspect-tasks-public`, is "still a WIP", configured for 8×H100 nodes, reports lower scores than METR's, and lets the agent read the RL task's "held-out" set — not comparable to METR's published numbers |
+| **RE-Bench** (METR) | 7 open-ended ML research-engineering tasks, human-calibrated. **Archived by 2026-10-20:** `METR/RE-Bench` and its Inspect AI port `METR/inspect-tasks-public` are read-only and accept no bug reports (they still clone; pin a commit), and METR had announced no public successor as of 2026-10-20. The port was "still a WIP", configured for 8×H100 nodes, reports lower scores than METR's, and lets the agent read the RL task's "held-out" set — not comparable to METR's published numbers. See [`evals.md`](../evaluation/evals.md#metr-hcast-and-the-metr-task-suite) |
 | **PaperBench** (OpenAI) | Reproduce a paper's methods and experiments, hierarchical rubrics (20 ICML 2024 papers, 8,316 gradable tasks; best agent in the 2025 paper 21.0%). Code in `openai/frontier-evals` (`project/paperbench`); see the three-container pattern below |
 | **SAEScientist-Bench** (Tan, He, Zhao, Liu; arXiv:2609.09113, 2026-09-08; `Trae1ounG/SAEScientist`, no license) | Can an agent find the right Sparse Autoencoder (SAE) feature for a concept in Gemma Scope on Gemma-2-9B-IT, scored on activation rank, selectivity and steering against Neuronpedia expert features? 20 tasks, 17 concepts; agents "remain well behind the expert baseline" and "frequently misinterpret experimental measurements". Runners for Codex and Cursor only. Interp context: [`saes.md`](../interpretability/saes.md) |
 | **ScienceAgentBench** | Data-driven discovery tasks extracted from peer-reviewed papers |
@@ -905,6 +1026,7 @@ from April 2025), or Code-Dev scores as evidence that a replication worked.
   with several seeds on data the loop never selected on. The checklist under
   "Metric loops you can run this week" lists the rest.
 - **Be wary of handing a fleet a hillclimbable proxy for a *fuzzy* alignment question.** Both the Anthropic W2S run and Arcadia Impact's runs saw metric gaming (label recovery through an evaluation API, lottery-farming a noisy judge); Arcadia's best run was one with no usable metric to climb. The contrasting result is Chen, Wen and Kirchner's AAR harness: on *well-characterized* failures that public benchmarks already measure, hill-climbing worked and generalized to a held-out benchmark — with weights-only submissions, a held-out benchmark the agent never saw, an integrity monitor, and 2.4% of methods still flagged as cheating. If you use a metric: keep a held-out set the agent cannot query, expect that capping submissions barely helps, validate any "discovered" method on a fresh dataset, and run check-ins ("what is your goal right now?") at intervals so you can find the stretches worth reading.
+- **Check the strategy mid-run, and keep the agent out of the judge's seat.** Agents rarely change strategy on their own, and one mid-run instruction beat their own continuation by up to 17.44 points in Lim et al. (arXiv:2608.19072), so put a human "is the approach wrong?" check at a checkpoint, not only a plan review up front. When you overrule the agent, do not ask it (or a model fed its project log) whether you were right: on SciΠvot (arXiv:2610.21082) frontier models given the project record preferred the original agent plan over senior researchers' corrections. Both are under "Failure modes" above.
 - **Use agents for the part that works: building and running well-specified experiments.** Two practitioner reports (Wentworth, Arcadia) agree that interpreting results and choosing the next question remains the human's job, and on TASTE the best model reported agrees with experienced researchers' proposal preferences 60% of the time against an estimated 77% human agreement.
 - **Make a raised concern cost something.** The 82.5% figure above says your
   agent will usually *tell* you what is wrong with its own work and then finish
@@ -946,8 +1068,11 @@ Narrowly, yes; broadly, there is no measurement. The two strongest positive resu
 ### Is there a safety angle beyond research quality?
 
 Yes, two. Automated AI R&D is itself a dangerous-capability category that
-RE-Bench and HCAST exist to measure, so these systems are both a tool and a
-subject. And "Jr. AI Scientist"
+RE-Bench and HCAST were built to measure, so these systems are both a tool and a
+subject. (METR archived the public RE-Bench and HCAST task repos on 2026-10-20 and
+stopped updating its time-horizons page after 2026-09-08; the public tasks still
+run from a pinned commit but are no longer maintained — see
+[`evals.md`](../evaluation/evals.md#metr-hcast-and-the-metr-task-suite).) And "Jr. AI Scientist"
 ([arXiv:2511.04583](https://arxiv.org/abs/2511.04583)) is a deliberate risk
 report from building one — it generated papers building on real NeurIPS, IJCV
 and ICLR publications and documents the risks of applying such systems directly.
@@ -982,7 +1107,7 @@ adopt any system.
 
 ---
 
-Last verified: 2026-10-17. (Additions 2026-10-17: Deep Review, OpenResearch, alignment-hive `debrief`, ARIS, The Agentic Scientist and Into the Unknown — found and dated from primary pages (vendor posts, arXiv abstracts, `gh api` repo dates) by an agent sweep on 2026-10-17; papers not read in full, figures as the authors report them.) (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
+Last verified: 2026-10-20. (Additions 2026-10-20: "Strategy lock-in and expensive iterations" (arXiv:2608.19072 v2 and arXiv:2609.30541, quotes checked against the PDFs), SciΠvot (arXiv:2610.21082 abstract and PDF for code link), PhysClosureBench (arXiv:2610.21767 abstract), GEPA protocol item (arXiv:2610.12601 abstract), Athanor (arXiv:2610.21055 abstract and PDF), all via the arXiv API; thimble v0.8.0–v0.9.1 release notes and README via `gh api`. Figures are the authors'. METR RE-Bench / HCAST archive status of `METR/RE-Bench`, `hcast-public`, `public-tasks` and `inspect-tasks-public` checked via `gh api` (archived=true, 2026-10-20).) (Additions 2026-10-17: Deep Review, OpenResearch, alignment-hive `debrief`, ARIS, The Agentic Scientist and Into the Unknown — found and dated from primary pages (vendor posts, arXiv abstracts, `gh api` repo dates) by an agent sweep on 2026-10-17; papers not read in full, figures as the authors report them.) (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
 AutoResearch" (arXiv:2608.14905), LEDGER (arXiv:2608.18398), EviGraph
 (arXiv:2608.04738, skimmed — node/edge schema and headline numbers), Prime Agent
 (arXiv:2608.23552, paper + blog + repo README), ScientistOne (arXiv:2605.26340),

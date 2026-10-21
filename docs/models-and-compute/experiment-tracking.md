@@ -42,10 +42,13 @@ Aliases: `wandb` on PyPI, "W&B", "Weights & Biases".
 - **Logging too much.** Logging activations or large tensors per step kills the dashboard. Use `wandb.Histogram` for distributions; sample sparsely.
 - **Artifact size.** wandb stores up to a per-plan storage quota (the free-tier figure has changed over time and sources disagree — check current pricing); large model checkpoints fill it fast. Use HF Hub for big artifacts.
 - **`wandb sync` from offline.** If you ran offline, sync with `wandb sync wandb/offline-run-...`. Easy to forget; runs sit unsynced.
+- **Upgrade to wandb ≥ 0.31.0 (2026-10-16) if you log offline or resume runs.** From 0.27.0 until 0.31.0, offline runs did not warn when `run.log()` data was dropped "because its step is lower than the current step" — so a step-counter bug in offline mode lost data silently. Before 0.31.0, `wandb sync` could also overwrite the earlier history of a resumed run "when the server reports a stale step". Both are fixed in 0.31.0 ([release notes](https://github.com/wandb/wandb/releases/tag/v0.31.0)). Pass an explicit, monotonically increasing `step=` and check the synced history length against your local log.
+- **New default server in 0.31.0: CoreWeave Forge.** "The default API endpoint is now CoreWeave Forge at `https://api.forge.coreweave.com`", and run links point to `https://forge.coreweave.com/wandb`; "Existing API keys stored for `api.wandb.ai` keep working". A sandbox, cluster or agent container whose egress allowlist only permits `api.wandb.ai` needs `api.forge.coreweave.com` added.
+- **Check a run locally without the web UI:** `wandb leet inspect --summary` (0.31.0) "prints a run's state, latest metric values, config and last console lines from its local `.wandb` file, a quick way for a script or a coding agent to check on a run"; `--json` prints machine-readable output and `--follow` streams a live run. It only reads the local file, so it is a safer thing to hand an agent than a write-capable W&B key.
 
 ### Let an agent query your runs: the W&B MCP server
 
-Aliases: `wandb/wandb-mcp-server` on GitHub (MIT; pushed 2026-10-14; no git tags or GitHub releases as of 2026-10-14, while the README describes a 0.4 line with 0.4.2 as a "candidate"), "W&B MCP", "Weights & Biases Model Context Protocol server". Hosted endpoint `https://mcp.withwandb.com/mcp`.
+Aliases: `wandb/wandb-mcp-server` on GitHub (MIT; "Merge release: v0.4.3" on 2026-10-16; still no git tags or GitHub releases as of 2026-10-20), "W&B MCP", "Weights & Biases Model Context Protocol server". Hosted endpoint `https://mcp.withwandb.com/mcp`.
 
 **What it is.** A Model Context Protocol (MCP) server that lets a coding agent (Claude Code, Codex, Cursor) read your W&B projects through bounded, paged tools instead of you exporting CSVs: `get_run_history_tool` (sampled metric curves), `compare_runs_tool`, `diagnose_run_tool` ("Why did this run diverge?"), `probe_project_tool`, `query_wandb_tool` (structured reads or a query-only GraphQL document), `summarize_evaluation_tool`, artifact listing and diffing, and Weave trace queries. It also has **write** tools: `create_wandb_report_tool` and `log_analysis_to_wandb`.
 
@@ -56,7 +59,7 @@ claude mcp add --transport http wandb https://mcp.withwandb.com/mcp --scope user
   --header "Authorization: Bearer <your-api-key-here>"
 ```
 
-**Read-only mode.** For a self-run server, `WANDB_MCP_ACCESS_MODE=read-only` "omit[s] every tool classified as a write, including `create_wandb_report_tool`, `log_analysis_to_wandb`" (README). The README's local install runs `uvx --from git+https://github.com/wandb/wandb-mcp-server@vX.Y.Z wandb_mcp_server`; with no tags published yet, pin a commit SHA in place of `vX.Y.Z`. Illustrative, adapted from the README's local Claude Code line by adding the access-mode variable:
+**Read-only mode.** For a self-run server, `WANDB_MCP_ACCESS_MODE=read-only` "omit[s] every tool classified as a write, including `create_wandb_report_tool`, `log_analysis_to_wandb`" (README). The README's local install runs `uvx --from git+https://github.com/wandb/wandb-mcp-server@vX.Y.Z wandb_mcp_server`; with no tags published yet, pin a commit SHA in place of `vX.Y.Z` — at or after `feede2350cbe` (2026-10-16), which raised the dependency to `mcp>=1.30.0` "for GHSA-84m7-p3x7-pcfv" (a medium-severity advisory in the MCP Python SDK: unbounded session accumulation in the StreamableHTTP transport, `mcp` 1.8.0 to <1.30.0). Illustrative, adapted from the README's local Claude Code line by adding the access-mode variable:
 
 ```bash
 claude mcp add wandb -e WANDB_API_KEY=<key> -e WANDB_MCP_ACCESS_MODE=read-only \
@@ -175,6 +178,8 @@ When you'd like a result to be reproducible by someone else (or future-you):
 - [ ] **Set seeds.** PyTorch (`torch.manual_seed`), NumPy, Python `random`, and dataset shuffling. Log them.
 - [ ] **Temperature 0 for evals** (or log seeds + sampling params).
 - [ ] **Log the prompt template / chat template** used. Wrong template silently changes results.
+- [ ] **Log the serving stack and numerics**: inference engine and version (e.g. vLLM 0.32.0), weight precision / quantization (bf16, FP8, 4-bit), KV-cache dtype, and tensor / expert parallelism. Defaults change between versions (vLLM 0.32.0 switched GLM-5.x to an FP8 KV cache on Blackwell, and fixed wrong-expert routing for FP4 MoE models under expert parallelism), and results can depend on precision: Africa & Levine report a "Napoleon attractor" result on the Talkie model "that only showed up on 4-bit" while their main runs were bf16 ([LessWrong, 2026-10-13](https://www.lesswrong.com/posts/qchwP6wt4teHgxoKu)).
+- [ ] **Log the Python version** and pin it (`uv python pin`). Several core libraries need Python ≥ 3.11 or ≥ 3.12 since 2026-10, and on 3.10 pip silently installs older releases ([`compute.md`](compute.md#python-version-floor-for-the-2026-10-stack-312-for-new-projects)).
 - [ ] **Log the dataset version.** `datasets` library has `version` field; HF dataset cards have revisions.
 - [ ] **Save raw outputs, not just summary stats.** A score of "0.73" is unreproducible-by-eye; the per-sample completions let you sanity-check.
 - [ ] **Record wall-clock start/end timestamps per experiment** in `metadata.json`. Besides lineage, it gives a coding agent real elapsed times to read; agents' own runtime estimates are unreliable (see [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#agents-are-not-time-aware-put-wall-clock-timestamps-in-the-loop)).
@@ -184,7 +189,7 @@ When you'd like a result to be reproducible by someone else (or future-you):
 ## Stochasticity gotchas specific to safety research
 
 - **Closed-API non-determinism.** `temperature=0` doesn't give you bit-identical outputs across calls on most providers. Run multiple seeds even at temp=0.
-- **vLLM determinism.** vLLM with batched generation is non-deterministic by default (KV cache reuse + batching introduces order-dependent floating point). Use `enforce_eager=True` and `seed` for closer-to-deterministic behavior; expect it to be slower.
+- **vLLM determinism: use batch-invariant mode.** By default, vLLM's output for a prompt can change with the batch size and with which other requests share the batch (batched floating-point reductions are order-dependent), even with a fixed `seed`. vLLM's documented fix is **batch invariance**: set the environment variable `VLLM_BATCH_INVARIANT=1` before the engine starts (`VLLM_BATCH_INVARIANT=1 vllm serve <model>`, or `os.environ["VLLM_BATCH_INVARIANT"] = "1"` before importing vLLM). Per `docs/features/batch_invariance.md` at tag v0.32.0, it "ensures that the output of a model is deterministic and independent of the batch size or the order of requests in a batch"; it keeps a fixed reduction order under tensor parallelism and splits the LoRA (Low-Rank Adaptation) shrink into fixed chunks. Caveats from the same page: "Batch invariance is currently in beta"; it needs "NVIDIA GPUs with compute capability 8.0 or higher" (A100 and newer; AMD Instinct and Intel XPU also listed); it may be slower ("This trade-off is intentional to guarantee reproducibility"); under tensor parallelism it is not yet guaranteed for all-reduces whose size is not a multiple of 16 bytes; and the validated-model list covers Qwen3 / Qwen3-VL / Qwen2.5, Llama 3.1 / 3.2, gpt-oss, DeepSeek-V3 / R1 / V3.1, OLMo 2, Phi, Granite 3.1 and a few others — **not** Qwen3.5 / 3.6 / 3.8, Gemma 4 or GLM-5.x. On an unvalidated model, test it: run the same prompt alone and inside a large batch and compare tokens. `enforce_eager=True` plus `seed` (the older advice) removes CUDA-graph effects but not batch-composition effects. **When not to use it:** throughput-bound sweeps where you report distributions over samples anyway.
 - **Tokenizer changes mid-run.** A subtle gotcha: if you upgrade `transformers` mid-project, some tokenizers change special-token handling. Pin and document.
 
 ## Notebooks vs scripts
@@ -237,7 +242,15 @@ After your run completes: `wandb sync wandb/offline-run-...` (the offline run di
 
 ### Why does my temp=0 OpenAI/Anthropic call still vary?
 
-Closed APIs aren't bit-deterministic even at temp 0 — backend non-determinism (batched FP arithmetic, etc.). Run multiple seeds even at temp=0 and report distributions. For higher reproducibility on the open side, vLLM with `enforce_eager=True` and a fixed seed is closer-to-deterministic but slower.
+Closed APIs aren't bit-deterministic even at temp 0 — backend non-determinism (batched FP arithmetic, etc.). Run multiple seeds even at temp=0 and report distributions. For higher reproducibility on the open side, run vLLM with `VLLM_BATCH_INVARIANT=1` (beta; GPUs with compute capability ≥ 8.0; validated on Qwen3, Llama 3.1 / 3.2, gpt-oss, DeepSeek-V3 and others but not Qwen3.5+, Gemma 4 or GLM-5) plus a fixed `seed`; it makes outputs independent of batch size and request order, at a speed cost. See "Stochasticity gotchas" above.
+
+### Can a coding agent check my wandb run without an API key?
+
+Yes, for a run on the same machine: `wandb leet inspect --summary` (add `--json` for machine-readable output; wandb ≥ 0.31.0) on the run's `.wandb` file prints the run's state, latest metrics, config and last console lines from the local `.wandb` file, read-only. For runs on the W&B server, use the read-only W&B MCP server (section above).
+
+### My wandb runs stopped syncing after upgrading — why?
+
+wandb 0.31.0 (2026-10-16) changed the default server to CoreWeave Forge (`https://api.forge.coreweave.com`). If your cluster or sandbox only allows outbound traffic to `api.wandb.ai`, add the new host. Existing API keys keep working.
 
 ### How do I track multiple model comparisons in wandb?
 
@@ -253,4 +266,4 @@ Yes, through the official W&B MCP server (`wandb/wandb-mcp-server`): `claude mcp
 
 ---
 
-Last verified: 2026-10-14. (Additions 2026-10-14: W&B MCP server from the `wandb/wandb-mcp-server` README and `gh api` (no tags or releases); Tan's five properties from the LessWrong GraphQL markdown of his 2026-07-06 post, `dtch1997/stagehand` archived per `gh api`; PaperBench reproduction step from the `openai/frontier-evals` `project/paperbench` README. Not verified: the hosted W&B endpoint's handling of read-only mode.) Earlier pass (2026-04): wandb, TensorBoard, Hydra all stable / actively maintained. uv increasingly the default for new Python projects in alignment research.
+Last verified: 2026-10-20. (Additions 2026-10-20: wandb 0.31.0 items from its GitHub release notes and PR #12951; W&B MCP server commits via `gh api` (no tags) and advisory GHSA-84m7-p3x7-pcfv via the GitHub advisory API; vLLM batch invariance from `docs/features/batch_invariance.md` at tag v0.32.0 and the v0.32.0 release notes; the 4-bit Talkie note from Africa & Levine's post (LessWrong GraphQL markdown). Not verified: batch-invariant mode on models outside vLLM's validated list.) (Additions 2026-10-14: W&B MCP server from the `wandb/wandb-mcp-server` README and `gh api` (no tags or releases); Tan's five properties from the LessWrong GraphQL markdown of his 2026-07-06 post, `dtch1997/stagehand` archived per `gh api`; PaperBench reproduction step from the `openai/frontier-evals` `project/paperbench` README. Not verified: the hosted W&B endpoint's handling of read-only mode.) Earlier pass (2026-04): wandb, TensorBoard, Hydra all stable / actively maintained. uv increasingly the default for new Python projects in alignment research.

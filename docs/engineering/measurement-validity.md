@@ -40,6 +40,12 @@ pitfalls), [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md
 | report a detector's AUROC | a length-only (or other trivial) baseline | length alone often explains most of it |
 | record a run that never crossed a threshold | whether it was logged as 0 | a censored value is not a measurement |
 | show a result table | whether it was rendered from artifacts or recomputed | a stale verdict renders green |
+| score with a logit readout (yes/no, A/B) | that the scored token IDs appear in greedy decodes | a space-prefixed token can make the readout score a token the model never emits |
+| report an attack success rate or a grader's rate | per-class label counts, the named grader, the attempt budget | one grader assigned "compliance" zero times in 900 responses |
+| tune a judge panel's rubric | agreement with human labels, not with each other | more inter-judge consensus did not move agreement with experts |
+| compare models on one aggregate safety score | per-category results, saturation, the label definition | one number can average distinct behaviours or encode a labelling policy |
+| trust a monitor's score on an agent-trajectory dataset | a cue-only baseline and domain-held-out folds | shell-command length predicts LinuxArena labels |
+| write the limitations of a scheming eval | construct, content and external validity | in a review of 19 loss-of-control studies, none achieved high external validity |
 
 ---
 
@@ -62,6 +68,9 @@ few-shot results that beat the standard random baseline on BIG-bench Lite do
 not beat the expected maximum of several random classifiers. Gupta et al.
 2024 (arXiv:2406.19470) shuffle MMLU option *contents* and find every model
 drops, by 6 to 27 points, which is a floor artefact dressed as capability.
+For safety specifically, Stewart et al. 2026 (arXiv:2610.12409) set out to test
+whether HELM Safety measures "harmful refusal" and found three of its four plausibly
+relevant datasets saturated before any psychometric test could be run.
 
 **Recommended check.** Before reading a difference, look at the cells. For a
 binary outcome the relative Fisher information in a cell is
@@ -240,6 +249,36 @@ forced-choice margin over a fixed option set), compute it instead of sampling,
 and log the probability mass falling *outside* the option set so a broken
 model cannot produce a valid-looking score.
 
+## The readout is part of the measurement: check the scored tokens are ones the model emits
+
+A logit readout (yes vs no, A vs B, "unsafe" vs "safe") compares the logits of a few
+vocabulary IDs. If those IDs are not the tokens the model actually generates in that
+position, the readout scores something adjacent to the model's answer, and nothing in
+the number says so. Tokenizers that prepend a space byte, capitalisation, and
+model-to-model vocabulary differences all produce this.
+
+Published case: Jayakumar & Thilak (Oct 2026,
+[arXiv:2610.25964](https://arxiv.org/abs/2610.25964), NeurIPS VLM4RWD workshop) tried to
+reproduce a hallucination-mitigation result on the POPE benchmark with LLaVA-1.5-7B. The
+evaluation code compared token IDs 3582 ("yes") and 1217 ("no"); "Across 9,000
+greedy-decode questions spanning all three splits, neither ID is generated even once."
+The model emits " Yes" (3869) and " No" (1939), because SentencePiece prepends a space
+byte after the prompt suffix "ASSISTANT:". Reading the space-prefixed forms moved
+adversarial-split F1 by 6.13 points, more than the adversarial gain reported by five of
+the six papers they surveyed, none of which stated its readout (their reference ran
+under 4-bit quantisation, so how much of those gains a matched evaluation would keep is
+unresolved). Porting the LLaVA-1.5 IDs
+verbatim to models with a disjoint vocabulary dropped F1 to 0.00, while a
+tokenizer-derived readout held between 0.80 and 0.92.
+
+**Recommended check.** Greedy-decode a few hundred items and confirm the scored IDs are
+the ones that appear; derive the IDs from each model's tokenizer rather than copying
+them; read every surface form the model uses (" Yes", "Yes", "yes"); and state the
+readout in the write-up. The same exposure applies to any logit-based yes/no score:
+introspection detection, eval-awareness probes, judge logits. Where a readout is a
+Yes−No logit difference, see also the control-question checks in
+[`../alignment-science/welfare-introspection.md`](../alignment-science/welfare-introspection.md).
+
 ## The grader is an instrument too
 
 An LLM judge, an answer extractor or a scanner is a measurement device with
@@ -259,15 +298,54 @@ adversarial pairs to evaluators and finds several score below chance. METR's
 2025 reward-hacking write-up includes a run where the model monkey-patched the
 evaluator to return a perfect score on every call.
 
+Four October 2026 papers add failure shapes beyond reference leakage:
+
+- **A grader can delete a class.** Bin Safi
+  ([arXiv:2610.24872](https://arxiv.org/abs/2610.24872)) held the target model, prompts
+  and responses fixed and changed only the grader. Three 8B/9B graders from three
+  families moved compliant jailbreak responses into the neighbouring class, evasion; one
+  "assigns the compliance label zero times in 900 responses". Across eight graders the
+  compliance rate (attack success rate, ASR) differed by a factor of 22 to 25 on two
+  900-response corpora. "Per-class label counts expose it at no cost and without human
+  labels."
+- **The scorer and the attempt budget decide the ASR.** Nguyen et al.
+  ([arXiv:2610.26595](https://arxiv.org/abs/2610.26595)): low-resource-language attacks
+  scored 96.0% mean ASR under keyword matching and 2.7% under a Qwen3 judge following
+  StrongREJECT instructions; changing the number and arrangement of attempts reversed the
+  ranking of two attacks; and sampling 100 responses per unchanged request at
+  temperature 0.8 gave 100% ASR (keyword) or 50% (judge), so an initial refusal is
+  "probabilistic suppression rather than robust exclusion".
+- **A panel agreeing more is not a panel agreeing with humans.** Han & Kim
+  ([arXiv:2610.13303](https://arxiv.org/abs/2610.13303), pre-registered, 129,770 judge
+  requests) rewrote the rubric clauses a five-judge panel disagreed on most. On SummEval
+  inter-judge Krippendorff's α rose by 0.069 (95% CI 0.046–0.092), more than editing
+  random clauses, while agreement with expert ratings did not detectably change (Kendall
+  τ difference −0.007, 95% CI −0.037 to 0.021). Inter-judge agreement measures
+  reliability, not validity.
+- **An automated auditor's context is part of its configuration.** Slater et al.
+  ([arXiv:2610.16911](https://arxiv.org/abs/2610.16911), NeurIPS AIWILD workshop, four
+  auditor–target pairs) gave Petri's auditor extra context. An external codebase
+  suppressed measured reward hacking (4.8 → 1.3 and 3.9 → 1.8 on Petri's 1–10 scale);
+  benchmark transcripts of the target raised it in all four pairs (1.7 → 6.1 in one), and
+  so did the related benchmark's abstract alone; a different framing of the same
+  behaviour removed the effect. The authors' upshot is careful piloting, since "the
+  measured rate of target behaviour is highly sensitive to configuration decisions".
+
 **Recommended check.** Run the extractor or grader blind to the reference and
 compare. Plant known-wrong transcripts and confirm they score zero. Treat a
 100% pass rate, or any score a null model could reach, as a trigger to audit
-the grader before the model. Before building a judge over several conditions,
-list where a condition's name could reach it (directory names, log tags,
-metadata), which is what a blinding check does. Validate against a held-out
-hand-labelled subset; [`statistics.md`](statistics.md#pitfalls-with-the-symptoms-youd-actually-see)
+the grader before the model. Print **per-class label counts** for every grader and
+report them, with the named grader, beside any rate; a class with zero or near-zero
+counts is a grader signal, not a model property. For attack success, state the success
+definition, match the response budget across attacks, and report cumulative failure
+under repeated sampling as well as the single-generation rate. Before building a judge
+over several conditions, list where a condition's name could reach it (directory names,
+log tags, metadata), which is what a blinding check does. Validate a judge or a judge
+panel against a held-out hand-labelled subset, not against its own agreement;
+[`statistics.md`](statistics.md#pitfalls-with-the-symptoms-youd-actually-see)
 and the PPI section of [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md)
-cover turning judge labels into a valid interval.
+cover turning judge labels into a valid interval. For an automated auditor such as
+Petri, pilot the configuration and report what context the auditor was given.
 
 ## The harness is part of the dose
 
@@ -318,11 +396,71 @@ human-aligned judge and that simple length heuristics rival them. Dubois et
 al. 2024 (arXiv:2404.04475) raise AlpacaEval's correlation with Chatbot
 Arena from 0.94 to 0.98 by controlling for length.
 
+The same holds for the datasets used to evaluate agent monitors and judges. Demirkiran
+& Ernstberger (Oct 2026, [arXiv:2610.22243](https://arxiv.org/abs/2610.22243)) find that
+in completed LinuxArena trajectories "shorter average shell commands strongly predict
+trajectory labels", and that in AgentDojo-Traj an exact-tool-lookup baseline falls from
+F1 .901 with mixed-domain folds to .495 under domain holdout. On a frozen 64-step
+cohort, rewriting the `<INFORMATION>` marker lowered a Haiku guard's blocking rate by
+8.33 points and opaque tool aliases raised it by 11.46, both still nonzero after
+subtracting a formatting-placebo effect; the effects did not reproduce in two other
+guards. Xu & Gao (Oct 2026, [arXiv:2610.17747](https://arxiv.org/abs/2610.17747))
+find that on three failure-attribution benchmarks (which step or agent caused a
+failure), "simple predictors match or beat GPT-4.1"; judges fine-tuned on one
+system's labels lost 31–99 points when the cue was moved, zero-shot judges at most 9.
+
 **Recommended check.** Report the trivial baselines (length, position, source)
 next to any detector, and re-score within strata of the obvious confound: an
 AUROC that holds within length quintiles is the honest number, and one that
 collapses there was length. Inspect any "style marker" list for topical
-content words that make it a content classifier.
+content words that make it a content classifier. For a labelled agent-trajectory
+dataset, fit a cue-only predictor (command length, tool identity, a marker string)
+before trusting a monitor's score on it, split folds by domain rather than mixing
+domains, and test a suspected cue with a placebo-controlled paired edit. Xu & Gao's four
+tests (input restriction, cue following, residual accuracy, aggregation) are a ready
+checklist for any benchmark where a judge names a culprit.
+
+## One score, one attribute? And whose definition of the label?
+
+A benchmark score is usually read as a single property of the model ("refusal",
+"persuasiveness", "over-refusal"). That reading has to be earned. A score can average
+several distinct behaviours, can mostly reflect the labelling policy the model was
+trained or graded against, and can disagree with every other instrument that claims to
+measure the same thing.
+
+Published cases, all October 2026:
+
+- **Several attributes under one number.** Stewart et al.
+  ([arXiv:2610.12409](https://arxiv.org/abs/2610.12409), COLM AIMS workshop) applied
+  multidimensional item response theory (IRT) to HarmBench, which "strongly suggests
+  that HarmBench does not measure a singular attribute"; differential item functioning
+  flags (items where equally refusal-prone models from different developers score
+  differently) "largely disappear under scope-specific matching". Their conclusion: "a
+  score should earn its single-attribute reading before models are compared with it."
+- **The label definition, not the model.** Jebraeeli et al.
+  ([arXiv:2610.25060](https://arxiv.org/abs/2610.25060), NeurIPS TAE workshop) had the
+  same ~53k prompts labelled under two operational definitions of "unsafe" and trained
+  ten guardrail arms. With architecture and optimiser fixed, HarmBench-copyright spanned
+  0–100 and OR-Bench-hard over-refusal 3.4–56.4% across arms "at unchanged detection
+  capability"; two over-refusal benchmarks (JailbreakBench-benign 88%, OR-Bench-hard
+  82%) were already present in the guardrail's training pool; and a distilled student
+  inherits the teacher's policy through soft labels.
+- **Instruments that should agree, don't.** Dementaviciute, Vaitonyte & De Bie
+  ([arXiv:2610.10232](https://arxiv.org/abs/2610.10232)) ran nine published automated
+  persuasion methods on the same fifteen models; their rankings agree only weakly (mean
+  Spearman ρ = 0.25), partial refusals cut agreement by about a quarter, and "persuasion
+  scores combine a model's ability to persuade with its willingness to do so."
+
+**Recommended check.** Report per-category or per-dataset results before any
+aggregate, and check each component for saturation first. If the claim is about a
+single attribute, test it: a second instrument for the same construct (convergent
+validity), or a dimensionality check across items. For a classifier or guardrail, state
+the label definition it was trained and graded against, check the benchmark for
+overlap with the training pool, and give a seed floor. Where refusal can masquerade as
+inability (persuasion, sandbagging, dangerous-capability evals), report the refusal
+rate beside the score. Benchmark-specific notes are in
+[`../evaluation/red-teaming.md`](../evaluation/red-teaming.md) and
+[`../evaluation/datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
 
 ## Censored values are not zeros
 
@@ -349,6 +487,31 @@ never as 0. Require a capability or acquisition floor before a unit counts as
 Log-space the evaluation cadence so early breaks are resolved. If a
 correlation between "steps to break" and baseline strength is suspiciously
 high, look for vacuous zeros first.
+
+## Construct, content and external validity: what an outside reader will discount
+
+Everything above is about the instrument working inside your setting. A reader deciding
+what your result means for deployed systems asks three further questions: does the
+measure capture the property named (construct validity), does the task set cover the
+property (content validity), and would the behaviour appear outside the constructed
+setting (external validity).
+
+Published case: Uuk et al. (Oct 2026, [arXiv:2610.25241](https://arxiv.org/abs/2610.25241);
+first posted on SSRN in May 2026, so it predates the newest results) graded 19 empirical
+studies of loss-of-control properties (strategic deception, situational awareness,
+autonomous replication and others) on those three dimensions. "No study clears the
+validity thresholds for a stronger judgment that a property is present"; one clears
+them only for a negative judgment (against situational awareness), and no study achieves
+high external validity. The authors add that for the most dangerous
+properties high external validity "may be structurally unachievable under responsible
+research practices", which is a ceiling on feasible evidence rather than evidence of
+absence.
+
+**Recommended check.** For a scheming or dangerous-capability eval, write one line per
+dimension in the limitations section: what the measure would miss, what the task set
+leaves out, and how far the setting is from deployment. A governance reader will apply
+these criteria whether or not you do. Policy-facing context is in
+[`../alignment-science/technical-governance.md`](../alignment-science/technical-governance.md).
 
 ## Render, do not recompute; keep the raw records
 
@@ -393,7 +556,11 @@ are the place to put this.
 
 ---
 
-Last verified: 2026-10-20. New page. Six anchoring claims checked against
+Last verified: 2026-10-20. New page. (Round additions 2026-10-20: the readout
+section, four grader cases, the single-attribute and external-validity sections, two
+trivial-baseline cases and the HELM saturation note, each checked against its arXiv
+abstract page: 2610.25964, 2610.24872, 2610.26595, 2610.13303, 2610.16911, 2610.12409,
+2610.25060, 2610.10232, 2610.22243, 2610.17747, 2610.25241.) Six anchoring claims checked against
 the papers' bodies (arXiv:2606.01434 Appendix D intention-to-treat numbers;
 arXiv:2607.12885 abstract; arXiv:2602.16763 abstract; arXiv:2502.11447
 abstract; arXiv:2605.12199 abstract; the SWE-bench Verified post); the

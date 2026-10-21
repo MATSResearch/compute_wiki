@@ -80,7 +80,12 @@ location. Do not turn this choice into a universal ban on automation or a
 universal demand for explicit lemma lists.
 
 These are editorial examples, not compiled before/after Lean fixtures. An actual
-rewrite must be checked in the target environment.
+rewrite must be checked in the target environment. Published tactic examples
+are no exception: lean4-skills v4.11.4 (2026-10-20) replaced several documented
+`grind` snippets that "failed when compiled" on Lean `v4.33.1` and `v4.35.0`
+(for instance, `grind [h1, h2]` with local hypotheses "is an error, not a
+no-op"). A cleanup that collapses steps into one `grind` or `simp` call is a
+candidate until the pinned toolchain accepts it.
 
 ## The preservation boundary
 
@@ -131,3 +136,7 @@ For changes to expensive automation, compare check times under comparable cache
 conditions. Human preferences or blinded comparisons are useful evidence for
 readability; an agent's self-score alone is insufficient. Record regressions as
 well as successes and adjust the skill to demonstrated failure modes.
+
+---
+
+Last verified: 2026-10-20. (Addition 2026-10-20: the `grind` example from the lean4-skills v4.11.4 release notes via `gh api`. The rest of the page, editorial guidance and two cited papers, was not re-checked in this pass.)

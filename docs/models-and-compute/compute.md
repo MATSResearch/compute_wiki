@@ -18,8 +18,11 @@ How to get GPUs for safety research at MATS scale (≤70B models, single-node or
 | Queue jobs on a shared GPU box you have no sudo on, a local card, or per-job RunPod pods, from one command | **gpuc** (`brendanlong/gpu-coordinator`) — see the gpuc section |
 | Run Inspect agent sandboxes without a local Docker daemon | cloud sandbox providers for Inspect (Daytona, E2B, Modal) — see [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) |
 | Fine-tune GPT-4o / GPT-4.1 | Not for new work: OpenAI self-serve fine-tuning is closed to new organisations, and creating jobs ends for everyone on 2027-01-06 — see [Finetuning closed-weight models](#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14) |
-| Free / academic | **NDIF** (interp on big models), **MATS-provided compute**, university cluster, **Lighthaven** workspace if applicable (ask MATS handbook / torchy) |
-| Large model interp without owning H100s | **NDIF** (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) |
+| Free / academic | **NDIF** (interp on big models), **ACS Infra** (large *base* models with logprobs, activations and steering), **MATS-provided compute**, university cluster, **Lighthaven** workspace if applicable (ask MATS handbook / torchy) |
+| Large model interp without owning H100s | **NDIF** (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)); **ACS Infra** for Llama 3.1 405B base and Trinity-Large-TrueBase — see the ACS Infra section |
+| A 400B-class **base** model with logprobs (base vs chat comparisons, loom-style exploration) | **ACS Infra** (free, apply at `infra.acsresearch.org/signup`) — see the ACS Infra section |
+| A closed model your project depends on is being retired | Save raw completions before the date — see [Closed-model retirements](#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-10-20) |
+| Pick a Python version for a new project | **Python 3.12** — see [Python version floor](#python-version-floor-for-the-2026-10-stack-312-for-new-projects) |
 | Already-trained model serving | self-hosted **vLLM** on rented box, or use API providers |
 | Free-tier hosted inference for open-weight models | **HF Inference API** (rate-limited), **Together** free tier, **Groq** (very fast Llama inference, free tier) |
 
@@ -125,7 +128,36 @@ Aliases: `groq.com`, "Groq".
 
 ## NDIF
 
-Covered in [`serving-and-activations.md`](../interpretability/serving-and-activations.md). Free academic compute for **interpretability** on very large models via nnsight remote backend. Latency-bound, not throughput.
+Covered in [`serving-and-activations.md`](../interpretability/serving-and-activations.md). Free academic compute for **interpretability** on very large models via nnsight remote backend. Latency-bound, not throughput. NDIF (National Deep Inference Fabric) lists Llama 3.1 8B / 70B / 405B and gpt-oss-120b on `ndif.us` (read 2026-10-20). The ACS Infra announcement (LessWrong, 2026-10-20) says NDIF "requires US residency or a US collaborator"; that eligibility rule is not stated on the NDIF homepage, so check NDIF's own sign-up terms. If you are outside the US and want a large base model, see the ACS Infra section.
+
+## ACS Infra: free hosted large base models (logprobs, activation harvesting, steering)
+
+Aliases: **ACS Infra**, `infra.acsresearch.org`, "ACS base-models platform", ACS Research (`acsresearch.org`, the Alignment of Complex Systems Research Group); announced in *ACS Infra: free access to large base models for LLM psychology research* (Vaněk, Kulveit, Havlíček, Frisch, Veronika_H, vgel, Douglas, Amis, Ali; [LessWrong, 2026-10-20](https://www.lesswrong.com/posts/yzaKWxsJzJjyExSAP)). Funded by Coefficient Giving.
+
+**What it is.** A free hosted platform for **base** (pre-trained, not chat-tuned) models aimed at "LLM psychology and adjacent areas". The post lists: a browser workbench and a **loom** (branching-completion explorer), a **completions API with logprobs**, **activation harvesting and steering**, and a community Discord. Models served at launch:
+- **Llama 3.1 405B** base;
+- **Llama 3.1 8B**, "for fast testing";
+- **Trinity-Large-TrueBase** (Arcee, `arcee-ai/Trinity-Large-TrueBase` on Hugging Face, about 398.6B parameters, 13B active, a Mixture-of-Experts (MoE) model; licence `openmdw-1.1`), "released as a raw pre-training checkpoint taken before annealing".
+
+**How to get access.** Apply at `infra.acsresearch.org/signup`; the post says applications are reviewed "usually within a few days" and no publications or affiliation are required. "If you run a program (MATS, PIBBSS, a reading group, a course) and would like a batch of accounts, email us infra@acsresearch.org." MATS fellows should check with MATS staff before emailing, in case a batch has already been arranged.
+
+**When to use it:**
+- Base-vs-chat comparisons for claims about what post-training does (personality, sycophancy, self-reports, calibration), at 400B scale rather than on a small model.
+- Re-running a small-model result on a large base model, or lens and introspection studies that need intermediate activations from one (see [`welfare-introspection.md`](../alignment-science/welfare-introspection.md) for the introspection side).
+- You are outside the US and the National Deep Inference Fabric (NDIF)'s eligibility rules exclude you.
+
+**When *not* to use it:**
+- Uptime-critical work or a deadline. The post: "Capacity is sized for roughly 70-100 active researchers, models may rotate, the goal is not 100% uptime." Keep a fallback (rented GPUs for the 8B model; NDIF or a self-hosted vLLM for 405B).
+- Chat or instruction-tuned models: the operators "lean towards hosting only base models".
+- Fine-tuning: it serves models, it does not train them.
+- Long-term reproducibility of the serving stack: the planned run is "at least a year, probably more", with a review after about six months, and served models may rotate. Record the model id, the date and the platform in `metadata.json`.
+
+**Pitfalls:**
+- **Base-model prompts are completions, not chats.** Send raw text; a chat template sent to a base model measures template-following, not the base model's dispositions.
+- **Trinity-Large-TrueBase is pre-annealing**, so it differs from Arcee's released post-trained models (`arcee-ai/Trinity-Large-Thinking` is on OpenRouter). Do not pair it with a post-trained model and call the difference "post-training" without saying the base is pre-annealing.
+- The API, its activation-harvesting interface and its hook-point naming are not documented publicly in the post; read the platform docs after sign-up before writing code against it.
+
+See also [`open-weights-models.md`](open-weights-models.md) (which open models have base checkpoints) and [`serving-and-activations.md`](../interpretability/serving-and-activations.md) (NDIF, vLLM-Lens and self-hosted activation extraction).
 
 ## MATS / Lighthaven / university compute
 
@@ -174,13 +206,70 @@ Aliases: OpenAI fine-tuning API, `ft:gpt-4o`, `ft:gpt-4.1`, `ft:gpt-4o-mini`, se
 - **Cost is mostly GPU-hours.** A small LoRA on a 0.5–7B model is cheap; full finetunes of large models are not. Estimate GPU-hours first.
 - **Rate limits during eval** — if you serve the finetuned model behind a hosted endpoint, it may have separate, lower rate limits.
 
+## Closed-model retirements to plan around (OpenAI and Anthropic, as of 2026-10-20)
+
+Aliases: model deprecation, model retirement, model shutdown, sunset date, `o3-2025-04-16` shutdown, `claude-sonnet-4-5-20250929` retirement, OpenAI Evals platform shutdown, "model not found" after a retirement.
+
+**o3** and **Claude Sonnet 4.5** are the subject models of a number of chain-of-thought (CoT) and scheming studies, and both retire in the next two months. Once a snapshot is retired, requests to it fail, and a result built on it can only be re-checked from saved outputs. Dates below are from OpenAI's deprecations page (`developers.openai.com/api/docs/deprecations.md`) and Anthropic's model-deprecations page (`platform.claude.com/docs/en/about-claude/model-deprecations.md`), both read as raw markdown on 2026-10-20. OpenAI fine-tuning dates are in the section above.
+
+| Date | Provider | What goes away | Replacement the provider recommends |
+|---|---|---|---|
+| 2026-10-23 | OpenAI | `o1`, `o1-pro`, `o3-mini`, `o4-mini`, `gpt-4.1-nano`, `gpt-4o-2024-05-13`, `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` (announced 2026-04-22; their fine-tunes are in the fine-tuning section above) | `gpt-5.6-sol` / `-terra` / `-luna` |
+| 2026-10-31 | OpenAI | **Evals platform**: "Existing evals become read-only." | Export now; OpenAI points to a Promptfoo migration guide (or move to Inspect AI, see [`evals.md`](../evaluation/evals.md)) |
+| 2026-11-30 | OpenAI | "The Evals dashboard and API are scheduled to shut down"; also the `v1/prompts` API (reusable prompt objects) | — |
+| 2026-11-30 | Anthropic | `claude-sonnet-4-5-20250929` (deprecated 2026-09-30) | `claude-sonnet-5-5` |
+| 2026-12-11 | OpenAI | `o3-2025-04-16`, `o3-pro-2025-06-10`, `gpt-5-2025-08-07`, `gpt-5-mini-2025-08-07`, `gpt-5-nano-2025-08-07`, `gpt-5-pro-2025-10-06` | `gpt-5.6-sol` / `-terra` / `-luna` |
+| 2027-01-14 | OpenAI | GPT-4o, GPT-4o mini, GPT-4.1, GPT-4.1 mini snapshots, **and their fine-tunes** (see the fine-tuning section above) | `gpt-6-luna` |
+| 2027-04-01 | OpenAI | `gpt-5.1`, `gpt-5.3-codex`, `gpt-5.4-nano` | `gpt-6-sol` / `gpt-6-luna` |
+
+Also on Anthropic's page: `claude-mythos-preview` is deprecated (since 2026-06-09) with its retirement date "To be announced", and `claude-haiku-4-5-20251001` is listed as "Not sooner than October 15, 2026" — that date has passed, so check the page before planning on it. Anthropic's page says the dates apply to the Claude API, Claude Platform on AWS and Microsoft Foundry, while "Partner-operated platforms (Amazon Bedrock and Google Cloud) set their own retirement schedules".
+
+**What to do before a retirement date:**
+- Re-run the evaluations you still need and save the **raw completions** with the exact prompt, model id (dated snapshot, not an alias), sampling parameters, provider and date. A summary score cannot be re-derived once the model is gone.
+- If a published result you are extending used one of these snapshots, collect the comparison numbers now; afterwards you can only compare against the paper's reported numbers, on whatever subset they released.
+- Anthropic's page says it "has committed to long-term preservation of model weights" (link on that page: *Commitments on Model Deprecation and Preservation*); that is not API access, so do not plan on querying a retired model.
+
+**When this section is not relevant:** open-weights models (download and pin the weights yourself; see [`open-weights-models.md`](open-weights-models.md)). Open models served through OpenRouter also retire: its models API now carries an `expiration_date` field (see the OpenRouter section of `open-weights-models.md`).
+
+## Python version floor for the 2026-10 stack (3.12 for new projects)
+
+Aliases: `requires_python`, `Requires-Python >=3.11`, pip's `Ignored the following versions that require a different python version` followed by `No matching distribution found for vllm==0.32.0` on Python 3.10, `uv` resolution failure on Python 3.10, which Python version for a new project.
+
+**The trap.** In October 2026 several core research libraries dropped Python 3.10. On a 3.10 environment, pip silently resolves to the last release that still supports 3.10 (old bugs included), or `uv` fails to resolve. `requires_python` from PyPI JSON, checked 2026-10-20:
+
+| Package (version, release date) | `requires_python` |
+|---|---|
+| `vllm` 0.32.0 (2026-10-18) | `<3.15,>=3.11` (0.31.0 was `>=3.10`) |
+| `sglang` 0.5.22 (2026-10-16) | `>=3.11` (0.5.21 was `>=3.10`) |
+| `inspect-ai` 0.3.281 (2026-10-15) / 0.3.282 (2026-10-19) | `>=3.11` (0.3.280 was `>=3.10`; CHANGELOG: "require Python 3.11 and test on Python 3.14") |
+| `trl` 1.16.0, `control-arena` 20.1.0 | `>=3.11` |
+| `axolotl` 0.21.0, `inspect-petri` 3.1.1, `petri-bloom` 0.2.6 | `>=3.12` (thimble's README also says Python 3.12+) |
+| `transformers` 5.20.2, `torch` 2.14.1, `peft` 0.21.2, `wandb` 0.31.0 | `>=3.10` |
+
+**Recommendation.** Use `requires-python = ">=3.12"` (and `uv python pin 3.12` or newer) for a new project that combines training, serving and Inspect evaluations. Run `python --version` on a rented box before installing. **When not to bother:** a project that only calls hosted APIs through one SDK, or an existing environment you are not upgrading.
+
+## vLLM 0.32.0 upgrade traps (released 2026-10-18)
+
+Aliases: vLLM v0.32.0, `vllm-project/vllm` release 0.32, `transformers>=5.16.1,<5.20.0`, `max_tokens` clamped, `finish_reason: "length"`, CORS `--allowed-origins`, NVFP4 / MXFP4 MoE expert-parallel corruption, FP8 KV cache default.
+
+From the [v0.32.0 release notes](https://github.com/vllm-project/vllm/releases/tag/v0.32.0) and the linked PRs:
+- **Python 3.10 dropped** ("the minimum is Python 3.11", #60402). See the Python version floor section.
+- **`transformers>=5.16.1,<5.20.0`** (#57387). That excludes transformers 5.20.x (5.20.0 released 2026-10-15), which contains a training-gradient fix for `use_kernels=True` (see the transformers row in [`safety-toolkits.md`](safety-toolkits.md#fast-moving-libraries-pin-the-version)). If you train and serve from one environment, the resolver will hold transformers below 5.20; keep training and vLLM serving in **separate environments**, or pin both explicitly and know which fix you are missing.
+- **`max_tokens` is now an upper bound, not a reservation** (#57035). Before, a request whose prompt plus `max_tokens` exceeded the context was rejected; now "prompt accepted, sampling `max_tokens` clamped" to what fits. Long prompts that used to error now silently get a shorter generation budget, so check `finish_reason == "length"` and count truncated samples, especially in long-context or long-CoT evaluations.
+- **Silent MoE corruption fixed** (#59042, merged 2026-10-12): CUTLASS NVFP4 / MXFP4 Mixture-of-Experts (MoE) kernels under **expert parallelism** ignored the expert map, "so tokens were [routed] to the wrong experts". The PR's example was "~0% GSM8K on RedHatAI/GLM-5.3-MXFP4 with DP=8 / EP=8". If you served an FP4 / MXFP4 MoE checkpoint with `--enable-expert-parallel` on an earlier version, re-check those results.
+- **New default KV-cache dtype for GLM-5.x on SM100 (Blackwell)**: an FP8 key/value (KV) cache with `--kv-cache-dtype auto` (#60140, #60281). Outputs can differ slightly from a bf16 KV cache; record the KV-cache dtype and the vLLM version in `metadata.json`.
+- **CORS (Cross-Origin Resource Sharing)**: default origins changed "from `*` to none" (#61009); a browser front-end (a loom, a notebook widget) talking to a local vLLM server needs `--allowed-origins`.
+- **CUDA builds**: `pip install vllm` is still the CUDA 13.0 build; the CUDA 12.9 Docker image is `vllm/vllm-openai:v0.32.0-cu129` (see the driver section below).
+
+**When not to upgrade yet:** a running study whose numbers you will compare against earlier runs — finish it on the pinned version, or re-run the baseline on 0.32.0. RL-specific vLLM changes (weight sync, colocated training) are in [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md).
+
 ## Driver and CUDA version check on rented GPUs (CUDA 13 wheels)
 
 Aliases: `The NVIDIA driver on your system is too old`, CUDA 13.0 wheels, cu129, driver r580, `nvidia-smi`, CUDA mismatch on RunPod / vast.ai.
 
-**The trap.** vLLM 0.31.0 (2026-10-05) lists `pip install vllm` as "PyPI (CUDA 13.0)" and publishes CUDA 12.9 separately (Docker `vllm/vllm-openai:v0.31.0-cu129`, plus CUDA 12.9 wheels on the release page); SkyRL's Tinker quickstart requires "CUDA 13.0 (NVIDIA driver r580 or newer)". On a rented box with an older driver, a fresh install that resolves CUDA 13 builds fails at CUDA initialisation. The PyTorch error string to search for is `The NVIDIA driver on your system is too old (found version …)` (from `c10/cuda/CUDAFunctions.cpp`).
+**The trap.** vLLM 0.31.0 (2026-10-05) and 0.32.0 (2026-10-18) list `pip install vllm` as "PyPI (CUDA 13.0)" and publish CUDA 12.9 separately (Docker `vllm/vllm-openai:v0.32.0-cu129`, plus CUDA 12.9 wheels on the release page); SkyRL's Tinker quickstart requires "CUDA 13.0 (NVIDIA driver r580 or newer)". On a rented box with an older driver, a fresh install that resolves CUDA 13 builds fails at CUDA initialisation. The PyTorch error string to search for is `The NVIDIA driver on your system is too old (found version …)` (from `c10/cuda/CUDAFunctions.cpp`).
 
-**Check first:** run `nvidia-smi` and read the driver version before installing. If it is older than r580, use CUDA 12.9 artifacts (`docker pull vllm/vllm-openai:v0.31.0-cu129`) or choose a host image with a newer driver (you usually cannot upgrade the driver inside a rented container).
+**Check first:** run `nvidia-smi` and read the driver version before installing. If it is older than r580, use CUDA 12.9 artifacts (`docker pull vllm/vllm-openai:v0.32.0-cu129`) or choose a host image with a newer driver (you usually cannot upgrade the driver inside a rented container).
 
 **Silent-correctness release.** PyTorch v2.14.1 (2026-09-30) moves its CUDA 13.2 Linux binaries to CUDA 13.2.2 to fix a cuBLAS NVFP4 scaling bug and a compiler bug that "could leave stale or corrupted register values in kernels with nested thread divergence (present since CUDA 12.8)". If you are on torch 2.14.0 with the CUDA 13.2 binaries, upgrade. **When not relevant:** managed APIs (Tinker, Fireworks, Together), or boxes already on driver r580+.
 
@@ -260,7 +349,23 @@ For small models, yes. Unsloth's RL guide gives QLoRA 4-bit GRPO VRAM ≈ the pa
 
 ### `pip install vllm` worked but CUDA fails with "driver is too old" — why?
 
-vLLM 0.31.0's default PyPI wheel is built for CUDA 13.0, which needs NVIDIA driver r580 or newer. Use the CUDA 12.9 artifacts (`vllm/vllm-openai:v0.31.0-cu129`) or a host image with a newer driver; see "Driver and CUDA version check on rented GPUs" above.
+vLLM's default PyPI wheel (0.31.0 and 0.32.0) is built for CUDA 13.0, which needs NVIDIA driver r580 or newer. Use the CUDA 12.9 artifacts (`vllm/vllm-openai:v0.32.0-cu129`) or a host image with a newer driver; see "Driver and CUDA version check on rented GPUs" above. If instead pip says `Ignored the following versions that require a different python version`, or quietly installs an older vLLM, you are on Python 3.10, which vLLM 0.32.0 dropped; see the Python version floor section.
+
+### Which Python version should a new research project use?
+
+Python 3.12. vLLM 0.32.0, SGLang 0.5.22, Inspect AI 0.3.281+, TRL 1.16.0 and ControlArena need at least 3.11, and axolotl 0.21.0, Inspect Petri 3.x and Petri Bloom need at least 3.12 (PyPI `requires_python`, checked 2026-10-20). See the Python version floor section above.
+
+### My vLLM outputs got shorter after upgrading — why?
+
+vLLM 0.32.0 treats `max_tokens` as an upper bound and clamps it to whatever fits after the prompt, instead of rejecting prompts that leave too little room (PR #57035). Check `finish_reason == "length"`. Other 0.32.0 changes that move numbers: an FP8 KV cache by default for GLM-5.x on Blackwell (SM100), and a fix for wrong-expert routing in NVFP4 / MXFP4 MoE models under expert parallelism. See "vLLM 0.32.0 upgrade traps" above.
+
+### How do I get logprobs or activations from a 405B base model for free?
+
+Two options: **NDIF** (Llama 3.1 405B via the nnsight remote backend; see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) and **ACS Infra** (Llama 3.1 405B base and Arcee's Trinity-Large-TrueBase, with a completions API with logprobs, activation harvesting and steering; apply at `infra.acsresearch.org/signup`; MATS can request a batch of accounts). Neither promises full uptime. See the ACS Infra section above.
+
+### Which closed models are being retired soon?
+
+As of 2026-10-20: `o1`, `o3-mini`, `o4-mini`, `gpt-4.1-nano`, `gpt-4-turbo` and `gpt-4o-2024-05-13` shut down 2026-10-23; OpenAI Evals becomes read-only 2026-10-31 and shuts down 2026-11-30; `claude-sonnet-4-5-20250929` retires 2026-11-30; `o3-2025-04-16`, `o3-pro-2025-06-10` and the 2025 GPT-5 snapshots go 2026-12-11; GPT-4o / GPT-4.1 and their fine-tunes go 2027-01-14. Save raw completions before then. Full table: "Closed-model retirements to plan around" above.
 
 ### How do I queue jobs on a shared GPU server where I don't have sudo?
 
@@ -272,4 +377,4 @@ Use **`tmux`** or **`screen`** — start the training inside a tmux session (`tm
 
 ---
 
-Last verified: 2026-10-14. RunPod, vast.ai, Lambda, Modal, Together, Groq all active and supported by mainstream tools. (Additions 2026-10-14: OpenAI fine-tuning dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, quotes exact); Together post-training billing from `docs.together.ai/docs/post-training/{overview,pricing}.md`; the CUDA 13 / driver r580 section from the vLLM v0.31.0 and PyTorch v2.14.1 GitHub release notes, SkyRL's Tinker quickstart and PyTorch's `c10/cuda/CUDAFunctions.cpp`; gpuc from its README and `gh api` repo metadata. The rest of the page was last fully reviewed 2026-04.)
+Last verified: 2026-10-20. RunPod, vast.ai, Lambda, Modal, Together, Groq all active and supported by mainstream tools. (Additions 2026-10-20: ACS Infra from the announcement post (LessWrong GraphQL markdown) and `arcee-ai/Trinity-Large-TrueBase` metadata from the Hugging Face API; NDIF's model list from `ndif.us` (its eligibility rule not found on the homepage); closed-model retirement dates from the raw markdown of OpenAI's and Anthropic's deprecation pages; `requires_python` values from PyPI JSON per version and the Inspect AI CHANGELOG; vLLM 0.32.0 traps from its GitHub release notes and PRs #57035 and #59042. Not verified: ACS Infra's API and activation interface, which are behind sign-up.) (Additions 2026-10-14: OpenAI fine-tuning dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, quotes exact); Together post-training billing from `docs.together.ai/docs/post-training/{overview,pricing}.md`; the CUDA 13 / driver r580 section from the vLLM v0.31.0 and PyTorch v2.14.1 GitHub release notes, SkyRL's Tinker quickstart and PyTorch's `c10/cuda/CUDAFunctions.cpp`; gpuc from its README and `gh api` repo metadata. The rest of the page was last fully reviewed 2026-04.)

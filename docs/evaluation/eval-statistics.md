@@ -15,7 +15,7 @@ multiple comparisons, Bayesian reporting, power) is
 judges is [`evals.md`](evals.md) and
 [`inspect-ecosystem.md`](inspect-ecosystem.md).
 
-All versions and dates below are as of 2026-10-14.
+All versions and dates below are as of 2026-10-14 unless a later date is given.
 
 ## At a glance
 
@@ -29,6 +29,7 @@ All versions and dates below are as of 2026-10-14.
 | One model for "many models × many items" that handles item difficulty and clustering | Bayesian crossed random effects (Bambi) or HiBayES on Inspect logs | [Crossed random effects](#many-models-many-items-a-crossed-random-effects-model-bambi) |
 | Find saturated, broken or uninformative benchmark items; build a small subset | Item response theory (IRT): py-irt; tinyBenchmarks | [IRT](#which-items-carry-the-signal-item-response-theory-py-irt-tinybenchmarks) |
 | Stop an eval early once the answer looks clear | Anytime-valid confidence sequences, or a Bayesian stopping rule (optstop) | [Stopping early](#stopping-an-eval-early-when-run-until-it-looks-significant-is-legitimate) |
+| Tell whether an agent-eval score change is the agent or the scorer | Re-score unchanged trajectories, then repeated paired runs (TRACE) | [Agent evals](#agent-evals-rerun-flips-and-scorer-changes) |
 
 ---
 
@@ -91,7 +92,7 @@ the name of a key in `Sample.metadata` that identifies the shared unit:
 `ci_wilson` with `cluster=` uses a Korn–Graubard effective sample size
 (p̂(1 − p̂) divided by the clustered variance of the mean, capped at n) and a
 Student-t critical value with `clusters − 1` degrees of freedom. The latest
-release is 0.3.280 (2026-10-14).
+release is 0.3.282 (2026-10-19), which needs Python ≥3.11.
 
 ```python
 from inspect_ai.dataset import Sample
@@ -472,6 +473,18 @@ and look once.
 
 ---
 
+## Agent evals: rerun flips and scorer changes
+
+Agentic evals add two sources of variation that a static benchmark lacks: the same agent on the same task can succeed on one run and fail on the next, and the verifier or judge can change what it rewards when you change something unrelated about the harness.
+
+**How big.** Gaonkar, "TRACE: Diagnosing Verifier Brittleness in Agentic Evaluation" (arXiv:[2610.11678](https://arxiv.org/abs/2610.11678), 2026-10-08), on τ²-bench tasks with four LLM agents: "Identical reruns flip 15-36% of task outcomes, so single-run comparisons cannot separate presentation effects from run-to-run variation." Two frontier LLM judges were each consistent when a fixed trajectory was presented differently, "yet disagree with each other on 57% of the same records, largely because one grades procedure rather than outcome." In a synthetic suite, renaming tools lowered a scripted agent's score by 0.250 although it performed exactly the same operations. Jia et al. (arXiv:[2610.24048](https://arxiv.org/abs/2610.24048)) report reruns of thinking agents on AgentDojo disagreeing with single-run labels up to 35% of the time.
+
+**Protocol (TRACE's, in short).** When a harness change (tool names, output format, prompt) moves a score: (1) re-score the **unchanged** trajectories with the changed scorer — if the gap appears there, the scoring rule moved, not the agent; (2) run each condition several times per task and compare **paired** per-task success rates, not single runs; (3) check whether the agent's behaviour actually changed in the transcripts. For the paired comparison itself, use the methods in [Paired comparisons](#paired-comparisons-can-this-benchmark-resolve-the-gap-the-resolution-ratio-q), with the task (not the run) as the unit, and cluster repeated runs by task ([Clustered items](#clustered-items-passages-images-problem-sheets-and-shared-tasks)).
+
+**When not to bother:** deterministic, single-turn scoring with temperature 0 and a fixed exact-match scorer, where reruns do not vary (check once that they don't).
+
+---
+
 ## Pitfalls, with the symptoms you'd actually see
 
 - **``ValueError: Sample <id> has no cluster metadata. To compute `stderr` with
@@ -514,7 +527,7 @@ and look once.
 
 ---
 
-Last verified: 2026-10-14. Drafted by Claude; pending MATS research-staff
+Last verified: 2026-10-20 (added the agent-eval rerun section from arXiv 2610.11678 and 2610.24048 abstracts; Inspect latest release 0.3.282 from the CHANGELOG). Earlier: 2026-10-14. Drafted by Claude; pending MATS research-staff
 review. Sources checked: Inspect `src/inspect_ai/scorer/_metrics/std.py` and
 CHANGELOG (`stderr(cluster=)` v0.3.64, `ci()` 0.3.260, `ci_wilson()` 0.3.262,
 latest 0.3.280); inspect_evals issue #2605 (body and tables); arXiv:2605.30315
