@@ -2,7 +2,7 @@
 
 Starter scaffolds for **model organisms of misalignment** — models deliberately made to exhibit a hypothesized failure mode (backdoor / sleeper agent, emergent misalignment, alignment faking, persona traits) so the field can study detection, mitigation, and monitoring against a known ground truth. ("Model organism" is borrowed from biology: a controllable simple system used to study mechanisms relevant to harder ones.)
 
-These templates cover both **construction** (LoRA fine-tuning a real organism) and **measurement/detection** (eval + analysis scaffolding around it). They ship **no misalignment training data and no dangerous-capability recipes** — only a tiny toy dataset for pipeline-testing and a loader for the public Emergent Misalignment data. The fine-tuning runs on a GPU box (local, `nathan-lambda`, or **Modal**'s cloud GPUs), not the laptop; everything else (eval, judging, analysis) is laptop-safe.
+These templates cover both **construction** (LoRA fine-tuning a real organism) and **measurement/detection** (eval + analysis scaffolding around it). They ship **no misalignment training data and no dangerous-capability recipes** — only a tiny toy dataset for pipeline-testing and a loader for the public Emergent Misalignment data. The fine-tuning runs on a GPU box (local, or **Modal**'s cloud GPUs), not the laptop; everything else (eval, judging, analysis) is laptop-safe.
 
 ## Layout
 
@@ -50,7 +50,7 @@ laptop-safe, ~$0.10 smoke); `example_2` is a stub (needs a GPU). Each imports
 
 - **You want to fine-tune the organism *on a laptop*.** You can't — LoRA SFT
   needs a CUDA GPU. The fine-tuning (`finetune.train_lora`, the example's
-  `train.py` / `train_modal.py`) runs on a local GPU, `nathan-lambda`, or Modal's
+  `train.py` / `train_modal.py`) runs on a local GPU or Modal's
   cloud GPUs; only the eval/analysis is laptop-safe. See `example_1`'s "From
   prompt-only to the real thing" and `docs/oversight-and-control/rl-training.md`.
 - **You want to use an organism *inside a control protocol*** (untrusted policy in
@@ -149,7 +149,7 @@ saved sample before then. OpenAI fine-tuning itself is closed to new
 organisations (since 2026-05-07) and to everyone from 2027-01-06; the
 fine-tuning path here is open-weight LoRA. Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
 Qwen2.5-0.5B** (per the efficient-organism result, arXiv:2506.11613), run on a
-local GPU, `nathan-lambda`, or **Modal**'s cloud GPUs; the trained adapter is
+local GPU or **Modal**'s cloud GPUs; the trained adapter is
 served back for eval via `serve.hf_local_backend` or a vLLM endpoint.
 
 See [`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md) for the
