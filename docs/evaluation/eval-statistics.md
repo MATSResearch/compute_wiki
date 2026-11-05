@@ -92,7 +92,7 @@ the name of a key in `Sample.metadata` that identifies the shared unit:
 `ci_wilson` with `cluster=` uses a Korn–Graubard effective sample size
 (p̂(1 − p̂) divided by the clustered variance of the mean, capped at n) and a
 Student-t critical value with `clusters − 1` degrees of freedom. The latest
-release is 0.3.282 (2026-10-19), which needs Python ≥3.11.
+release is 0.3.287 (2026-10-31), which needs Python ≥3.11.
 
 ```python
 from inspect_ai.dataset import Sample
@@ -479,9 +479,11 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
 
 **How big.** Gaonkar, "TRACE: Diagnosing Verifier Brittleness in Agentic Evaluation" (arXiv:[2610.11678](https://arxiv.org/abs/2610.11678), 2026-10-08), on τ²-bench tasks with four LLM agents: "Identical reruns flip 15-36% of task outcomes, so single-run comparisons cannot separate presentation effects from run-to-run variation." Two frontier LLM judges were each consistent when a fixed trajectory was presented differently, "yet disagree with each other on 57% of the same records, largely because one grades procedure rather than outcome." In a synthetic suite, renaming tools lowered a scripted agent's score by 0.250 although it performed exactly the same operations. Jia et al. (arXiv:[2610.24048](https://arxiv.org/abs/2610.24048)) report reruns of thinking agents on AgentDojo disagreeing with single-run labels up to 35% of the time.
 
+**The judge reruns too.** The same effect appears in LLM judges with nothing else changed. Yorke (arXiv:[2610.30512](https://arxiv.org/abs/2610.30512)): GPT-4.1 judging 500 Arena-Hard v2.0 prompts at temperature zero on a pinned model version; "Rerunning the default setup moves the aggregate score by about one point but changes the win/tie/loss outcome on 21.2% of prompts." An unchanged aggregate therefore says nothing about whether per-item verdicts are repeatable; if you use per-item verdicts (as labels, or to compare conditions item by item), rerun the judge and report item-level agreement. More judge-reliability results: [`evals.md`](evals.md#how-far-can-i-trust-one-llm-judge-run-reliability-results-from-octobernovember-2026).
+
 **Protocol (TRACE's, in short).** When a harness change (tool names, output format, prompt) moves a score: (1) re-score the **unchanged** trajectories with the changed scorer — if the gap appears there, the scoring rule moved, not the agent; (2) run each condition several times per task and compare **paired** per-task success rates, not single runs; (3) check whether the agent's behaviour actually changed in the transcripts. For the paired comparison itself, use the methods in [Paired comparisons](#paired-comparisons-can-this-benchmark-resolve-the-gap-the-resolution-ratio-q), with the task (not the run) as the unit, and cluster repeated runs by task ([Clustered items](#clustered-items-passages-images-problem-sheets-and-shared-tasks)).
 
-**When not to bother:** deterministic, single-turn scoring with temperature 0 and a fixed exact-match scorer, where reruns do not vary (check once that they don't).
+**When not to bother:** deterministic, single-turn scoring with temperature 0 and a fixed exact-match scorer, where reruns do not vary (check once that they don't). Note that Claude models can no longer be run at temperature 0 through Anthropic API version `2026-10-21` (the default of the `anthropic` SDK ≥2.0.0, which Inspect ≥0.3.283 requires; Inspect's `anthropic` provider now drops `temperature` with a warning), so Claude runs through that provider are sampled and reruns vary.
 
 ---
 
@@ -509,6 +511,31 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
   towards the classical interval. Check judge–human agreement on the labelled
   subset; improving the judge helps more than adding unlabelled items. Also
   check `alpha`: the default 0.1 gives a 90% interval.
+- **"The model scores 5.0/16" — under which aggregation over seeds?** Best-of-k
+  and worst-of-k over the same runs are different numbers. Smirnov
+  ("Tracking the Cyber Capabilities of Cheap Open-Weight Models", LessWrong
+  2026-10-28): MiMo-V2.6-Pro on the 41 ExploitBench CVEs, three seeds: "the
+  same runs score 5.0/16 under best-of-3 but 3.6/16 under worst-of-3, a 38%
+  difference from the scoring choice alone". Vendor cards mix definitions (the
+  Kimi K3.1 Pro card reports ExploitBench as a "pass@5 maximum-capability
+  score": best of five seeds). State k and the aggregation (best-of-k,
+  worst-of-k, mean) with every multi-seed number, and compare only like with like.
+- **A doubling time that moves when you change the floor.** A trend fitted to a
+  bounded score (accuracy, rubric points) depends on where the zero is; time
+  horizons measured in human-task minutes do not. Jackson ("Measuring agent
+  capabilities on open-ended AI R&D tasks", LessWrong 2026-10-27, edited
+  2026-10-29): floor-normalising scores to the weakest model (gpt4-turbo)
+  "changes the overall median doubling time from 11.5 months to 8.6 months",
+  and the authors weakened their comparison with METR's doubling times for that reason.
+  Report the zero point and refit under an alternative before comparing a
+  score trend with a time-horizon trend.
+- **Same outputs, different accuracy.** The rule that turns free-form text into
+  a multiple-choice letter can move accuracy by up to 22 points on identical
+  outputs, and by exactly 0 for a model that emits clean letters (Hasan &
+  Lwowski, arXiv:[2611.03377](https://arxiv.org/abs/2611.03377), eight
+  multimodal benchmarks), so a gap between a terse and a verbose model can be
+  a scorer effect. Report the non-compliance rate and the score under at least
+  two extraction rules.
 - **py-irt will not install on Python 3.12 or later.** Its `requires_python` is
   `<3.12`; uv reports that no compatible version exists. Use a separate
   Python 3.11 environment for the IRT fit.
@@ -527,7 +554,7 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
 
 ---
 
-Last verified: 2026-10-20 (added the agent-eval rerun section from arXiv 2610.11678 and 2610.24048 abstracts; Inspect latest release 0.3.282 from the CHANGELOG). Earlier: 2026-10-14. Drafted by Claude; pending MATS research-staff
+Last verified: 2026-11-04 (Additions 2026-11-04: judge-rerun paragraph from the arXiv 2610.30512 abstract; scoring-rule pitfall from the 2611.03377 abstract; seed-aggregation pitfall from Smirnov's LessWrong post body (2026-10-28) and the ExploitBench footnote of the `moonshotai/Kimi-K3.1-Pro` model card; doubling-time pitfall from Jackson's LessWrong post body and its 2026-10-29 edit note; temperature note from Inspect PR #6003; Inspect latest release 0.3.287 from the CHANGELOG.) Earlier: 2026-10-20 (added the agent-eval rerun section from arXiv 2610.11678 and 2610.24048 abstracts; Inspect latest release 0.3.282 from the CHANGELOG). Earlier: 2026-10-14. Drafted by Claude; pending MATS research-staff
 review. Sources checked: Inspect `src/inspect_ai/scorer/_metrics/std.py` and
 CHANGELOG (`stderr(cluster=)` v0.3.64, `ci()` 0.3.260, `ci_wilson()` 0.3.262,
 latest 0.3.280); inspect_evals issue #2605 (body and tables); arXiv:2605.30315

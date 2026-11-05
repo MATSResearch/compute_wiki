@@ -416,8 +416,8 @@ about 20 models, where item parameters are poorly identified. Fitting:
 
 ### Plots straight from Inspect logs: Inspect Viz
 
-**Inspect Viz** (`inspect-viz` on PyPI, `meridianlabs-ai/inspect_viz`; 0.4.1,
-2026-07-09) has pre-built views over the dataframes from `inspect_ai.analysis`:
+**Inspect Viz** (`inspect-viz` on PyPI, `meridianlabs-ai/inspect_viz`; 0.4.2,
+2026-10-19, which requires Python ≥ 3.11 and adds `HtmlPage` for several views on one page) has pre-built views over the dataframes from `inspect_ai.analysis`:
 `scores_by_task`, `scores_by_model`, `scores_by_factor`, `scores_timeline`,
 `sample_tool_calls`, and `scores_by_limit` (success rate against a token or
 time budget, with a confidence band; its docs pitch it as answering "*Will
@@ -565,7 +565,7 @@ labels rather than indices. Three more that matter specifically at grid scale:
 
 ---
 
-Last verified: 2026-10-14. Drafted by Claude for Nathan's review; pending MATS
+Last verified: 2026-11-04 (addition 2026-11-04: Inspect Viz 0.4.2 version, Python floor and `HtmlPage` from its release notes via `gh api` and PyPI JSON). Earlier: 2026-10-14. Drafted by Claude for Nathan's review; pending MATS
 research-staff review. Citations checked against source: dataset cartography
 (Swayamdipta et al., EMNLP 2020, `allenai/cartography`); gradient noise scale
 (McCandlish et al., 2018); tuned lens (Belrose et al., `tuned-lens`, learns a

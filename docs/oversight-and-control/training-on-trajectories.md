@@ -228,7 +228,20 @@ what yours does before logging text and re-tokenising later.
   an arbitrary agent harness through an LLM-endpoint proxy and lists
   retokenisation, sample merging, advantage calculation and loss normalisation
   as the hard parts of training on a harness's own request–response pairs.
-- **OpenEnv + Harbor `TrainingTrace`** (`huggingface/OpenEnv`, PyPI `openenv` 0.8.0, 2026-10-08). For loop-owning harnesses, OpenEnv's Harbor integration "captures every model call as a framework-neutral `TrainingTrace`", which TRL's `AsyncGRPOTrainer` trains on; per the OpenEnv README it "runs Claude Code, Codex, OpenCode, mini-swe-agent and other harnesses on Harbor tasks, and captures the exact tokens for RL". TRL also has its own Harbor integration for white-box `environment_factory` training (`trl.experimental.harbor`, `pip install trl[harbor]`). Details in [`rl-frameworks.md`](rl-frameworks.md#rl-environment-libraries-openenv-verifiers-harbor-openreward).
+  v1.0.3 (2026-11-03) added "opt-in trajectory prefix-mismatch diagnostics to
+  help identify possible retokenization mismatches without changing training
+  tensors" — a built-in check for exactly the drift this page warns about — and
+  fixed rewards being cast to bfloat16 before GRPO advantages in ≤1.0.2
+  (details in [`rl-frameworks.md`](rl-frameworks.md#agent-lightning-microsoft--rl-for-agents-in-their-own-harness)).
+- **Reading sessions back through the Claude Agent SDK (Python): upgrade to
+  ≥0.2.170 first.** Its CHANGELOG for 0.2.170 (GitHub release 2026-10-21):
+  "`get_session_messages` and `get_session_messages_from_store` now return
+  every tool call and result from turns that ran tools in parallel. Previously
+  only one branch of the forked transcript was followed, dropping some calls
+  and results (#1422)". Trajectory datasets extracted with older versions are
+  missing tool calls and observations *non-randomly* (only in parallel-tool
+  turns); re-extract before training or analysing them.
+- **OpenEnv + Harbor `TrainingTrace`** (`openenv/OpenEnv` on GitHub, redirected from `huggingface/OpenEnv`; PyPI `openenv` 0.8.0, 2026-10-08, latest 0.11.0, 2026-10-29). For loop-owning harnesses, OpenEnv's Harbor integration "captures every model call as a framework-neutral `TrainingTrace`", which TRL's `AsyncGRPOTrainer` trains on; per the OpenEnv README it "runs Claude Code, Codex, OpenCode, mini-swe-agent and other harnesses on Harbor tasks, and captures the exact tokens for RL". TRL also has its own Harbor integration for white-box `environment_factory` training (`trl.experimental.harbor`, `pip install trl[harbor]`). Details in [`rl-frameworks.md`](rl-frameworks.md#rl-environment-libraries-openenv-verifiers-harbor-openreward).
 - **`verifiers` 0.4.0 traces and compaction** (PrimeIntellect-ai, 2026-10-12). Per the release notes, traces "carry training logprob/entropy annotations, sampling masks, and serialized token counts; rejected compaction attempts are excluded from training", and "**Bash context compaction is enabled by default.**" A compacted trajectory is not the context the model would have seen without compaction, so record compaction events with the trace, set `compaction.summarize_at_tokens` deliberately, or disable compaction when you need verbatim observations.
 - **Per-model turn terminators.** Tinker Cookbook v0.5.7 (2026-09-03) is a
   one-line fix titled "Make GLM-5.3 train the turn terminator on every
@@ -294,4 +307,8 @@ post (GraphQL, post `wBsEFfQFteHSWCtsv`, 2026-06-08; quotes exact); OpenEnv
 `TrainingTrace` from the OpenEnv README and TRL `docs/source/harbor.md`;
 verifiers v0.4.0 trace and compaction notes from its GitHub release notes.
 
-Last verified: 2026-10-14.
+Last verified: 2026-11-04. (Additions 2026-11-04: Agent Lightning v1.0.3
+release notes via `gh api`; Claude Agent SDK (Python) `CHANGELOG.md` entry for
+0.2.170 and its GitHub release date via `gh api`; OpenEnv repo redirect and
+PyPI `openenv` 0.11.0 via `gh api` and PyPI JSON. Quotes are exact substrings of
+those sources.)

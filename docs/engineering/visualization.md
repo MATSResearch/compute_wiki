@@ -45,7 +45,7 @@ The libraries throughout are **Matplotlib** (`matplotlib` on PyPI),
 | **Plotly** (`plotly.express` / `plotly.graph_objects`) | Interactive exploration, hover-to-inspect, and HTML reports you send to someone. Writes a self-contained `.html`. | Static publication figures — the exported static images need `kaleido` and are fiddlier than Matplotlib. |
 | **Altair** (`altair`) | Declarative grammar-of-graphics plots, especially faceted small multiples. | Very large datasets — it embeds data in the spec and gets slow past ~5k rows without special handling. |
 | **pyobsplot** (`pyobsplot` on PyPI, `juba/pyobsplot`; v0.5.4, 2025-07-11) | Observable Plot from Python dicts, as a notebook widget (Jupyter, marimo, Quarto) or static SVG/PNG/PDF via typst (`uv add "pyobsplot[typst]"`). | Tooltips in static output (SVG, PNG, PDF, static HTML) — interactions exist only in the widget format; and the `typst` extra does not work under pyodide (JupyterLite, marimo WebAssembly). |
-| **Inspect Viz** (`inspect-viz` on PyPI, `meridianlabs-ai/inspect_viz`; 0.4.1, 2026-07-09) | Pre-built views over Inspect AI log dataframes: `scores_by_task`, `scores_by_model`, `scores_by_factor`, `scores_by_limit`, `sample_tool_calls`, with tooltips that can link to published log transcripts (when the data has a `log_viewer` column). | Fully styled paper figures — it is interactive-first (static export is covered in its Publishing docs); Matplotlib is simpler for exact control. |
+| **Inspect Viz** (`inspect-viz` on PyPI, `meridianlabs-ai/inspect_viz`; 0.4.2, 2026-10-19, Python ≥ 3.11) | Pre-built views over Inspect AI log dataframes: `scores_by_task`, `scores_by_model`, `scores_by_factor`, `scores_by_limit`, `sample_tool_calls`, with tooltips that can link to published log transcripts (when the data has a `log_viewer` column). | Fully styled paper figures — it is interactive-first (static export is covered in its Publishing docs); Matplotlib is simpler for exact control. |
 
 ```python
 # Inspect Viz, from its docs: a parquet written from inspect_ai.analysis dataframes
@@ -221,7 +221,7 @@ This is where dimensionality-reduction figures mislead, whatever the algorithm:
 
 **Embedding Atlas** (`embedding-atlas` on PyPI, `apple/embedding-atlas` on
 GitHub, Apple; Ren, Hohman, Lin and Moritz,
-[arXiv:2505.06386](https://arxiv.org/abs/2505.06386); v0.25.0, 2026-10-03,
+[arXiv:2505.06386](https://arxiv.org/abs/2505.06386); v0.26.0, 2026-10-15,
 Python ≥ 3.11) is a browser app for exploring a large embedded collection:
 density contours, automatic cluster labels, nearest-neighbour search, and
 linked charts over the other columns that cross-filter each other. The README
@@ -373,8 +373,8 @@ properly — prefer them over a menu when they fit.
 
 ## Reactive notebooks for exploring results: marimo
 
-**marimo** (`marimo` on PyPI, `marimo-team/marimo` on GitHub; 0.25.1,
-2026-10-01; Apache-2.0; Python ≥ 3.10) is a reactive Python notebook. Running a
+**marimo** (`marimo` on PyPI, `marimo-team/marimo` on GitHub; 0.25.2,
+2026-10-19; Apache-2.0; Python ≥ 3.10, and 3.15 supported from 0.25.2) is a reactive Python notebook. Running a
 cell, or moving a slider, re-runs the cells that depend on it (or marks them
 stale), so the notebook cannot hold hidden state left by deleted or
 out-of-order cells, a common reason a Jupyter result does not reproduce. The
@@ -401,6 +401,13 @@ dashboard's report viewer, a marimo export containing such a widget did not
 render at all in a 2026-10 test (marimo 0.25.1), because the widget loads its
 code from a `data:` URL. For a report someone else will open, export static
 figures (PNG/PDF) or Plotly HTML alongside.
+
+**Dark-mode figures changed in 0.25.2.** Up to 0.25.1, marimo switched
+Matplotlib, Plotly, Bokeh and HoloViews to a dark theme when the notebook was
+dark, which the release notes say gave unexpected results, "especially in saved
+figures". From 0.25.2, "Plots now use the plotting library's own settings"; set
+a theme explicitly if you want dark plots. A figure saved from a dark notebook
+looks different before and after the upgrade.
 
 **When not to use it.** When collaborators depend on Jupyter-only extensions,
 or when the deliverable is a self-contained HTML report that has to keep
@@ -443,13 +450,14 @@ column ends up with 5-point text. Set the figure to its printed size and the
 fonts to the paper's sizes from the start.
 
 **tueplots** (`tueplots` on PyPI, `pnkraemer/tueplots` on GitHub, University of
-Tübingen; v0.2.5, 2026-10-12) returns plain Matplotlib `rcParams` dictionaries
+Tübingen; v0.2.6, 2026-11-02) returns plain Matplotlib `rcParams` dictionaries
 with figure size (from the template's text width), font sizes and fonts for a
 given venue. It keeps no global state: you apply the dictionary with
 `plt.rcParams.update(...)` or scope it with `plt.rc_context(...)`. Bundles as
 of v0.2.5 include `neurips2021`–`neurips2024`, `icml2022`, `icml2024`,
 `iclr2023`, `iclr2024`, `colm2026`, `aistats2022`/`2023`/`2025`, `cvpr2024`,
-`aaai2024`, `uai2023`, `eccv2024`, `tmlr2023` and `jmlr2001`. There is no
+`aaai2024`, `uai2023`, `eccv2024`, `tmlr2023` and `jmlr2001`; v0.2.6 adds a
+`tufte_book` bundle. There is no
 NeurIPS 2025/2026 or ICML 2025/2026 bundle yet; it is worth checking the newest
 template's `\textwidth` against the closest bundle before relying on it.
 
@@ -549,7 +557,7 @@ fig.savefig(run_dir / "plots" / "sweep.png", dpi=200, bbox_inches="tight")  # ra
 
 ---
 
-Last verified: 2026-10-14. Drafted by Claude for Nathan's review — the
+Last verified: 2026-11-04 (additions 2026-11-04: Inspect Viz 0.4.2, Embedding Atlas 0.26.0, marimo 0.25.2 and tueplots 0.2.6 release notes via `gh api` and versions from PyPI JSON; the `tufte_book` bundle read from `tueplots/bundles.py` at v0.2.6; the marimo dark-theme change quoted from the 0.25.2 release notes). Earlier: 2026-10-14. Drafted by Claude for Nathan's review — the
 recommendations here are a first pass and have not yet been reviewed by the MATS
 research staff. Matplotlib, seaborn, Plotly and Altair APIs verified against
 current releases. PaCMAP (JMLR 2021) and LocalMAP (AAAI 2025,

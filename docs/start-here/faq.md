@@ -23,7 +23,7 @@ A reproduction. Pick one paper from [`model-organisms.md`](../alignment-science/
 
 ### What should I install first?
 
-For a typical Python safety research project: `uv` for environment management; `inspect-ai` and `inspect-evals` if you'll do evals; `safety-tooling` (from `safety-research` GitHub org) for multi-provider LLM API access with caching; `transformers`, `torch`, `vllm` if you'll touch open-weight models; `wandb` for experiment tracking. Most papers will ask for additional packages — install per-project, not globally. Use `uv venv && uv pip install ...`.
+For a typical Python safety research project: `uv` for environment management; `inspect-ai` and `inspect-evals` if you'll do evals; `safety-tooling` (from `safety-research` GitHub org) for multi-provider LLM API access with caching; `transformers`, `torch`, `vllm` if you'll touch open-weight models; `wandb` for experiment tracking. Most papers will ask for additional packages — install per-project, not globally. Use `uv venv --python 3.12 && uv pip install ...`: pin the Python version, because uv 0.13 and later download Python 3.15 when nothing is pinned and no suitable Python is installed, and vLLM 0.33.0 does not install on 3.15. Add `exclude-newer = "1 week"` under `[tool.uv]` so a re-lock skips releases less than a week old (the malicious `litellm==1.107.0` of 2026-10-21 was on PyPI for under two hours). See [`code-recipes.md`](../engineering/code-recipes.md#standard-pyprojecttoml-baseline).
 
 ### Can I use Claude Code for this?
 
@@ -31,7 +31,7 @@ Yes — Claude Code (the CLI) works well as a coding assistant for safety resear
 
 ### Is it safe to install a Claude Code skill or plugin I found on GitHub?
 
-Treat it like running someone's script: a skill is instructions your agent follows, and code it may run, with your permissions. Read it first (`gh skill preview OWNER/REPO SKILL`), install a pinned version (`gh skill install OWNER/REPO SKILL --pin <tag-or-SHA> --agent claude-code`), and optionally scan it with Cisco's `skill-scanner` — whose best measured setting still misses about a third of held-out malicious skills, so reading it remains the real check. Skip install routes that tell your agent to fetch and follow a remote instruction file. Details: [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#third-party-skills-and-plugins-installing-safely).
+Treat it like running someone's script: a skill is instructions your agent follows, and code it may run, with your permissions. Read it first (`gh skill preview OWNER/REPO SKILL`, with `gh` 2.102.0 or later, which fixed an option-injection bug in `gh skill search`), and search it for lines that loosen oversight (`--no-verify`, "without asking", `--dangerously-skip-permissions`), which scanners mostly miss; install a pinned version (`gh skill install OWNER/REPO SKILL --pin <tag-or-SHA> --agent claude-code`), and optionally scan it with Cisco's `skill-scanner` — whose best measured setting still misses about a third of held-out malicious skills, so reading it remains the real check. Skip install routes that tell your agent to fetch and follow a remote instruction file. Details: [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#third-party-skills-and-plugins-installing-safely).
 
 ### My agent says the run will take three hours. Should I believe it?
 
@@ -91,7 +91,7 @@ Tinker for managed RL/SFT without GPU management (the default for most fellows i
 
 ### Should I use Claude / GPT-4o / Gemini for my judge model?
 
-The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. Print the judge's per-class label counts too: small graders can silently never assign a class (one 8B/9B grader labelled zero of 900 jailbreak responses "compliance"), and several judges agreeing with each other is not agreement with humans (see [`measurement-validity.md`](../engineering/measurement-validity.md#the-grader-is-an-instrument-too)). See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
+The Owain-Evans-team default is GPT-4o (often via majority voting). Claude Sonnet 4.x or Opus 4.x are also common. For most behavioral-safety scoring, validate the judge on a hand-labeled subset before trusting it on a full eval set; whichever judge survives validation is the right one. Print the judge's per-class label counts too: small graders can silently never assign a class (one 8B/9B grader labelled zero of 900 jailbreak responses "compliance"), and several judges agreeing with each other is not agreement with humans. Re-running a conclusion with a judge from a second provider is a weak check: in a preregistered study of 4,000 Chatbot Arena battles ([arXiv:2611.04090](https://arxiv.org/abs/2611.04090)), five judges from three providers had median Cohen's kappa 0.22 with the human vote, and Kendall's tau with the human ranking ranged from 0.17 to 0.89 depending on the judge. GPT-4o is also scheduled for shutdown on 2027-01-14 (see [`compute.md`](../models-and-compute/compute.md)), so a GPT-4o judge will not be re-runnable after that date (see [`measurement-validity.md`](../engineering/measurement-validity.md#the-grader-is-an-instrument-too)). See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
 
 ### Should I do interp or behavioral work?
 
@@ -145,7 +145,7 @@ The exception is a **model diff** (what fine-tuning changed in the weights or ac
 
 ### Should I use temperature 0?
 
-For evals: yes, unless you're explicitly studying sampling. Even at temp 0, closed APIs aren't bit-deterministic — log seeds and run multiple times if reproducibility matters. For RL training rollouts: no, you want diversity (typically temp 0.7–1.0).
+For evals: yes where the API allows it, unless you're explicitly studying sampling. Even at temp 0, closed APIs aren't bit-deterministic — log seeds and run multiple times if reproducibility matters. **Claude is the exception:** on Anthropic API version `2026-10-21` (the default of the `anthropic` Python SDK 2.x), a request that sends `temperature`, `top_p` or `top_k` returns HTTP 400 even at the default value, and Claude 4.7 and later accept only the default anyway. Inspect AI does not choose the API version itself: from 0.3.283 it requires `anthropic` 2.0 or later and no longer sends these parameters, logging a warning, so the run does not fail. Either way, a temperature-0 baseline of Claude 4.6 or older from an older SDK is not comparable to a rerun on the new one. Record the API and SDK versions; details in [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals). For RL training rollouts: no, you want diversity (typically temp 0.7–1.0).
 
 ### Do I need to release my code?
 
@@ -198,4 +198,4 @@ Decide which level of "done" you want and say it out loud to your mentor. Jo Jia
 
 ---
 
-Last verified: 2026-10-20 (additions 2026-10-20: the model-diff seed exception, arXiv:2610.17093; judge per-class counts, arXiv:2610.24872 and 2610.13303; both checked against the arXiv abstract pages). Earlier: 2026-10-14 (additions: skill-install safety, agent time estimates, mentor-update format, levels of "done").
+Last verified: 2026-11-04 (additions 2026-11-04: interpreter pin and dependency cooldown (uv 0.13.0 CHANGELOG, uv resolution docs, vLLM 0.33.0 PyPI metadata, BerriAI/litellm issue #47826); `gh` 2.102.0 release notes; oversight-loosening directives, arXiv:2610.37734; cross-provider judges, arXiv:2611.04090 — both checked against the arXiv abstracts; the Anthropic `2026-10-21` sampling-parameter rule from Anthropic's migration guide; the GPT-4o shutdown date as already stated in compute.md). Earlier: 2026-10-20 (additions 2026-10-20: the model-diff seed exception, arXiv:2610.17093; judge per-class counts, arXiv:2610.24872 and 2610.13303; both checked against the arXiv abstract pages). Earlier: 2026-10-14 (additions: skill-install safety, agent time estimates, mentor-update format, levels of "done").

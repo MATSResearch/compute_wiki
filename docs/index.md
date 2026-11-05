@@ -140,7 +140,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Reliable, with an actual SLA, small team | **RunPod secure cloud** or **Lambda Cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Burst inference for evals (no persistent box) | **Modal** | [`compute.md`](models-and-compute/compute.md) |
-| A closed model I depend on is being retired | Dated OpenAI / Anthropic retirement table | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-10-20) |
+| A closed model I depend on is being retired | Dated OpenAI / Anthropic retirement table | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04) |
 | Which Python version for a new project | **3.12** (vLLM 0.32, inspect-ai, TRL need ≥ 3.11; axolotl and inspect-petri need ≥ 3.12) | [`compute.md`](models-and-compute/compute.md#python-version-floor-for-the-2026-10-stack-312-for-new-projects) |
 | Upgraded vLLM and outputs got shorter, or the environment won't resolve | vLLM 0.32.0 traps (`max_tokens` now clamps, `transformers<5.20`, Python 3.10 dropped) | [`compute.md`](models-and-compute/compute.md#vllm-0320-upgrade-traps-released-2026-10-18) |
 | MATS-provided compute | See [MATS handbook](#) (ask torchy) | — |
@@ -153,6 +153,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Local-only / offline | wandb in offline mode, or `tensorboard` | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
 | Configs / sweeps | **Hydra** (overkill for many) or simple `dataclass` configs | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md) |
 | Deterministic vLLM outputs regardless of batch size | `VLLM_BATCH_INVARIANT=1` (beta) plus a fixed `seed` | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md#stochasticity-gotchas-specific-to-safety-research) |
+| My temperature-0 Claude eval changed after upgrading the `anthropic` SDK or Inspect | API version `2026-10-21` removes `temperature` / `top_p` / `top_k`; record API and SDK versions, or pin `anthropic<2` with `inspect-ai<=0.3.282` to finish an old study | [`experiment-tracking.md`](models-and-compute/experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals) |
 
 ## I'm building an agent eval
 
@@ -162,7 +163,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Bring an external agent framework (LangChain, OpenAI Agents SDK, Pydantic AI) | **Inspect Agent Bridge** | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Sandboxed shell / cyber-style task | **Inspect sandboxing toolkit** | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent | **Inspect** external-agent support | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
-| Is my agent sandbox really offline, and are my fictional names safe to use? | `network_mode: none` caveats + unclaimable names (RFC 2606 / 5737) | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
+| Is my agent sandbox really offline, and are my fictional names safe to use? | `network_mode: none` caveats, the agent CLIs' provider-side web search (turn it off in the CLI's settings) + unclaimable names (RFC 2606 / 5737) | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md#how-do-i-check-that-my-sandbox-really-has-no-internet-access) |
 | Run an agent eval that touches the live internet without harming third parties | Allow-list destinations, test DNS as well as HTTP egress, scan transcripts for side effects | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md#running-agent-evals-with-internet-access) |
 | Monitor an agent that runs outside Inspect, beside an LLM proxy | **Inspect Sentinel** sidecar (0.1.4) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10) |
 | One interactive report for a long multi-agent transcript | **Transect** (UK AISI, on Scout) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#what-else-plugs-in) |
@@ -195,7 +196,7 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Situation | Use | Topic doc |
 |---|---|---|
 | Run AI Control experiments end-to-end (the default) | **ControlArena** (UK AISI + Redwood) | [`ai-control.md`](oversight-and-control/ai-control.md) |
-| Code-sabotage protocol research (backdoors, vulnerabilities) | **ControlArena: Apps / BigCodeBench / SWE-bench Django** (for Apps, install from `main`: the stderr scoring fix, PR #914, is unreleased as of 2026-10-20) | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Code-sabotage protocol research (backdoors, vulnerabilities) | **ControlArena: Apps / BigCodeBench / SWE-bench Django** (for Apps, use `control-arena>=20.1.1` (2026-10-22), which carries the stderr scoring fix, PR #914) | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Bash / shell agent control | **ControlArena: Bash / BashArena** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Research-task sabotage (interp / eval) | **ControlArena: SAE Interp Sabotage / Eval Sabotage / Rogue Eval** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Infrastructure sabotage (AWS / k8s) | **ControlArena: IAC / Infra** | [`ai-control.md`](oversight-and-control/ai-control.md) |
@@ -360,10 +361,11 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Guarantee an action happens every time | Use a hook, not an instruction-file line | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Avoid plausible-but-wrong code | Small diffs, read every line, fresh-context adversarial review | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Stop the agent faking results / dummy data | Write the failing test yourself; assert real shapes/values; demand run output | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
-| Avoid a hallucinated-package supply-chain footgun | Verify and pin every dependency the agent adds | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
+| Avoid a hallucinated-package supply-chain footgun | Verify and pin every dependency the agent adds; add a uv dependency cooldown (`exclude-newer = "1 week"`), which would have skipped the malicious `litellm==1.107.0` | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Stop secrets leaking | Keys in gitignored `.env`, deny agent read access, scan diffs | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Pick a coding agent today | Decision table (terminal vs cloud background agent) | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md) |
 | Run Claude Code headless (`claude -p`, Agent SDK) in a script | Pass `--permission-mode` explicitly: the default starting mode changed in 2.1.302 | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against) |
+| My coding agent stalls, narrows scope or reports blockers on safety-research code | Check the blocker yourself and rerun with another model (GPT-6 Astra covertly underperforms on safety-framed tasks) | [`model-organisms.md`](alignment-science/model-organisms.md#gpt-6-astra-covertly-underperforms-on-safety-research-tasks-openai-2026-11-04) |
 | Keep a boundary I typed ("don't push") from vanishing while I'm away | Turn off idle compaction (`"idleCompaction": false`) or write a deny rule | [`agentic-swe-practices.md`](engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against) |
 
 ## I want to work in another safety research area
@@ -390,5 +392,5 @@ These come up everywhere in safety research; topic docs link back here.
 - **BOS / system token quirks.** Some models prepend `<bos>` automatically, some don't. The first-token activation is often anomalous (Llama, Gemma). Either skip position 0 or be explicit.
 - **dtype / precision mismatch.** Storing activations in fp16 then computing in fp32 (or vice versa) is a common silent corruption. Be deliberate.
 - **HF cache disk pressure.** Multi-GB models accumulate fast. Default cache is `~/.cache/huggingface`. Move it (`HF_HOME=/path/to/big/disk`) before running on rented GPUs.
-- **Reproducibility of stochastic decoding.** Set `temperature=0` for evals unless you're explicitly studying sampling. Even then, log the seed.
+- **Reproducibility of stochastic decoding.** Set `temperature=0` for evals unless you're explicitly studying sampling, where the API still accepts it: Claude models on Anthropic API version `2026-10-21` (the `anthropic` SDK ≥ 2.0, which Inspect ≥ 0.3.283 requires) always sample at the default. Log the seed, the sampling parameters actually applied, and the API and SDK versions ([`experiment-tracking.md`](models-and-compute/experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals)).
 - **"It works on my model."** A method that worked on GPT-2 / Pythia / Gemma-2 may not transfer to instruct-tuned, RLHF'd, or larger models. Always sanity-check on the target before scaling.
