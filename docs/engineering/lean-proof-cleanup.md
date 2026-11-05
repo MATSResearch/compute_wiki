@@ -110,6 +110,22 @@ exactly the reviewed statements with only the permitted axioms, which is the
 preservation boundary above made mechanical for those theorems (helpers and
 definitions outside the challenge still need the manual comparison).
 
+For a definition the cleanup touches, the check has to follow the definition
+into every theorem that uses it. **ProofPatch** (Che, Xu, Xiang, Khan,
+[arXiv:2611.01357](https://arxiv.org/abs/2611.01357), October 2026, single
+preprint; no code link in the paper) is built for this: it stores a reviewer's
+decision on a Lean statement with fingerprints of the statement "as Lean
+elaborated it and of the definitions it depends on", so notation and
+formatting edits leave the decision intact while "a changed definition reaches
+every theorem that uses it", and a pinned declaration blocks any patch that
+changes it, whether a person or a large language model (LLM) agent wrote the
+patch. The abstract reports no change to a pinned statement getting through in
+344 runs of an LLM agent. With no code linked, the same idea by hand: compare
+the elaborated types of the public theorems (`#check @MyNamespace.my_theorem`
+with `set_option pp.all true`) and the elaborated bodies of the definitions
+they use (`#print` on each definition) before and after cleanup, not their
+source text.
+
 When compilation is unavailable, preserve the known checked artifact and label
 the edited candidate unchecked. Avoid replacing a verified deliverable with an
 unverified one simply because it looks better.
@@ -139,4 +155,4 @@ well as successes and adjust the skill to demonstrated failure modes.
 
 ---
 
-Last verified: 2026-10-20. (Addition 2026-10-20: the `grind` example from the lean4-skills v4.11.4 release notes via `gh api`. The rest of the page, editorial guidance and two cited papers, was not re-checked in this pass.)
+Last verified: 2026-11-04. (Addition 2026-11-04: ProofPatch from the arXiv:2611.01357 abstract and PDF, which gives no code link; the `pp.all` comparison is a suggested manual equivalent, not taken from the paper.) (Addition 2026-10-20: the `grind` example from the lean4-skills v4.11.4 release notes via `gh api`. The rest of the page, editorial guidance and two cited papers, was not re-checked in this pass.)

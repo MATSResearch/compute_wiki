@@ -131,16 +131,32 @@ The [Lean tactic reference](https://lean-lang.org/doc/reference/latest/Tactic-Pr
 describes search tactics such as `exact?` and `apply?`; availability and behavior
 should be checked in the pinned environment.
 
+Two October 2026 additions, both single preprints: **Lean Finder V2**
+(Lu et al., [arXiv:2610.30843](https://arxiv.org/abs/2610.30843);
+`leanfinder.github.io`), a Mathlib semantic search engine trained for the short,
+ambiguous queries people and agents actually type, reporting "at least 11%
+relative improvement over the previous best Mathlib semantic search engines" on
+the MathlibQR benchmark (whether lean-lsp-mcp's `lean_leanfinder` tool calls V2
+is not documented); and **Vampire-Hammer** (Bodingbauer and Kovács,
+[arXiv:2610.40310](https://arxiv.org/abs/2610.40310); `vprover/vampire-hammer`,
+Apache-2.0), a hammer that sends goals to the Vampire automated theorem prover
+through Lean-auto and reconstructs kernel-checked proofs; with a 10-second
+budget on 196,083 eligible Mathlib theorems it "solves 21,158 problems not
+solved by other evaluated tools". When not to use a hammer: where a reader needs
+to follow the argument, since the reconstructed step does not show it.
+
 ## Agent tooling for Lean: lean-lsp-mcp, lean4-skills, LeanInteract, provers
 
 Lean FRO = the Lean Focused Research Organization, which maintains Lean.
 
 | I want to… | Use |
 |---|---|
-| Let Claude Code or another agent read goals, diagnostics and hover info from a Lean project | **lean-lsp-mcp** |
+| Let Claude Code or another agent read goals, diagnostics and hover info from a Lean project | **lean-lsp-mcp** (0.33.0 or later) |
+| An agent interface maintained by the Lean FRO, shipped inside the toolchain: speculative tactic runs, module checkpoints, a `sorry` finder | **Lean Beam** (`lean-beam`, `lean-beam-mcp`; bundled from Lean v4.36.0-rc2, beta) |
 | A packaged prove / disprove / golf workflow for the agent | **lean4-skills** (Cameron Freer), or the wiki's `mats-lean-*` skills — [pick one](#mats-lean-skills-or-lean4-skills-pick-one-per-project) |
 | Script many proof attempts or tactic steps from Python | **LeanInteract** (`lean-interact`); **kimina-lean-server** to check proofs in parallel behind an HTTP API |
-| Hand a whole Lean project's `sorry`s, or a LaTeX paper, to a hosted prover | **Aristotle** (Harmonic, `aristotlelib`) |
+| Check the proofs of an existing LaTeX paper in Lean, result by result | **KAPPA** (statistics papers, unattended) or **PaperFormalizer** (author in the loop); **Numina Fuse** as an interactive app — [details](#checking-an-existing-papers-proofs-in-lean-kappa-paperformalizer-numina-fuse) |
+| Hand a whole Lean project's `sorry`s to Harmonic's hosted prover | Not with current **Aristotle**: `aristotlelib` 3.0.0 (2026-10-27) and later verify Verilog, C and Rust, not Lean — [details](#aristotle-aristotlelib-30-no-longer-takes-lean) |
 | A cheap local first pass (pass@k) on competition-style statements | Open-weight provers: **Pythagoras-Prover** (4B, 32B), **Goedel-Prover-V2** (8B, 32B) |
 | See how a Claude Code–based proving agent is put together | **Numina-Lean-Agent** (architecture reference; no LICENSE file) |
 | A baseline to beat before crediting a specialised prover harness with a gain | **mini-Lean-agent** (bash as the only tool, separate trusted evaluator) |
@@ -169,14 +185,92 @@ calls it a beta research tool and suggests its Docker image for stricter
 isolation, with `LEAN_MCP_DISABLED_TOOLS=lean_run_code` as the container
 default. Search results still need checking against the pinned Mathlib.
 
-**Aristotle** (Harmonic; `aristotlelib` on PyPI, v2.1.0 as of 2026-10;
-`aristotle.harmonic.fun`). A hosted proving agent with a Python SDK and an
-`aristotle` command-line tool: `aristotle submit "Fill in all sorries"
---project-dir ./my-lean-project --wait`, or `aristotle formalize paper.tex`.
-It needs an `ARISTOTLE_API_KEY` from a sign-up; pricing and access terms are
-unverified here. When not to use it: when the project's code or statements
-cannot leave your machine, or when you need to see how a proof was found.
-Treat its output like any other untrusted proof: check it yourself.
+**lean-lsp-mcp before 0.33.0: a failed tactic can look like a closed goal.**
+This affects only the optional Lean REPL accelerator (enabled with
+`LEAN_REPL=true` or `uvx lean-lsp-mcp --repl`), which serves `lean_run_code`
+and line-based `lean_multi_attempt`; column-based attempts use the language
+server and are unaffected. Per the fix (PR #239, released in v0.33.0 on
+2026-11-03): "The Lean read-eval-print loop (REPL) returned native errors in
+`message`, while the adapter read `error`. Failed tactics could therefore
+appear to return no goals or diagnostics." Symptom: a tactic trial returning
+no goals and no diagnostics. `uvx` reuses a cached tool environment and does
+not pick up a new release on its own, so use `uvx lean-lsp-mcp@latest` (or
+`uv tool upgrade lean-lsp-mcp` for an installed copy). A final `lake build`
+and comparator check still catch a proof that was never closed; the cost on
+older versions is wasted search on a false lead.
+
+### Lean Beam: the Lean FRO's agent interface, bundled with the toolchain
+
+**Lean Beam** (`leanprover/lean-beam` on GitHub, Apache-2.0; commands
+`lean-beam`, `beam-daemon`, `lean-beam-mcp`). Lean FRO = the Lean Focused
+Research Organization. A command-line tool and Model Context Protocol (MCP)
+server, written in Lean, that keeps a Lean project's module context alive
+across requests. Its README lists speculative execution (`runAt`: "try
+commands and tactics in a file's context without changing its source", with
+independent attempts run concurrently), `save` (a module checkpoint from the
+state the server already checked, without batch re-elaboration), `sync`
+(wait for current diagnostics) and `todo` (find sorries, holes, diagnostics
+and incomplete proofs), plus goals, hover, definitions and references. The
+Lean v4.36.0-rc2 release notes (2026-10-27) say PR #15665 "adds Lean Beam's
+CLI, MCP server, daemon, and LSP plugin to Linux and macOS release
+toolchains"; Windows distribution is deferred. On older toolchains, the
+standalone installer (`./scripts/install-beam.sh --claude --claude-mcp` from a
+checkout) installs it for Linux or macOS; its compatibility policy gives a
+supported Lean window of 4.34–4.36, so v4.33 and older are out. "Bundled binaries do not install an
+agent skill": install the Lean skill from the matching Beam release yourself.
+
+When not to use it: on a toolchain older than v4.34 (outside its supported
+window), or expecting a bundled copy on the stable v4.35.0 toolchain (it ships
+only from the 4.36 release candidates; use the standalone install there); as a
+sandbox ("Beam is for
+non-adversarial development. Speculative requests isolate Lean elaboration
+state; they do not provide an OS sandbox for Lean IO"); or as a verifier, which
+remains `lake comparator`. The README calls it "beta software, and its
+interfaces may change". Running it beside lean-lsp-mcp gives the agent two
+tool sets for the same job, so pick one per project.
+
+**Why the interface matters.** Moalla, Rammal, Patel, Munos and Kempe
+([arXiv:2610.35962](https://arxiv.org/abs/2610.35962), "h1: A Taste of the
+Bitter Lesson in Automated Theorem Proving", single preprint) give a model an
+efficient Lean 4 interface and a plain loop of verifier feedback and
+self-reflection, with no imposed
+decomposition, and report that at matched models it "matches or outperforms
+specialized workflows such as Goedel-Architect and AlphaProof Nexus"; their
+ablations find "simplicity alone is not enough: an efficient Lean interface
+largely determines cost and solve rate". Read with mini-Lean-agent
+(arXiv:2610.17331, a bash-only baseline agent): before building a proving
+workflow, try a frontier model with a fast Lean interface (Lean Beam,
+lean-lsp-mcp) and plain feedback.
+
+### Aristotle (`aristotlelib` 3.0+) no longer takes Lean
+
+**Aristotle** (Harmonic; `aristotlelib` on PyPI, `harmonic-ai/aristotle` on
+GitHub, `aristotle.harmonic.fun`). Up to v2.1.0 (PyPI 2026-06-18) this was a
+hosted Lean prover driven by `aristotle submit "Fill in all sorries"
+--project-dir ./my-lean-project --wait` or `aristotle formalize paper.tex`.
+From **3.0.0** (2026-10-27) it is a code verifier. The current PyPI
+description: "It verifies Verilog and C, and Rust on accounts where Rust is
+enabled. Send your code as it is: Aristotle writes the Lean itself. It doesn't
+verify pure mathematics or Lean: a project with only Lean files runs and
+verifies nothing." The 3.0.0 changelog removes `aristotle formalize` and ask
+mode; 3.2.0 (2026-10-31) makes `submit` exit 2 before uploading when only
+`.lean` files would go up, and deprecates the Lean-toolchain helpers
+`get_lean_toolchain_version()` and `get_expected_toolchain()`.
+
+Searchable symptoms of an old workflow on 3.x: `aristotle formalize` no longer
+exists (the 3.0.0 changelog says "Removed" and points to `submit` with
+Verilog, C or Rust code instead); `aristotle submit` on a Lean-only folder exits 2; a script that
+treated exit 0 as success changes behaviour, because 3.0.0 moved every command
+onto one exit-code table (in 2.1.0 "a handled error exited 0 (a missing or rejected key, rate
+limiting, `cancel` finding no task)"; now a missing or rejected key exits 5 and
+rate limiting exits 6). Whether Harmonic still serves Lean proving to the 2.x
+client, or through another product, is not stated in the package
+documentation, so pinning `aristotlelib==2.1.0` is not a known-good route.
+When not to use it: for Lean or pure-mathematics work at all; for Verilog, C or
+Rust verification, when the code cannot leave your machine. Treat any prover's
+output as an untrusted proof and check it yourself.
+
+### Scripted checking, open-weight provers and reference agents: LeanInteract, kimina-lean-server, Pythagoras, Goedel, Numina-Lean-Agent, mini-Lean-agent, lean-eval
 
 **LeanInteract** (`lean-interact` on PyPI, v0.11.6 released 2026-10-18;
 `augustepoiroux/LeanInteract` on GitHub, MIT). A Python package that drives
@@ -277,6 +371,48 @@ a problem counts as solved if and only if comparator accepts the submission.
 Use it to compare provers on fixed statements; it does not measure whether a
 formalization captures an informal claim.
 
+### Checking an existing paper's proofs in Lean: KAPPA, PaperFormalizer, Numina Fuse
+
+Three October 2026 tools, each from a single preprint, take a paper (not a
+competition problem) as input:
+
+- **KAPPA** ("Kit of Agents for Proof-checking Papers with a proof Assistant";
+  `ziwaa-se/kappa` on GitHub, MIT; She and Wang,
+  [arXiv:2610.35596](https://arxiv.org/abs/2610.35596)). Claude Code agents
+  translate a LaTeX statistics paper's proofs into Lean 4 and Mathlib, following
+  the paper's own proof step by step, and give each numbered result one of four
+  verdicts: "verified unconditionally; verified conditionally, with every cited
+  or unproved input stated as a named hypothesis; issue recorded …; or
+  unfinished". Separate agents write and review, and each statement is compared
+  with the paper before it is proved. On three published statistics papers,
+  checked blind in their pre-correction versions, "the kit found the published
+  error at the step that the correction names". The same model given the papers
+  directly with Lean "reported some statements narrower than the paper's as
+  proved". Scope: three research papers plus four constructed examples; the
+  paper's runs used Lean 4.19.0 and Claude Code 2.1.296.
+- **PaperFormalizer** (`Jiyuan-Tan/PaperFormalizer` on GitHub; GitHub detects no
+  standard licence; Tan, Blanchet and Syrgkanis,
+  [arXiv:2610.31810](https://arxiv.org/abs/2610.31810)). An author-in-the-loop
+  LaTeX → Lean pipeline that runs inside Claude Code or Codex. It builds a
+  dependency graph of the paper's statements, audits each in natural language,
+  then formalizes and proves against Mathlib. It "stops and asks the author
+  whenever a statement admits more than one reading" and leaves the author
+  "every decision that could potentially change what the paper claims". For
+  your own paper; check the licence before reusing its code.
+- **Numina Fuse** (`project-numina/fuse-desktop` on GitHub, **AGPL-3.0**; Asher
+  et al., [arXiv:2610.33860](https://arxiv.org/abs/2610.33860)). A desktop app in
+  which a user supervises an AI orchestrator on a Lean project through
+  blueprint, dependency-graph and code views, while agents run for hours. The
+  paper reports its use on a formalization of the three-dimensional Kakeya
+  conjecture. AGPL-3.0 matters if you modify and serve it.
+
+When not to use them: as a substitute for reviewing the statements. Each tool
+makes statement review a step, but a "verified" verdict is still a Lean proof
+of the formal statement, and the
+[statement-fidelity checks](#checking-that-a-formal-statement-says-what-the-informal-one-does)
+still apply. A whole-paper run spends agent time on every result; formalizing only the
+subclaim that matters is often the better trade.
+
 ## Interpret the evidence
 
 Keep the informal claim next to the theorem's actual type, relevant definitions,
@@ -301,8 +437,9 @@ counterexample; distinguish that contribution from a completed proof.
 
 ### Checking that a formal statement says what the informal one does
 
-Statement fidelity is the step no Lean checker covers. Two October 2026
-resources for it:
+Statement fidelity is the step no Lean checker covers, and as provers get
+stronger "the burden of correctness shifts from the proof to the statement"
+(SemantEq, arXiv:2610.32919). October 2026 resources for it:
 
 - **AnnalsChallenge** (`ImperialCollegeLondon/AnnalsChallenge`, Apache-2.0;
   Browning, Hristova, Ledvinka, Springer, Su, McKoen, Buzzard,
@@ -326,8 +463,40 @@ resources for it:
   (the fraction of incorrect statements accepted). Built for special-function
   identities from the NIST Digital Library of Mathematical Functions; the
   numerical check does not apply to definitions, limits or infinite sums.
+- **Proving `P ↔ Q` against a reference formalization "proves too much"**
+  (SemantEq; Li, Ammanamanchi, Bhat, Jamdar, Lin, Biderman,
+  [arXiv:2610.32919](https://arxiv.org/abs/2610.32919); `hlxr89/SemantEq`,
+  Apache-2.0). If the library proves both statements, a prover can pass
+  through `P ↔ True ↔ Q`, so the stronger the prover, the more unrelated pairs
+  pass an equivalence check; a language model "proves both directions of about
+  two in five of the non-equivalent pairs" under two of four prompts. SemantEq
+  instead requires a chain of allowed steps (logical rearrangement, rewriting
+  with the library's own equations), judged on the proof term Lean checks, not
+  the tactic script. The abstract reports its model-free search at 100%
+  precision and 65.6% recall on the ProofNetVerif test split, against 95.8%
+  and 61.8% for BEq+. Use it when you check an autoformalized statement
+  against a trusted reference; it does not help when no reference exists.
+- **Project-level review: MechAlign and LeanReviewBench** (Shen, Qiu, Zhi, Gao,
+  [arXiv:2610.35269](https://arxiv.org/abs/2610.35269)). A main theorem's meaning
+  depends on definitions scattered across a development. Its LeanTrace tool
+  extracts the statement dependency graph (definition bodies and structure
+  constraints, no proof bodies, stopping at a library boundary) as context for
+  an LLM reviewer. The paper calls its review of 201 main results from 173
+  OpenAI Math projects "preliminary", and releases LeanReviewBench, 501
+  claim–statement–context triples from OpenAI Math, Fermat's Last Theorem and
+  Kakeya, for comparing such reviewers.
+- **Keeping a review valid as the code changes: ProofPatch** (Che, Xu, Xiang,
+  Khan, [arXiv:2611.01357](https://arxiv.org/abs/2611.01357); no code link in the
+  paper). A reviewer's decision on a statement is stored with fingerprints of the
+  elaborated statement and of the definitions it depends on, and "any
+  declaration can be pinned so that a patch changing it is blocked, whether a
+  person or an agent built on a large language model (LLM) wrote the patch".
+  The abstract reports that "in 344 runs of an LLM agent no change to a pinned
+  statement got through", and that "kernel evidence flags unfaithful ones with
+  precision 0.88 to 0.96" on 1,527 labelled statements. Useful where an agent
+  edits a development for a long time after its statements were reviewed.
 
-When not to rely on either: an LLM review of a statement, even with these
+When not to rely on any of these: an LLM review of a statement, even with these
 checks, is evidence for fidelity, not a proof of it; for a published result a
 human still reconciles each quantifier and assumption with the informal claim.
 
@@ -530,7 +699,7 @@ AI, formal corrigibility results), see
 
 ---
 
-Last verified: 2026-10-20. (Additions 2026-10-20: LeanInteract v0.11.6
+Last verified: 2026-11-04. (Additions 2026-11-04: Aristotle 3.x from the `harmonic-ai/aristotle` CHANGELOG.md (3.0.0, 3.1.0, 3.2.0) via `gh api` and the PyPI `aristotlelib` description and upload dates; lean-lsp-mcp PR #239 text, v0.33.0 release notes and README "REPL Setup" via `gh api`, PyPI upload date; `uvx` caching from uv `docs/concepts/tools.md`; Lean Beam from the `leanprover/lean-beam` README and licence via `gh api`, its `docs/COMPATIBILITY.md` (Lean 4.34–4.36 window), lean4 PR #15665 and the v4.36.0-rc2 release notes on lean-lang.org (which mention no `lake comparator` or `lake check` change); KAPPA (arXiv:2610.35596 abstract and PDF sections 7.1 and "Computational details"; repository and licence via `gh api`), PaperFormalizer (arXiv:2610.31810 abstract; repository via `gh api`), Numina Fuse (arXiv:2610.33860 abstract; licence via `gh api`), h1 (arXiv:2610.35962 abstract), SemantEq (arXiv:2610.32919 abstract; repository via `gh api`), MechAlign (arXiv:2610.35269 abstract and PDF), ProofPatch (arXiv:2611.01357 abstract and PDF, searched for a code link), Lean Finder V2 (arXiv:2610.30843 abstract) and Vampire-Hammer (arXiv:2610.40310 abstract and PDF; repository via `gh api`).) (Additions 2026-10-20: LeanInteract v0.11.6
 release notes, README and PyPI; `leanprover/comparator` archived flag via the
 GitHub API; Lean v4.36.0-rc1 release date; lean4-skills v4.11.4 release notes;
 mini-Lean-agent (arXiv:2610.17331 abstract and PDF, repository via the GitHub

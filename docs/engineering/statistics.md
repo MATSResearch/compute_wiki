@@ -233,6 +233,14 @@ finding, and plenty of published work does without them.
   training randomness to average over and item variance dominates.
 - If a result *only* appears at one seed, that is a finding about fragility, and
   worth saying plainly.
+- **A binary per-seed verdict needs far more seeds than the number it summarises.**
+  In one reinforcement-learning audit (Reveron-Fonseca, Oct 2026,
+  [arXiv:2610.33816](https://arxiv.org/abs/2610.33816), one XLand-MiniGrid task),
+  separating training-seed, map and evaluation randomness showed "about ten paired
+  seeds detect a 10-point gap in final success", while the binary "task acquired"
+  verdict "is 76% evaluation noise and would need about a hundred seeds for the same
+  gap". Compare the continuous metric across paired seeds, and re-evaluate each
+  checkpoint more than once so evaluation noise is not booked as seed variance.
 
 Treat a seed sweep as an "if there is time and compute left" strengthening step,
 not as a gate. What is not optional is **saying which error bar you drew**:
@@ -318,6 +326,17 @@ in a parallel-coordinates plot does exactly this selection.
 - **Keep failed runs in the table.** Dropping them makes the surviving configs
   look more reliable than they are (survivorship).
 - **Confirm the chosen config on held-out data** before reporting its number.
+- **Score every candidate on the same items.** Viakhirev, Borodin & Mkrtchian (Oct 2026,
+  [arXiv:2610.31948](https://arxiv.org/abs/2610.31948), single preprint, theorems
+  verified in Lean 4) give sharp worst-case bounds on how far the best of M unbiased
+  noisy scores overstates the winner: c·√V, with V the sum of the candidates' score
+  variances and c = √((M−1)/(2M)) for independent noise (each candidate on its own
+  items) or (M−1)/M for pairwise nonnegatively correlated noise (typically shared
+  items). The bound is a ceiling you can compute from the per-candidate variances you
+  already have. In their 448 language-model and classifier selection settings, at a
+  fixed item budget, shared items gave "a median 4.9 times less optimism than
+  per-candidate items"; the nonnegative-correlation assumption failed in one of nine
+  populations, so check it on your data before using the (M−1)/M constant.
 
 The same selection effect hits prompt optimisers. Lumer, Sen, Subbiah & Paul (Oct 2026,
 [arXiv:2610.12601](https://arxiv.org/abs/2610.12601)) ran GEPA (reflective prompt
@@ -595,6 +614,17 @@ many safety evals live. See
 - **`scipy.stats.bootstrap` returns `nan`** — your statistic returned `nan` for
   at least one resample, typically a mean over an empty slice. Filter empties
   first.
+- **A disattenuated correlation above 1.** Spearman's correction for attenuation
+  (divide the observed correlation by the square root of the two measures'
+  estimated reliabilities, for example split-half or across-seed reliabilities of
+  a per-example difficulty score) is unstable when a reliability estimate is small
+  or noisy. Li & Ni (Oct 2026, [arXiv:2610.38015](https://arxiv.org/abs/2610.38015),
+  single preprint) report that on two CIFAR-100 difficulty scores "it returned
+  correlations above one in 70 of 100 classes", and prove its mean squared error is
+  infinite. Their gated rule corrects only when both reliabilities pass a
+  significance test and then divides by their upper confidence bounds, so the
+  output stays bounded (coverage guarantees assume Gaussian noise). Otherwise report
+  the uncorrected correlation beside the reliabilities.
 - **Comparing against best-of-N.** If the baseline is one sample and your method
   takes the best of 8, the comparison is meaningless. Match the sampling budget.
 - **"Fine-tuning moved the representation by X" with no rerun band.** Two reruns of
@@ -654,13 +684,15 @@ many safety evals live. See
 - Whether the instrument can see the effect at all (saturated cells,
   denominators, graders, harness artefacts, censoring):
   [`measurement-validity.md`](measurement-validity.md).
+- Checking the proofs in a statistics paper with Lean and agents (KAPPA):
+  [`lean-formalization.md`](lean-formalization.md#checking-an-existing-papers-proofs-in-lean-kappa-paperformalizer-numina-fuse).
 - Eval-specific statistics (clustered items, resolution ratio q, LLM-judge
   correction with PPI, crossed random effects, item response theory, early
   stopping): [`eval-statistics.md`](../evaluation/eval-statistics.md).
 
 ---
 
-Last verified: 2026-10-20 (additions: four pitfalls pointing at measurement-validity.md; the model-diff rerun band, arXiv:2610.17093; the GEPA prompt-optimiser selection example, arXiv:2610.12601; the anytime-valid exfiltration monitor, arXiv:2610.11843 — all three checked against their arXiv abstract pages; the rare-behaviour worked example from Apollo's GLM-5.3 post, read via LessWrong GraphQL, with its posterior mean, interval and the 0.25 comparison recomputed in SciPy). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
+Last verified: 2026-11-04 (additions 2026-11-04: the winner's-bias constants and the 4.9× shared-items median from arXiv:2610.31948 abstract and PDF sections 1 and 5; the seed and binary-verdict numbers from arXiv:2610.33816 abstract; the disattenuation result and gated rule from arXiv:2610.38015 abstract and PDF section on Algorithm 1. Earlier additions 2026-10-20: four pitfalls pointing at measurement-validity.md; the model-diff rerun band, arXiv:2610.17093; the GEPA prompt-optimiser selection example, arXiv:2610.12601; the anytime-valid exfiltration monitor, arXiv:2610.11843 — all three checked against their arXiv abstract pages; the rare-behaviour worked example from Apollo's GLM-5.3 post, read via LessWrong GraphQL, with its posterior mean, interval and the 0.25 comparison recomputed in SciPy). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
 rule (2018) and BEST (2013); ArviZ default credible levels (0.94 in 0.x, 0.89 in 1.x) verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical

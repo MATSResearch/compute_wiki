@@ -38,8 +38,21 @@ models produce plausible references that do not exist and misattribute findings
 to papers that do. Orchestra Research's `ml-paper-writing` skill puts the rule
 as "**NEVER generate BibTeX entries from memory. ALWAYS fetch
 programmatically.**" (it also quotes a "~40% error rate" for AI-generated
-citations without giving a source for the figure). Three sources that work as of
-2026-10-14, all checked on PaperBench (arXiv:2504.01848):
+citations without giving a source for the figure).
+
+**Asking for citations makes it worse, in post-trained models.** A pre-registered
+study (Naboulsi, [arXiv:2611.01313](https://arxiv.org/abs/2611.01313), 2026-10-31;
+900 questions in case law, scientific and medical literature; twelve to fifteen
+open-weights checkpoints across post-training stages) reports: "Asking for
+citations raises fabrication sharply in post-trained checkpoints and not in base
+ones: a 47.8-point interaction on twelve checkpoints", and "Post-training also
+raises fabrication overall, from 4.8% to 56.7%". Its answer to whether this is
+reward hacking is "possibly, but not proven". Open-weights models only; the
+practical reading is that a prompt saying "cite your sources" invites more invented
+references, so resolve every one.
+
+Three sources that work as of 2026-10-14, all checked on PaperBench
+(arXiv:2504.01848):
 
 ```bash
 # arXiv's own BibTeX for an arXiv ID
@@ -64,6 +77,19 @@ its arXiv version.
 `arxiv-mcp-server`'s `export_citations` tool does the same from inside an agent
 ("Export BibTeX for one or more arXiv IDs", from "Authoritative arXiv
 metadata").
+
+### Checking a bibliography someone (or something) already wrote: CiteAnchor
+
+**CiteAnchor** (Tong, Nie, Zhang, [arXiv:2610.30355](https://arxiv.org/abs/2610.30355),
+2026-10-21; code `oldwizard7/CiteANCHOR_code` on GitHub, MIT) is a research
+pipeline that checks whether each citation is valid and, separately, whether a
+unique real source can be recovered for it, with retrieval and field-level checks
+adapted to the source type. It ships CiteResolve, a benchmark of 423 real
+hallucinated citations. The authors report 0.841 F1 on an existing detection
+benchmark with GPT-5.6 Luna as the backbone. **When not to use it:** for your own
+bibliography, where fetching each entry from metadata (above) is simpler and
+exact; it is a research artifact, not a maintained tool, and needs an LLM
+backbone.
 
 ## arxiv-mcp-server: read papers in bounded sections
 
@@ -204,13 +230,14 @@ README names Claude 3.7 Sonnet as the primary generator with any LiteLLM model
 usable — and uses OpenAI's moderation API if an OpenAI key is present.
 
 **When not to use it:** as a search of LessWrong / Alignment Forum or
-unpublished work; or for a known-paper lookup (the Semantic Scholar API is
-faster).
+unpublished work; for a known-paper lookup (the Semantic Scholar API is
+faster); or as a settled verdict on a contested question (see "Can I trust an
+agent's literature summary?" below).
 
 ## Hugging Face MCP server
 
 The official **Hugging Face MCP server** (`huggingface/hf-mcp-server`, MIT,
-v0.4.30 released 2026-10-13) is hosted at `https://huggingface.co/mcp`:
+v0.4.33 released 2026-11-04) is hosted at `https://huggingface.co/mcp`:
 
 ```bash
 claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login
@@ -317,6 +344,20 @@ metadata (above), and for a claim about what a paper found, keep the verbatim
 quote beside it — the shape Asta's `check-claims` uses (`quote`, `cite`,
 `provenance`) works without Asta.
 
+### Can I trust an agent's literature summary?
+
+Treat its conclusions as more settled than the sources are. Singha Roy, Wadhwa
+and Durrett ([arXiv:2610.35793](https://arxiv.org/abs/2610.35793), "Quantifying
+Claim Smoothing by LLM Research Agents", 2026-10-26) find that deep-research
+reports "read as confident syntheses but ... fail to accurately reflect the
+underlying documents": "In collapsing diverse and potentially conflicting
+sources into a single narrative, the model discards the evidential
+"jaggedness" of its corpus", and "Across 7 systems and 4 datasets, we find that
+agents consistently produce stronger claims than warranted" (no effect sizes in
+the abstract). A cheap counter: for each conclusion in a generated review, ask
+for the strongest source that disagrees with or qualifies it, with a verbatim
+quote, and read the two papers that carry the most weight yourself.
+
 ### Which of these keeps my unpublished work local?
 
 PaperQA2 indexes local files but sends text to whichever LLM you configure
@@ -347,4 +388,4 @@ queries were run on 2026-10-14; Semantic Scholar endpoints and ID formats from
 its published `swagger.json`. Drafted by Claude; pending MATS research-staff
 review.
 
-Last verified: 2026-10-14.
+Last verified: 2026-11-04. (Additions 2026-11-04: arXiv:2611.01313, 2610.30355 and 2610.35793 checked against their abstracts (numbers quoted from the abstracts); the CiteANCHOR_code repository and its licence via `gh api`; Hugging Face MCP server v0.4.33 release date via `gh api`.)

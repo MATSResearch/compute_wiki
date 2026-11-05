@@ -43,6 +43,9 @@ pitfalls), [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md
 | score with a logit readout (yes/no, A/B) | that the scored token IDs appear in greedy decodes | a space-prefixed token can make the readout score a token the model never emits |
 | report an attack success rate or a grader's rate | per-class label counts, the named grader, the attempt budget | one grader assigned "compliance" zero times in 900 responses |
 | tune a judge panel's rubric | agreement with human labels, not with each other | more inter-judge consensus did not move agreement with experts |
+| confirm a judge-based ranking by re-running it with another provider's judge | agreement with human labels | swapping the judge changed system rankings (Kendall τ with humans 0.17–0.89) |
+| let an LLM annotate text about named people | the label rate on texts that say nothing about the attribute | famous names raise remembered-attribute labels the text does not support |
+| credit an architecture (memory, recurrence) with a gap | a baseline given the obvious confound feature (time step) | a memory-free multilayer perceptron (MLP) told the time step came within 3.3 points of a long short-term memory (LSTM) agent |
 | compare models on one aggregate safety score | per-category results, saturation, the label definition | one number can average distinct behaviours or encode a labelling policy |
 | trust a monitor's score on an agent-trajectory dataset | a cue-only baseline and domain-held-out folds | shell-command length predicts LinuxArena labels |
 | write the limitations of a scheming eval | construct, content and external validity | in a review of 19 loss-of-control studies, none achieved high external validity |
@@ -205,6 +208,12 @@ answer to position A and lift llama-30B by 15 points, past gpt-3.5-turbo;
 moving it to D drops gpt-3.5-turbo by 6. Alzahrani et al. 2024
 (arXiv:2402.01781) shift MMLU leaderboard positions by up to 8 places with
 option-order and answer-extraction changes alone.
+The number of in-context examples is a setting of the same kind: Li & Ni (Oct
+2026, [arXiv:2610.38015](https://arxiv.org/abs/2610.38015)) report that "On ARC,
+Qwen2-1.5B trails Llama-3.2-3B by 3.8 points with no examples in the prompt and
+leads by 16.6 with two", and that across four benchmarks, averaging the two
+settings names one winner for 15 of 16 such reversals. They compare models
+within each prompt setting instead.
 
 **Recommended check.** Treat wording sensitivity as a quantity to estimate,
 not a nuisance to pick through. Run a small paraphrase family (the existing
@@ -347,6 +356,51 @@ and the PPI section of [`../evaluation/eval-statistics.md`](../evaluation/eval-s
 cover turning judge labels into a valid interval. For an automated auditor such as
 Petri, pilot the configuration and report what context the auditor was given.
 
+### Is a second judge from another provider a check? Judge swaps, paraphrased judge prompts, memory shortcuts
+
+Three more large language model (LLM) judge and annotator failure shapes from
+October–November 2026 preprints:
+
+- **Cross-provider replication is a weak check.** Han & Kim
+  ([arXiv:2611.04090](https://arxiv.org/abs/2611.04090), preregistered, with a disclosed post-registration reduction of the judge set) had five
+  judges from three providers re-judge 4,000 Chatbot Arena battles that carry human
+  votes. Verdict-level agreement with the human vote was low ("median Cohen's kappa
+  = 0.22") and "Kendall's tau with the human ranking ranged from 0.17 to 0.89
+  (median 0.67)". Requiring two low-cost judges from different providers to agree
+  raised precision by 0.10, but "the gain came from filtering out one poorly aligned
+  judge", and judges' disagreements with humans co-occurred more than independence
+  predicts (one human vote per battle cannot separate shared judge bias from voter
+  noise). Two judges agreeing is not validation; agreement with a human-labelled
+  subset is.
+- **Paraphrasing the judge prompt changes verdicts.** Subasic et al.
+  ([arXiv:2610.38076](https://arxiv.org/abs/2610.38076), "Prompt Lottery") find
+  meaning-preserving rephrasings of a judge prompt alter outcomes and in some
+  settings reverse model rankings; in a 10-annotator user study, LLM judges showed
+  "6-9× larger agreement degradation under prompt rephrasings than humans".
+  Aggregating over several prompt variants improved robustness. Mehrabi,
+  Aliannejadi & Siro ([arXiv:2610.31172](https://arxiv.org/abs/2610.31172); 9
+  prompting strategies, 4 open-weight judges, 27 languages) find "the choice of the
+  judge model dominates the choice of prompting strategy" and that "strategy
+  effects reverse direction across judges", worst in low-resource languages, so a
+  judge-prompt recipe validated on one judge does not transfer.
+- **An annotator fills silence from memory.** Wang & Song
+  ([arXiv:2611.02273](https://arxiv.org/abs/2611.02273); 995 public figures, each
+  with four matched control names, three commercial LLMs) find no model follows
+  memory over the text when the two conflict, but when the text is silent, "for one
+  model, famous names raise the rate of remembered occupations, ages, and countries
+  by 17.0, 14.9, and 6.8 percentage points relative to synthetic names"; "98.6% of
+  the resulting labels are factually correct about the namesake while none is
+  supported by the text". Evaluation-threat wording and answer-contingent rewards
+  in the instructions amplified it. Name masking or a namesake reminder each removed
+  the effect, with trade-offs in gender annotation.
+
+**Recommended check.** Validate any judge against human labels for your task, and
+treat a second judge's agreement as reliability, not validity. Run the judge over a
+few paraphrases of its prompt and report the spread, or aggregate across them. For
+LLM annotation of texts about real entities, include items where the text is silent
+on the attribute and check the annotator answers "not stated" there, and compare
+real names with matched synthetic names.
+
 ## The harness is part of the dose
 
 For any hypothesis whose prediction is monotone in a dose (task length, number
@@ -412,13 +466,27 @@ system's labels lost 31–99 points when the cue was moved, zero-shot judges at 
 **Recommended check.** Report the trivial baselines (length, position, source)
 next to any detector, and re-score within strata of the obvious confound: an
 AUROC that holds within length quintiles is the honest number, and one that
-collapses there was length. Inspect any "style marker" list for topical
+collapses there was length. For an architecture comparison (memory, recurrence, attention span), give the
+baseline any cheap feature the environment leaks (time step, step budget
+remaining) before crediting the architecture. Inspect any "style marker" list for topical
 content words that make it a content classifier. For a labelled agent-trajectory
 dataset, fit a cue-only predictor (command length, tool identity, a marker string)
 before trusting a monitor's score on it, split folds by domain rather than mixing
 domains, and test a suspected cue with a placebo-controlled paired edit. Xu & Gao's four
 tests (input restriction, cue following, residual accuracy, aggregation) are a ready
 checklist for any benchmark where a judge names a culprit.
+
+The trivial feature can be one the comparison model was simply denied. On a
+partially observable XLand-MiniGrid task where an LSTM (long short-term memory)
+agent beat a memory-free MLP (multilayer perceptron) by 25 percentage points,
+Reveron-Fonseca (Oct 2026, [arXiv:2610.33816](https://arxiv.org/abs/2610.33816),
+single author, one task; code `Effiani-Core/memory-or-clock`) found that "a
+memory-free MLP of the LSTM's size comes within 3.3 points of the LSTM when it is
+given the time step", and a linear probe reads the time step from the LSTM's
+state: episodes are cut at a fixed limit and reward shrinks with time, so most of
+the "memory" advantage was knowing the time. The same paper finds the binary "task
+acquired" verdict is 76% evaluation noise; see
+[`statistics.md`](statistics.md#seeds-useful-not-mandatory).
 
 ## One score, one attribute? And whose definition of the label?
 
@@ -556,7 +624,7 @@ are the place to put this.
 
 ---
 
-Last verified: 2026-10-20. New page. (Round additions 2026-10-20: the readout
+Last verified: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
 section, four grader cases, the single-attribute and external-validity sections, two
 trivial-baseline cases and the HELM saturation note, each checked against its arXiv
 abstract page: 2610.25964, 2610.24872, 2610.26595, 2610.13303, 2610.16911, 2610.12409,

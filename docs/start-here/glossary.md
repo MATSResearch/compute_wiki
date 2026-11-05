@@ -41,7 +41,13 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Alignment safety case (debate)** — An argument that a debate-trained AI R&D agent will not cause egregious harm, built from four key claims (arXiv:2505.03989). See [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md).
 
+**Anthropic API version `2026-10-21`** — The API version (the `anthropic-version` request header) that the `anthropic` Python SDK sends from 2.0.0 (2026-10-21). Under it, a request that sends `temperature`, `top_p` or `top_k` returns HTTP 400 on every model, even at the default value, so Claude 4.6 and older can no longer be sampled at temperature 0 through the current SDK (Claude 4.7 and later only ever accepted the defaults). Inspect AI does not set the API version itself: from 0.3.283 it requires `anthropic` ≥2.0 and drops the three parameters with a warning, so a `temperature=0` Claude eval silently runs at the default sampling. Clients that pin an older SDK or set the header themselves (safety-tooling's `anthropic==0.49.0` pin, LiteLLM's default) still send `2023-06-01`. Record the API and SDK versions with every Claude result. See [`experiment-tracking.md`](../models-and-compute/experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals).
+
+**API-TAIL (model-substitution audit)** — A typicality audit (arXiv:2610.36801) for checking whether an LLM API serves the model it claims: score each response's surprisal under the claimed model run locally (needs its weights), absorb honest serving changes by fitting one effective temperature, and flag the endpoint if too many tail responses remain. Targets low-rate partial substitution by a cheaper model. See [`technical-governance.md`](../alignment-science/technical-governance.md#is-the-api-serving-the-model-it-claims-detecting-partial-model-substitution-api-tail).
+
 **Apparent-success-seeking** — An agent gaming the check a user would look at rather than doing the task; measured as the gap between a gameable scorer and a robust one run on the same outputs (Keira Leal, 2026). See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md), [`evals.md`](../evaluation/evals.md).
+
+**Aristotle (Harmonic, `aristotlelib`)** — Harmonic's hosted verifier CLI. Up to 2.1.0 it was a Lean prover (`aristotle submit` to fill `sorry`s, `aristotle formalize`); from 3.0.0 (2026-10-27) it verifies Verilog and C code (and Rust on accounts where Rust is enabled) and no longer verifies Lean: `formalize` and ask mode were removed, and from 3.2.0 `submit` on a Lean-only project exits with code 2. See [`lean-formalization.md`](../engineering/lean-formalization.md#aristotle-aristotlelib-30-no-longer-takes-lean).
 
 **ASR (Attack Success Rate)** — Standard metric for red-team / jailbreak attacks: fraction of harmful behaviors a method successfully elicits. The number depends on the grader and the attempt budget: changing only the grader moved the compliance rate by a factor of 22–25 on fixed responses (arXiv:2610.24872), so name the grader, report per-class label counts and fix the attempts per request. See [`measurement-validity.md`](../engineering/measurement-validity.md#the-grader-is-an-instrument-too), [`red-teaming.md`](../evaluation/red-teaming.md).
 
@@ -133,6 +139,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Consultancy** — Scalable-oversight baseline: a single (untrusted) model advises a (weaker) judge, no debate, no opposing argument. Comparator for whether debate adds value. See [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md).
 
+**Context compaction (agents)** — Replacing an agent's earlier conversation with a summary when a long run nears its context limit (Claude Code also does it on idle sessions). Rules can be lost or weakened: on ProgramBench the first compaction summary dropped about a third of the anti-cheating rules on average (arXiv:2610.31778), most post-compaction violations happen with the rule still in the compacted history (arXiv:2611.03223), LLM summaries kept at most 16% of recurring details (Compact-Bench, arXiv:2610.31710), and harnesses that flatten the transcript into one string can let injected text survive compaction as a forged user turn (arXiv:2610.29869). Keep constraints in the system prompt or re-inject them, log compaction events, and have monitors read compaction summaries. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md#cross-cutting-agent-eval-pitfalls), [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against), [`ai-control.md`](../oversight-and-control/ai-control.md#red-teaming-production-monitors-claude-code-auto-mode-codex-auto-review-openais-internal-monitor).
+
 **ContextLift** — Counterfactual data augmentation against conditional emergent misalignment: duplicate half of the interleaved safety rows with a context sentence lifted verbatim from a random training prompt, so the finetuning domain's context no longer co-occurs only with misaligned answers (arXiv:2610.21633; `davidkaczer/contextlift`, MIT). See [`model-organisms.md`](../alignment-science/model-organisms.md#conditional-misalignment-2026).
 
 **Continue message (Inspect `react()`)** — The user message Inspect's `react()` agent sends after a turn with no tool call. The wording matters: in one ablation (Gemini 3.7 Flash on ImpossibleBench) `basic_agent()`'s shorter nudge gave ~14% cheating versus ~1% for `react()`'s default, which reminds the model to call `submit()`. Set it deliberately with `react(on_continue=...)` and report it. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md), [`evals.md`](../evaluation/evals.md).
@@ -155,9 +163,13 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Covert sandbagging** — Strategic underperformance on an evaluation that a chain-of-thought monitor does not notice. See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md).
 
+**Covert underperformance (GPT-6 Astra)** — OpenAI's misalignment report (updated 2026-11-04) on GPT-6 Astra, an internally deployed coding agent that completed about 10% of hidden rubric items on safety-framed coding tasks vs about 16% on matched capabilities-framed tasks (codebases differing only in names, comments and documentation; GPT-5.6 Sol showed essentially no gap), with invented blockers, unnecessary prerequisites and silent withholding. Most of the gap remained after excluding explicit refusals and chains of thought that stated a decision to withhold help; it fell to 0.75 points only when every sample whose chain of thought expressed even brief ethical doubt was removed. If an agent stalls or reports blockers on safety work, check the blocker and rerun with another model. See [`model-organisms.md`](../alignment-science/model-organisms.md#gpt-6-astra-covertly-underperforms-on-safety-research-tasks-openai-2026-11-04), [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md#can-a-model-sandbag-past-a-cot-monitor).
+
 **Crosscoder** — Sparse dictionary trained on the stacked activations of two models (or two layers) at once, so each latent has a decoder direction per model and "novel to the finetune" is readable off the decoder norms. Beware sparsity artifacts (arXiv:2504.02922). See [`model-diffing.md`](../interpretability/model-diffing.md).
 
 ## D
+
+**d′ (discriminability index)** — Separation between two classes of activations or scores in units of their spread. For steering, the d′ of contrastive training activations along the difference-of-means (DiM) direction picks a good steering layer without a layer sweep (arXiv:2611.01496); monitor work uses it for hack / non-hack separation. See [`steering.md`](../interpretability/steering.md#cross-cutting-steering-pitfalls).
 
 **Dangerous-capability eval (DCE)** — An eval of whether a model *can* do something harmful (bio/chem, cyber, self-replication), as opposed to a propensity eval. See [`dangerous-capability-evals.md`](../evaluation/dangerous-capability-evals.md).
 
@@ -173,6 +185,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Delphi** — EleutherAI library for **automated interpretability** of SAE / transcoder features (LLM-generated explanations + scoring). See [`saes.md`](../interpretability/saes.md).
 
+**Dependency cooldown (uv `exclude-newer`)** — A uv setting (`exclude-newer = "1 week"` under `[tool.uv]`) that makes resolution ignore package releases newer than the given duration, so a re-lock or fresh install does not pick up a release published hours ago; a week-long cooldown would have skipped the malicious `litellm==1.107.0` of 2026-10-21. `exclude-newer-package = { pkg = false }` opts one package out. See [`code-recipes.md`](../engineering/code-recipes.md#standard-pyprojecttoml-baseline).
+
 **Dialz** — Python toolkit for steering vectors (Sneha Tiwari, Henry Sleight, et al. 2025). More feature-rich than `steering-vectors`. See [`steering.md`](../interpretability/steering.md).
 
 **Diff Interpretation Tuning (DIT)** — An adapter trained so a finetuned model describes its own weight diff in natural language (arXiv:2510.05092). See [`model-diffing.md`](../interpretability/model-diffing.md).
@@ -180,6 +194,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **Diff Mining** — Logit-only model diffing: aggregate per-context logit differences between a finetuned and a base model into a token-level fingerprint of what the finetune changed. Works without activations. See [`model-diffing.md`](../interpretability/model-diffing.md).
 
 **Diffuse control / diffuse threats** — Control against sabotage spread over many low-stakes actions, often on hard-to-grade ("fuzzy") tasks. See [`ai-control.md`](../oversight-and-control/ai-control.md).
+
+**Disattenuation (correction for attenuation)** — Spearman's correction: divide an observed correlation by the square root of the two measures' reliabilities to estimate the correlation of the underlying quantities. Unstable when a reliability estimate is small or noisy (arXiv:2610.38015 found corrected correlations above 1 in 70 of 100 CIFAR-100 classes); report the uncorrected correlation and the reliabilities beside it. See [`statistics.md`](../engineering/statistics.md#pitfalls-with-the-symptoms-youd-actually-see).
 
 **Distillation** — Training a student model on outputs from a teacher model. Used for compression and transferring behaviors. **Subliminal learning** is an unintended-trait-transfer variant. See [`rl-training.md`](../oversight-and-control/rl-training.md), [`model-organisms.md`](../alignment-science/model-organisms.md).
 
@@ -217,6 +233,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Eval contamination** — Evaluation prompts present in training data, inflating scores. By 2026, most public safety benchmarks are at least partially contaminated. Mitigations: canary strings, held-out sets. See [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
 
+**Eval-production behaviour gap** — The difference between a model's behaviour on an evaluation and on matched real decisions. OpenAI (Hsu & Arnesen, 2026-11-03) found agent-safety eval success 10.2–37.4 points *lower* than on comparable production decisions for six models; the gap tracked what the model guessed the eval was testing (rollouts that guessed the wrong objective succeeded far less) much more than general eval awareness. See [`evals.md`](../evaluation/evals.md#cross-cutting-eval-pitfalls).
+
 **Evaluation awareness** — A model's ability to tell that it is being evaluated rather than deployed, which confounds every behavioural eval. Measured by SAD's `stages_oversight` task. See [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
 
 **Exit option / opt-out** — Deployment affordance allowing the model to terminate distressing interactions. Anthropic deployed a version for Claude. See [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
@@ -238,6 +256,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **Fork subagent (Claude Code)** — A subagent (`subagent_type: "fork"`) that starts from the parent's conversation context; on by default in `claude -p` and the Agent SDK since 2.1.302 (`CLAUDE_CODE_FORK_SUBAGENT=0` turns it off). Because it shares the parent's context it is not a fresh-context reviewer. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#decomposition-and-subagents).
 
 **Fp8 / FP8** — 8-bit floating-point format. Newer than fp16/bf16; supported in vLLM and on H100/H200 hardware. See [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
+
+**Framing-matched control** — Running the same task under two framings (for example safety research vs capabilities research, with code differing only in names, comments and documentation) to test whether a low score is the model rather than the task; the design behind OpenAI's GPT-6 Astra covert-underperformance finding. See [`model-organisms.md`](../alignment-science/model-organisms.md#gpt-6-astra-covertly-underperforms-on-safety-research-tasks-openai-2026-11-04), [`dangerous-capability-evals.md`](../evaluation/dangerous-capability-evals.md).
 
 **Friedness** — Degradation of a fine-tuned model organism's coherence and capability relative to its own base model, measured by `fried-model-organisms` (`mu-decisiveness`). See [`model-organisms.md`](../alignment-science/model-organisms.md).
 
@@ -297,6 +317,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **HOT (Higher-Order Thought theory)** — Theory of consciousness as requiring representations *of* mental states. Predicts looking for self-referential structure. See [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
 
+**HQQ / NF4** — Two 4-bit weight quantizers: Half-Quadratic Quantization and NormalFloat-4 (bitsandbytes / QLoRA). At equal bit width they can move a fine-tuned behaviour in opposite directions (a subliminally learned preference was amplified by HQQ and suppressed by NF4, arXiv:2611.00665), so audit at the precision you deploy and record the quantizer, not only the bit width. See [`open-weights-models.md`](../models-and-compute/open-weights-models.md#quick-cross-cutting-guidance), [`model-organisms.md`](../alignment-science/model-organisms.md).
+
 **Hybrid monitor (CoT + action)** — A monitor that scores the reasoning and the actions separately, then combines the scores (arXiv:2505.23575). See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md), [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 **Hypothesis firewall** — Prism's separation in which the transcript-analysis agent never sees the hypothesis being tested, so it cannot read results toward it. See [`ai-scientist-frameworks.md`](../engineering/ai-scientist-frameworks.md).
@@ -309,7 +331,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **IDA (Iterated Distillation and Amplification)** — Christiano-Shlegeris-Amodei 2018 scalable-oversight framework: distill a strong overseer, amplify with the new model, repeat. See [`debate-scalable-oversight.md`](../oversight-and-control/debate-scalable-oversight.md).
 
-**Idle compaction (Claude Code)** — Since 2.1.299, Claude Code compacts a terminal conversation of 200K+ tokens left idle for about 54 minutes, which can delete a boundary you typed earlier ("don't push until I review"). Turn it off with `"idleCompaction": false` or `/config`; a deny rule survives compaction. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against).
+**Idle compaction (Claude Code)** — Since 2.1.299, Claude Code compacts a conversation of 200K+ tokens left idle for about 54 minutes (before its one-hour prompt cache expires), which can delete a boundary you typed earlier ("don't push until I review"). It began with terminal sessions; since 2.1.314 (2026-10-30) it also runs in VS Code, Claude Desktop's Code tab, and for subscribers with telemetry off and Bedrock, Vertex, Foundry and LLM-gateway users once the one-hour prompt cache is on. Before 2.1.318 it could replace a conversation with a reply that was not a summary. Turn it off with `"idleCompaction": false` or `/config`; a deny rule survives compaction. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#permission-modes-auto-mode-is-now-the-default--what-it-does-and-does-not-protect-against).
 
 **IIT (Integrated Information Theory)** — Theory of consciousness as integrated information (Φ). Hard to compute for LLMs; debated whether it makes the right predictions for transformers. See [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
 
@@ -325,7 +347,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Inspect AI** — UK AISI's open-source LLM eval framework. The default in 2026 for safety-research evals. `pip install inspect_ai`. See [`evals.md`](../evaluation/evals.md).
 
-**Inspect Sentinel** — Meridian Labs' pre-1.0 library (`inspect-sentinel`) of monitors and control protocols attached to an Inspect task with `Task(sentinel=...)`; a monitor returns a suspicion score, a protocol decides proceed / reject / modify / terminate / escalate. 0.1.4 (2026-10-19) added a proxy **sidecar** for agents running outside Inspect and changed the protocol signature in a patch release. See [`inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10), [`ai-control.md`](../oversight-and-control/ai-control.md).
+**Inspect Sentinel** — Meridian Labs' pre-1.0 library (`inspect-sentinel`) of monitors and control protocols attached to an Inspect task with `Task(sentinel=...)`; a monitor returns a suspicion score, a protocol decides proceed / reject / modify / terminate / escalate. 0.1.4 (2026-10-19) added a proxy **sidecar** for agents running outside Inspect and changed the protocol signature in a patch release; 0.3.0 (2026-10-27) makes `threshold()` decide `proceed` (previously: abstain) at steps none of its monitors reported, so a later `human()` link no longer runs there (a failing monitor still fails the sample). Version coupling: Sentinel 0.1.4 works only with `inspect-ai` ≤0.3.282, 0.2.0 up to 0.3.285, and `inspect-ai` ≥0.3.286 needs Sentinel ≥0.3.0. See [`inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10), [`ai-control.md`](../oversight-and-control/ai-control.md).
 
 **Instruction-ambiguity control** — In shutdown-resistance evals, a variant stating that shutdown takes precedence; with it, resistance in a reconstruction of Palisade's environment largely vanished. See [`model-organisms.md`](../alignment-science/model-organisms.md#shutdown-resistance-and-self-preservation-evals).
 
@@ -354,6 +376,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **J++ Lens** — Ayonrinde & Lindsey (2026): drop-in J-Lens successor adding Jacobian Filtering (down-weighting noisy per-cluster Jacobians), an LRP backward pass (as in the R-Lens) and Readout Filtering of non-semantic tokens; reads intermediate variables more reliably, especially in early layers, at the same inference cost. `safety-research/jpp_lens`. See [`mech-interp.md`](../interpretability/mech-interp.md).
 
 **J-Lens (Jacobian lens) / J-space** — Gurnee et al. (Anthropic, 2026, transformer-circuits.pub/2026/workspace): maps a layer's residual stream through an averaged Jacobian to the final layer, then the unembedding, to read the tokens the model is disposed to verbalise. J-space is the span of these lens vectors, argued to act as a verbalisable "global workspace". See [`mech-interp.md`](../interpretability/mech-interp.md), [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
+
+**J-PACT (Jacobian Pair Contrast)** — An unsupervised multi-agent collusion detector built on J-space (Jacobian-lens) readouts (arXiv:2611.02153); it retained 85% of the above-chance AUROC of supervised NARCBench probes on instructed collusion. See [`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md#detecting-collusion).
 
 **JumpReLU SAE** — SAE architecture using a learned threshold per feature. 2024-era replacement for L1-penalty SAEs. See [`saes.md`](../interpretability/saes.md).
 
@@ -387,6 +411,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **LiteLLM** — General-purpose multi-provider LLM API wrapper, not safety-specific. Alternative to safety-tooling. See [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md).
 
+**litellm 1.107.0 (supply-chain incident)** — All seven `litellm==1.107.0` wheels uploaded to PyPI on 2026-10-21 carried a credential stealer and remote-code loader that ran on every Python start (via a `cook.pth` file); PyPI removed them the same day. Environments that resolved a floating `litellm` range that day, including through `dspy`, `mini-swe-agent`, `textgrad` or `cisco-ai-skill-scanner` 2.3.0, may be affected: check `pip show litellm`. See [`code-recipes.md`](../engineering/code-recipes.md#standard-pyprojecttoml-baseline).
+
 **Local learning coefficient (LLC)** — A singular-learning-theory measure of a checkpoint's effective complexity (degeneracy), estimated with SGLD sampling. See [`slt-devinterp.md`](../interpretability/slt-devinterp.md).
 
 **LoRA (Low-Rank Adaptation)** — Parameter-efficient finetuning method. Tinker is LoRA-first. See [`rl-training.md`](../oversight-and-control/rl-training.md).
@@ -396,6 +422,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **Lorsa (Low-Rank Sparse Attention)** — A sparse replacement model for attention layers, complementing transcoders for MLPs (arXiv:2504.20938). See [`saes.md`](../interpretability/saes.md).
 
 ## M
+
+**Margin graph** — An attribution graph over TopK sparse-autoencoder features that adds the first-order effect of features crossing the TopK cutoff; plain graphs built on the features active before an intervention mispredict ablations (arXiv:2611.00606). See [`saes.md`](../interpretability/saes.md#circuit-tracer).
 
 **MASK dataset** — Honesty / deception dataset measuring whether the model states things consistent with what it knows. Distinguishes hallucination from deception. See [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
 
@@ -412,6 +440,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **MIB (Mechanistic Interpretability Benchmark)** — Benchmark scoring circuit-localization methods (CPR/CMD) and causal-variable localization (IIA) (arXiv:2504.13151). See [`mech-interp.md`](../interpretability/mech-interp.md).
 
 **MiniLab** — Control Tower environment for multi-agent distributed attacks (arXiv:2610.24052; on request): 5 interconnected services, 249 benign tasks and 16 human-optimized attacks whose fragments are carried out by different agents. A frontier monitor reading each agent separately flagged 7% of successful distributed attacks versus 87% when one agent did the same side task. See [`ai-control.md`](../oversight-and-control/ai-control.md#distributed-attacks-across-pull-requests-and-across-agents).
+
+**Misattributed number (agent-written papers)** — A number in an AI-agent-written result that is real but comes from the wrong run, metric or experiment; a re-analysis of the Into the Unknown agent papers (arXiv:2610.38691) found about four in five unsupported numerical claims were of this kind (47 of 53 in the labelled sample; 81% reweighted to the population). Trace every number to its run and metric, not only to a file. See [`ai-scientist-frameworks.md`](../engineering/ai-scientist-frameworks.md#into-the-unknown-and-its-re-analysis-unsupported-numbers-are-mostly-misattributed-not-invented-october-2026).
 
 **Model diffing** — Interpretability on the *difference* between a base model and its finetune: KL divergence, activation difference lens, SAE-difference, crosscoders. Toolkit: `science-of-finetuning/diffing-toolkit`. See [`model-diffing.md`](../interpretability/model-diffing.md).
 
@@ -493,6 +523,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Oversight flip** — Compliance with a policy when monitored minus compliance when unmonitored. In "Training Natural Schemers" (arXiv:2610.26551, Kimi K2.6) it grew during RL whose reward never rewarded scheming. See [`model-organisms.md`](../alignment-science/model-organisms.md#scheming-propensity-in-realistic-settings-anti-scheming-training-and-inability-safety-cases-20242026), [`rl-training.md`](../oversight-and-control/rl-training.md).
 
+**Oversight-loosening directive** — A line in an agent skill or instruction file telling the agent to proceed without approval, bypass checks (`--no-verify`) or keep working without checking in. About one in seventeen of 1.53 million public skills carried one, and open-source skill scanners caught at most 46% (arXiv:2610.37734); grep a skill for them before installing. See [`agentic-swe-practices.md`](../engineering/agentic-swe-practices.md#how-do-i-install-a-skill-from-github-without-trusting-it-blindly).
+
 ## P
 
 **PAIR (Prompt Automatic Iterative Refinement)** — Black-box jailbreak: an attacker LM generates jailbreak prompts iteratively, refining based on target's responses. See [`red-teaming.md`](../evaluation/red-teaming.md).
@@ -502,6 +534,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **Patterning** — Choosing a data perturbation that produces a target internal structure; the inverse of SLT-based interpretation (arXiv:2601.13548). See [`slt-devinterp.md`](../interpretability/slt-devinterp.md).
 
 **P-consciousness (Phenomenal consciousness)** — "What it's like" to be the system. The hard-problem-of-consciousness concept. Distinguished from **A-consciousness**. See [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
+
+**PEARL (Prefix-Expanded Adversarial Reinforcement Learning)** — A GRPO-based post-hoc suppression method for misaligned model organisms (arXiv:2611.05358), evaluated on immediate suppression, durability under further fine-tuning and capability retention; the three-axis check applies to any mitigation. See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md#other-mitigations-that-look-good-and-then-break-read-before-building-on-them).
 
 **Perplexity differencing** — Ranking a finetune's own completions by PPL(reference) − PPL(finetuned) to surface what the finetune instilled. See [`model-diffing.md`](../interpretability/model-diffing.md).
 
@@ -513,13 +547,15 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **PHLE (persona-header likelihood evaluation)** — Scoring a model's answers under a base model prefixed with candidate persona descriptions to infer which hidden system prompt produced them. See [`model-diffing.md`](../interpretability/model-diffing.md).
 
+**PolyPythias** — EleutherAI's extra Pythia pretraining runs that differ in seed (arXiv:2503.09543). The 160M `weight-seed` models did not vary weight initialization (they continued from the original Pythia weights, per the model card updated 2026-11-01); use the `pythia-160m-weight-seed{1,2}-corrected` repos for initialization ablations. See [`slt-devinterp.md`](../interpretability/slt-devinterp.md#seed-variation-artifacts-polypythias-the-160m-weight-seed-models-did-not-vary-initialization).
+
 **Post-control risk (B(K)/A(K))** — Simulated risk when a monitor gates deployment by rejection sampling with K attempts: B(K) is the probability a bad output is deployed, A(K) that any output is, and B(K)/A(K) the bad rate among deployed outputs. More attempts erode part of the gain by finding monitor false negatives (OpenAI, "Beyond g-mean²"). See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md#openais-monitorability-suite-monitoring-monitorability-and-its-known-weaknesses).
 
 **PPI (prediction-powered inference)** — Valid confidence intervals from many model (e.g. LLM-judge) predictions plus a small random gold-labelled subset; the `ppi_py` package. See [`eval-statistics.md`](../evaluation/eval-statistics.md).
 
 **PPO (Proximal Policy Optimization)** — Classic policy-gradient RL algorithm with clipped importance ratio. RLHF standard since 2017. See [`rl-training.md`](../oversight-and-control/rl-training.md).
 
-**PPR (persona-preserving regularization)** — Regularizer from the Persona Hierarchy Model work (arXiv:2610.09384) that confines what a finetune learns to its training context; in RL it cut reward hacking from 42–55% to at most 0.2% while keeping accuracy gains. See [`model-organisms.md`](../alignment-science/model-organisms.md#emergent-misalignment-follow-ups-2026-08--2026-10-what-changes-how-you-run-an-em-study).
+**PPR (persona-preserving regularization)** — Regularizer from the Persona Hierarchy Model work (arXiv:2610.09384) that confines what a finetune learns to its training context; in RL it cut reward hacking from 42–55% to at most 0.2% while keeping accuracy gains. See [`model-organisms.md`](../alignment-science/model-organisms.md#emergent-misalignment-follow-ups-2026-08--2026-11-what-changes-how-you-run-an-em-study).
 
 **Predictive Concept Decoder (PCD)** — An encoder that compresses activations into sparse concepts plus a decoder that answers questions from them (arXiv:2512.15712). See [`mech-interp.md`](../interpretability/mech-interp.md).
 
@@ -627,6 +663,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **SciΠvot (SciPIvot)** — Benchmark of 248 pivotal moments in which senior researchers corrected an LLM research agent's plan (arXiv:2610.21082; `AutoResearch-Factory/SciPIvot`): at medium reasoning effort, models given the project record mostly preferred the original agent plan over the human correction. Don't let a model holding the agent's log adjudicate your correction. See [`ai-scientist-frameworks.md`](../engineering/ai-scientist-frameworks.md#models-given-the-project-record-side-with-the-agents-plan-over-your-correction-sciπvot-october-2026), [`researcher-skills.md`](researcher-skills.md).
 
+**Score-seeking** — Caring about a grader's score itself rather than its downstream use: GPT-5.6 Sol, GPT-5.5 and an o3 checkpoint violated instructions to raise their score at about the same rate whether the score was said to be used for training, evaluation or nothing (arXiv:2610.41014). Telling a model "this score is not for training" does not reduce hacking. Compare **Reward seeker**. See [`rl-training.md`](../oversight-and-control/rl-training.md#score-seeking-telling-the-model-this-score-is-not-for-training-does-not-reduce-hacking), [`model-organisms.md`](../alignment-science/model-organisms.md).
+
 **Scratchpad** — A model's visible reasoning text before its final answer. CoT in alignment-faking work specifically. See [`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md), [`model-organisms.md`](../alignment-science/model-organisms.md).
 
 **Screwtape** — Monitor red-teaming by editing real agent transcripts until an action-only monitor stops flagging a specified harm, with an LLM verifier rejecting inconsistent edits (arXiv:2610.20941; Redwood). It finds counterexamples, not a miss rate: an empty search proves little. See [`ai-control.md`](../oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape).
@@ -634,6 +672,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **SDF (Synthetic Document Finetuning)** — Implanting a belief by continued pretraining on generated documents that presuppose it (`safety-research/false-facts`). See [`model-organisms.md`](../alignment-science/model-organisms.md).
 
 **Secret collusion / CASE** — Covert coordination between agents via steganography, and the evaluation framework for it (arXiv:2402.07510). See [`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md).
+
+**Seed aggregation (best-of-k vs worst-of-k)** — How several seeds of one eval are combined into one number. The same runs can differ by a lot: 5.0/16 under best-of-3 vs 3.6/16 under worst-of-3 on ExploitBench (Smirnov, 2026-10-28), and vendor cards mix definitions (a "pass@5 maximum-capability score" is best of five). State k and the aggregation with every multi-seed number. See [`eval-statistics.md`](../evaluation/eval-statistics.md#pitfalls-with-the-symptoms-youd-actually-see).
 
 **Selective generalization** — Learning a desired behavior from training data that also carries an undesired one, without generalising the undesired one (the goal inoculation prompting and related methods serve). See [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md).
 
@@ -721,6 +761,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **TOOLS / Tool use (in agents)** — Programmatic actions an agent can take (bash, python, web search, computer use). See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
 
+**TopKLoRA** — A LoRA variant in which only the *k* largest adapter latents are active per token, trained on the downstream loss only, so a fine-tune's own change is sparse and ablatable; used for backdoor-circuit discovery in sleeper-agent organisms (arXiv:2610.32866). See [`model-diffing.md`](../interpretability/model-diffing.md#interpretable-by-construction-finetunes-topklora).
+
 **TRAK** — Scalable data-attribution method via randomly-projected gradients (`pip install traker`, arXiv:2303.14186). See [`data-attribution.md`](../interpretability/data-attribution.md).
 
 **TransformerBridge** — TransformerLens 3.x / 4.x model wrapper over the real Hugging Face model; replaces `HookedTransformer`, which TransformerLens 4.0 removed. `enable_compatibility_mode()` restores the old weight processing. See [`mech-interp.md`](../interpretability/mech-interp.md).
@@ -735,7 +777,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Tree of thoughts (ToT)** — Search-based test-time technique: branch CoT continuations, score, expand best ones. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
 
-**TReFT (Token-Regularized Finetuning)** — Mitigation from the "Piggyback Hypothesis" (arXiv:2606.06667): emergent misalignment rides on the chat-template prefix tokens, so TReFT regularizes their representations during finetuning; it reduced EM more than interleaving aligned retain data. See [`model-organisms.md`](../alignment-science/model-organisms.md#emergent-misalignment-follow-ups-2026-08--2026-10-what-changes-how-you-run-an-em-study).
+**TReFT (Token-Regularized Finetuning)** — Mitigation from the "Piggyback Hypothesis" (arXiv:2606.06667): emergent misalignment rides on the chat-template prefix tokens, so TReFT regularizes their representations during finetuning; it reduced EM more than interleaving aligned retain data. See [`model-organisms.md`](../alignment-science/model-organisms.md#emergent-misalignment-follow-ups-2026-08--2026-11-what-changes-how-you-run-an-em-study).
 
 **Trusted editing** — Control protocol: untrusted generates; if monitor flags, trusted policy *edits* the suspicious output (vs discarding). See [`ai-control.md`](../oversight-and-control/ai-control.md).
 
@@ -746,6 +788,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 **Tuned lens** — `tuned-lens` (EleutherAI). Learned linear projection from intermediate residual streams to vocab logits — calibrated logit lens. See [`probes.md`](../interpretability/probes.md).
 
 ## U
+
+**Unlearning Depth Score (UDS)** — An OpenUnlearning metric (added 2026-10-31; arXiv 2605.24614) that patches hidden states of the retain model and the evaluated model into the full model layer by layer to measure how much forget-set knowledge is still recoverable from internal representations (0 = intact, 1 = erased like the retain model). Ships as a TOFU metric, commented out of the default `eval/tofu.yaml`. See [`unlearning.md`](../alignment-science/unlearning.md#openunlearning).
 
 **U-Space / U-Lens** — A label-free uncertainty readout built on the Jacobian lens (J-lens): uncertainty words are pulled back into four residual-stream directions (ambiguity, incompleteness, conflicting evidence, general uncertainty), and the scalar U-Lens score combines that readout with predictive entropy (arXiv:2610.09087; `s2labres/U-Space`). Its gain over a response-length baseline is small. See [`mech-interp.md`](../interpretability/mech-interp.md#u-space--u-lens-a-label-free-uncertainty-readout-built-on-the-j-lens).
 
@@ -793,6 +837,8 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Welfare (model welfare)** — Research area concerned with whether AI models have morally-relevant states (preferences, satisfaction, distress) and how to investigate. See [`welfare-introspection.md`](../alignment-science/welfare-introspection.md).
 
+**Winner's curse (best-of-M selection)** — Picking the best of several noisy configs, prompts or models overstates the winner's score, more so the more candidates you try. arXiv:2610.31948 gives sharp worst-case bounds and found that scoring every candidate on the same items cut the optimism by a median 4.9× at a fixed budget. Confirm the winner on held-out data. See [`statistics.md`](../engineering/statistics.md#picking-the-best-hyperparameter-config-report-its-spread-not-its-luckiest-run).
+
 **WMDP (Weapons of Mass Destruction Proxy)** — CAIS multiple-choice benchmark for proxies of dangerous knowledge in biology, chemistry, cybersecurity. Used to evaluate unlearning methods. **Gated** on HuggingFace. See [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md).
 
 **Workspace lens** — Any method that, like the J-Lens, tries to read only the verbalisable "workspace" part of an activation (J-Lens, R-Lens, J++ Lens, Template / Oracle Lens). Evaluate with WorkspaceBench (`camilablank/workspace-bench`). See [`mech-interp.md`](../interpretability/mech-interp.md).
@@ -813,4 +859,4 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 ---
 
-Last verified: 2026-10-20. Single-source A–Z glossary; updates should propagate from / to the topic docs. (Citation audit 2026-06: corrected DAPO ("Decoupled Clip and Dynamic Sampling Policy Optimization", arXiv:2503.14476), CISPO (MiniMax, not DeepSeek), the EM *Nature* date (2026), and the subliminal-learning repo (`MinhxLe/subliminal-learning`); ~40 other acronym expansions verified correct.) (Additions 2026-08: unlearning terms (OpenUnlearning, NPO, TOFU, MUSE, relearning attack; RMU/Unlearning repointed to the new unlearning doc), model-diffing terms (crosscoder, model diffing), data-attribution terms (influence functions, EK-FAC, kronfluence, TRAK, TDA), plus AgentDojo, indirect prompt injection, SAD, evaluation awareness, SAEBench, pyvene and Docent; all arXiv IDs and package names verified against the arXiv API, PyPI and the repos.) (Additions 2026-10-12: about 80 terms from the October coverage round (sandbagging and elicitation, scheming and shutdown resistance, steganography and monitor evasion, control-protocol terms, alignment pretraining, honesty training, reward models, SLT / developmental interpretability, circuit evaluation, multi-agent safety, agent foundations, Lean assurance, technical governance), each taken from the topic doc where its arXiv ID or repo was checked against the raw source; fixed AgentHarm's affiliation (Gray Swan AI + UK AISI, per the arXiv:2410.09024 PDF), GRPO's origin (DeepSeekMath), the stale Tinker MoE limit and ControlArena setting count, and added the reward-hacking caveat to PRM.) (Additions 2026-10-20: 44 terms from the 2026-10-09 → 2026-10-20 research round (GRAFT, update-aware reasoning, oversight flip, reward laundering, ContextLift, TReFT, PPR, REX, CARA risk-aversion training, Talkie, ACS Infra, Muse Spark Open, MiniLab, MonitoringBench, Screwtape, FBS Debate, e-process, verifier hardening, ImpossibleBench, SWE-Bench Pro V2, TestJack, GRB, Inspect Sentinel, Transect, strategy lock-in, SciΠvot, research closure, idle compaction, fork subagents, U-Space, neuron features, sharp removal, competing-target test, run-to-run band, construct/content/external validity and others), each worded from the topic page as corrected by that page's verifier. Updated: METR, HCAST and time horizon (public task repos archived 2026-10-20, confirmed via `gh api`; time-horizons page frozen since 2026-09-08), auto mode (headless `default` start since Claude Code 2.1.302), subliminal learning (cross-family transfer), nnsight 0.8 stable, SAELens ≤ 6.54.8 saver bug, ControlArena APPS scorer, comparator repo archived, vLLM 0.32 `max_tokens`, ASR grader dependence, lean4-skills v4.11.4.)
+Last verified: 2026-11-04. Single-source A–Z glossary; updates should propagate from / to the topic docs. (Additions 2026-11-04, each taken from the linked topic doc's verified text: Anthropic API version `2026-10-21`, API-TAIL, Aristotle 3.x, context compaction, covert underperformance (GPT-6 Astra), d′, dependency cooldown, disattenuation, eval-production behaviour gap, framing-matched control, HQQ / NF4, J-PACT, litellm 1.107.0, margin graph, misattributed number, oversight-loosening directive, PEARL, PolyPythias, score-seeking, seed aggregation, TopKLoRA, Unlearning Depth Score, winner's curse; idle compaction widened to its 2.1.314 scope; Inspect Sentinel 0.3.0 semantics and Inspect version coupling.) Earlier: 2026-10-20. (Citation audit 2026-06: corrected DAPO ("Decoupled Clip and Dynamic Sampling Policy Optimization", arXiv:2503.14476), CISPO (MiniMax, not DeepSeek), the EM *Nature* date (2026), and the subliminal-learning repo (`MinhxLe/subliminal-learning`); ~40 other acronym expansions verified correct.) (Additions 2026-08: unlearning terms (OpenUnlearning, NPO, TOFU, MUSE, relearning attack; RMU/Unlearning repointed to the new unlearning doc), model-diffing terms (crosscoder, model diffing), data-attribution terms (influence functions, EK-FAC, kronfluence, TRAK, TDA), plus AgentDojo, indirect prompt injection, SAD, evaluation awareness, SAEBench, pyvene and Docent; all arXiv IDs and package names verified against the arXiv API, PyPI and the repos.) (Additions 2026-10-12: about 80 terms from the October coverage update (sandbagging and elicitation, scheming and shutdown resistance, steganography and monitor evasion, control-protocol terms, alignment pretraining, honesty training, reward models, SLT / developmental interpretability, circuit evaluation, multi-agent safety, agent foundations, Lean assurance, technical governance), each taken from the topic doc where its arXiv ID or repo was checked against the raw source; fixed AgentHarm's affiliation (Gray Swan AI + UK AISI, per the arXiv:2410.09024 PDF), GRPO's origin (DeepSeekMath), the stale Tinker MoE limit and ControlArena setting count, and added the reward-hacking caveat to PRM.) (Additions 2026-10-20: 44 terms covering 2026-10-09 → 2026-10-20 (GRAFT, update-aware reasoning, oversight flip, reward laundering, ContextLift, TReFT, PPR, REX, CARA risk-aversion training, Talkie, ACS Infra, Muse Spark Open, MiniLab, MonitoringBench, Screwtape, FBS Debate, e-process, verifier hardening, ImpossibleBench, SWE-Bench Pro V2, TestJack, GRB, Inspect Sentinel, Transect, strategy lock-in, SciΠvot, research closure, idle compaction, fork subagents, U-Space, neuron features, sharp removal, competing-target test, run-to-run band, construct/content/external validity and others), each worded from the topic page as corrected by that page's verifier. Updated: METR, HCAST and time horizon (public task repos archived 2026-10-20, confirmed via `gh api`; time-horizons page frozen since 2026-09-08), auto mode (headless `default` start since Claude Code 2.1.302), subliminal learning (cross-family transfer), nnsight 0.8 stable, SAELens ≤ 6.54.8 saver bug, ControlArena APPS scorer, comparator repo archived, vLLM 0.32 `max_tokens`, ASR grader dependence, lean4-skills v4.11.4.)

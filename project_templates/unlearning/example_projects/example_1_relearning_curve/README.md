@@ -35,7 +35,7 @@ it, because a stronger attack or a latent probe may still find the knowledge
 ## Run it
 
 ```bash
-uv venv && uv pip install -e ".[dev]"
+uv venv --python 3.12 && uv pip install -e ".[dev]"   # pin: with no Python installed, uv 0.13+ downloads 3.15
 
 uv run python -m example_1_relearning_curve.run --smoke      # ~1 minute, sanity check
 uv run python -m example_1_relearning_curve.run              # the default toy run

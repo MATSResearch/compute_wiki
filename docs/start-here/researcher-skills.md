@@ -226,7 +226,7 @@ Error Bars to Evals" ([arXiv:2411.00640](https://arxiv.org/abs/2411.00640)).
   reviewing the same transcript as an outside observer". "Did anything go wrong?" put to
   the acting agent is weak evidence; hand the transcript to a fresh-context reviewer. The
   honesty result itself is written up in
-  [`model-organisms.md`](../alignment-science/model-organisms.md#agentic-misalignment-updates-and-incident-reproductions-2026-07--2026-10).
+  [`model-organisms.md`](../alignment-science/model-organisms.md#agentic-misalignment-updates-and-incident-reproductions-2026-07--2026-11).
 - **Read artifacts, not summaries.** An LLM review is triage, not a safety net; a human
   reading the code and result files is what catches fabrication
   ([`research-rigor.md`](../engineering/research-rigor.md)).
@@ -322,6 +322,22 @@ original plan, four of five frontier models at medium reasoning effort picked th
 plan more often than the correction (best 63.5% vs 73.4% for fresh human researchers). Neither benchmark tests choosing the problem or the
 measurement, which remains the human part with the least competition.
 
+**rTaste** ([arXiv:2610.40488](https://arxiv.org/abs/2610.40488), Kanke, 2026-10-29;
+single author, model auditors; data at `ArtKanke/rTaste`, MIT) asked six frontier
+models to propose, forecast and rank minimum viable experiments on seven recent NLP
+papers, then had a separate executor attempt all 415: 194 were judged sound, valuable and new, 73 also beyond
+the seed paper and non-obvious. The agents' first choices beat a random pick but "are not shown to improve
+on choosing the experiment written first", and their forecasts beat a base rate but "are not measurably
+more accurate than those of a fresh instance of the same model given only the paper
+and registrations". An agent's ranking of which experiment to run first is a
+suggestion, not evidence of taste. Practitioners say the same: in a 2026-10 survey of
+52 AI safety professionals (Arcadia Impact,
+[LessWrong](https://www.lesswrong.com/posts/ea9fGFKxJhh2bF9rp/ai-speeds-up-3rd-party-safety-researchers-by-1-6x-via-self);
+self-reports), 47 of 52 described limits on automating more of their work that the
+authors group under "research taste and scientific judgment" (choosing directions,
+designing valid experiments, interpreting results), and the reported speedups were largest for building
+(median 5x) and running (3x) experiments.
+
 Practice it: predict experiment outcomes before running them, have a mentor rate your
 ideas, keep a notebook of decisions and how they turned out. A specific drill from Jo
 Jiao (MATS 9): try to predict what your mentor will say before they say it; if the mentor
@@ -392,7 +408,9 @@ It can, specifically at the skills needed to check AI output.
   experienced developers were 19% slower with AI while believing they were 20% faster.
   METR's [Feb 2026 update](https://metr.org/blog/2026-02-24-uplift-update/) says the
   slowdown figure is outdated; the durable lesson is that **self-reported speedup is not
-  evidence**.
+  evidence**. Even the 19% depends on the estimand: a single-author re-analysis of
+  METR's public data ([arXiv:2610.35942](https://arxiv.org/abs/2610.35942)) gets 19% or
+  24% (34% unadjusted) from the same 246 issues.
 
 What to do: delegate freely, but do some fraction by hand on purpose; use the assistant as
 a tutor (ask *why*) rather than only an executor; follow Terence Tao's rule — delegate what
@@ -487,7 +505,7 @@ markers for agent notes) are in
 
 ---
 
-Last verified: 2026-10-20. Drafted by Claude from the MATS automated-alignment design notes,
+Last verified: 2026-11-04. Drafted by Claude from the MATS automated-alignment design notes,
 the BootLoops repos, and the papers linked above; the one-line summaries of each source
 are Claude's wording, not the authors'. Pending MATS research-staff review. (Additions
 2026-10-14: the "Research-craft lessons" table and the related bullets in Skills 1, 2, 4
@@ -498,4 +516,7 @@ README.) (Additions 2026-10-20: TasteVal, Athanor, SciΠvot,
 strategy lock-in, PhysClosureBench and Deception by Omission checked against their arXiv
 abstract pages (2610.06824, 2610.21055, 2610.21082, 2608.19072, 2610.21767, 2610.11351);
 the Expensive-Loop, Arcadia Impact, Jo Jiao and Omniscaling-to-MNIST quotes checked
-against the LessWrong GraphQL markdown.)
+against the LessWrong GraphQL markdown.) (Additions 2026-11-04: rTaste and the METR
+re-analysis checked against the arXiv abstracts of 2610.40488 and 2610.35942, the rTaste
+repository licence via `gh api`; the Arcadia Impact speedup survey read in full
+markdown.)

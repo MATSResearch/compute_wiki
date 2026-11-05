@@ -109,26 +109,82 @@ dependencies = [
     "tyro",  # cleanest dataclass-CLI
     "python-dotenv",
 ]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days
 ```
-Then `uv venv && uv pip install -e .`. Commit `uv.lock`.
+Then `uv python pin 3.12 && uv venv && uv pip install -e .` (pin the interpreter: see
+"Which Python?" below). Commit `uv.lock` and `.python-version`.
+
+**Why the `exclude-newer` cooldown line (litellm 1.107.0, 2026-10-21).** All seven
+`litellm==1.107.0` wheels on PyPI carried "a credential stealer and a remote-code
+loader" (BerriAI/litellm issue #47826); the payload was not in the `v1.107.0` git
+tag but was injected into the build. A `cook.pth` file in site-packages ran it on
+**every** Python start, no `import litellm` needed. PyPI received it at
+11:39–11:40Z on 2026-10-21 and had removed it by 13:23Z. A lockfile protects you
+until you re-lock: any `uv lock --upgrade`, `pip install -U` or fresh install in that
+window that resolved a floating `litellm` range took it, including through
+`dspy` (`litellm>=1.65.8`), `mini-swe-agent` (`litellm>=1.75.5` minus two earlier
+bad versions), `textgrad` (`litellm>=1.49.5`) and `cisco-ai-skill-scanner` 2.3.0
+(fixed in 2.3.1). Packages that pin litellm exactly (for example `aider-chat`,
+`openhands-ai`) were not exposed. uv's **dependency cooldown** ("resolution will
+ignore packages newer than a duration", uv docs, "Dependency cooldowns") is one
+TOML line, `exclude-newer = "1 week"`; a week-long cooldown would have skipped this
+release. `exclude-newer-package = { some-package = false }` opts one package out, for a
+fresh release you need (an urgent security fix). With a lockfile, uv
+stores the cutoff timestamp in `uv.lock` and moves it only on a new resolution
+(`--upgrade`, `--refresh`).
+
+**Check your machines if you installed anything on 2026-10-21:** `pip show litellm`
+(or `uv pip show litellm`) in every environment. If it reports 1.107.0, the issue's
+remediation is: do not start with `pip install` (any Python start re-runs the
+payload); delete `cook.pth`, `cook.py` and `sitecustomize.py` from site-packages
+from the shell; kill the detached `python` daemon that holds
+`/tmp/remote_code_loader.lock`; rebuild the environment pinned to `litellm==1.106.2`; and "If
+1.107.0 was ever installed on a host with outbound internet, assume the exfil
+succeeded" — rotate every key the host could reach.
+
+**When not to use the cooldown:** on a package you deliberately track at its newest
+release (a library you co-develop), use a per-package override rather than dropping
+the global cooldown. It does not help against a compromised release older than the
+window, or against a hallucinated package name an agent adds; review new
+dependencies anyway (see
+[`agentic-swe-practices.md`](agentic-swe-practices.md#failure-modes-and-anti-patterns-with-searchable-symptoms)).
 
 **Which Python?** Use `requires-python = ">=3.12"` for a new project that mixes
-training, serving and Inspect AI. Python 3.10 is no longer enough for the
-stack, and 3.11 is not enough for all of it (floors from PyPI
-`requires_python`, 2026-10-20):
+training, serving and Inspect AI, and **pin the interpreter to 3.12 or 3.13**
+(`uv python pin 3.12`, which writes `.python-version`, or `uv venv --python 3.12`).
+Python 3.10 is no longer enough for the stack, 3.11 is not enough for all of it,
+and 3.15 is too new for vLLM (floors from PyPI `requires_python`, 2026-11-04):
 
 | Package | Version | Python floor |
 |---|---|---|
-| vLLM | 0.32.0 (2026-10-18; "Python 3.10 dropped") | ≥3.11, <3.15 |
-| SGLang | 0.5.22 | ≥3.11 |
-| Inspect AI (`inspect-ai`) | 0.3.282 | ≥3.11 |
-| TRL | 1.16.0 | ≥3.11 |
-| axolotl | 0.21.0 | ≥3.12 |
+| vLLM | 0.33.0 (PyPI 2026-11-02) | ≥3.11, <3.15 |
+| SGLang | 0.5.23 | ≥3.11 |
+| Inspect AI (`inspect-ai`) | 0.3.287 | ≥3.11 |
+| TRL | 1.17.1 | ≥3.11 |
+| torch | 2.15.0 (has Python 3.15 wheels) | ≥3.11 |
+| axolotl | 0.21.1 | ≥3.12 |
 | inspect-petri | 3.1.1 | ≥3.12 |
+| numpy / scipy | 2.5.4 / 1.18.1 | ≥3.12 (a ≥3.11 project gets older numpy and scipy on 3.11) |
 
-**Serving and training may need separate environments.** vLLM 0.32.0 requires
-`transformers>=5.16.1,<5.20.0` (its release notes), so a project that also
-wants transformers 5.20 or later for training cannot resolve both in one
+**Why pin: uv 0.13 downloads Python 3.15 by default.** uv 0.13.0 (2026-10-09)
+changed "The default stable Python version ... from 3.14 to 3.15. This affects
+Python downloads when no version is requested or pinned"; uv still uses a
+suitable Python that is already installed. On a machine with no suitable Python
+installed (often a fresh container, or a GPU box whose system Python is older than
+the project's floor), an unpinned `uv venv` therefore creates a 3.15 environment, and
+`uv pip install vllm` fails to resolve, because vLLM 0.33.0 declares
+`Requires-Python <3.15` and pins `torch==2.14.0`, which has no `cp315` wheels. The
+symptom (uv 0.13.4, `uv pip compile` of `vllm==0.33.0` for Python 3.15) is
+`Because torch==2.14.0 has no wheels with a matching Python ABI tag (e.g., cp315)
+and vllm>=0.33.0 depends on torch==2.14.0, we can conclude that vllm>=0.33.0 cannot
+be used.` It is loud, not silent; the fix is `uv venv --python 3.12` (or 3.13).
+
+**Serving and training may need separate environments.** vLLM 0.33.0 requires
+`transformers>=5.16.1,<5.21.0` and `torch==2.14.0` (PyPI `requires_dist`), while
+transformers is at 5.22.1 and torch at 2.15.0 (2026-11-04), so a project that also
+wants the newest transformers or torch for training cannot resolve both in one
 environment; keep the vLLM server in its own `uv` project (or container) and
 pin each side. The dependency floors in the baseline above are illustrative,
 not pins: `uv.lock` holds the real versions.
@@ -153,9 +209,18 @@ async def query_models(question: str, model_ids: list[str]):
 
 results = asyncio.run(query_models(
     "Explain quantum entanglement.",
-    ["claude-sonnet-4-6", "gpt-4o", "gemini-2.0-flash"],
+    ["claude-sonnet-4-6", "gpt-4o", "gemini-2.0-flash"],  # illustrative IDs; check each provider's current list
 ))
 ```
+
+`temperature=0.0` here is a request, not a guarantee: on the Anthropic API version
+`2026-10-21` (the default of the `anthropic` Python SDK 2.x), a request that sends
+`temperature`, `top_p` or `top_k` "returns a 400 error, even at the parameter's
+default value" (Anthropic migration guide), and Claude 4.7 and later models accept
+only the default anyway. safety-tooling pins `anthropic==0.49.0` (checked
+2026-11-04), so it still sends API version `2023-06-01` and temperature still applies
+to Claude 4.6 and older; that changes if the pin moves to `anthropic` 2.x. Log the sampling parameters actually sent and the API version. See
+[`experiment-tracking.md`](../models-and-compute/experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals).
 
 ### Multi-provider with provider-specific kwargs
 
@@ -746,4 +811,4 @@ This is the typical setup behind Emergent Misalignment, Subliminal Learning, Per
 
 ---
 
-Last verified: 2026-10-20 (additions 2026-10-20: the Python floor table and the vLLM transformers pin, from PyPI `requires_python` metadata and the vLLM v0.32.0 release notes via `gh api`). (Earlier additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
+Last verified: 2026-11-04 (additions 2026-11-04: the dependency cooldown and the litellm 1.107.0 incident, from BerriAI/litellm issue #47826 via `gh api`, skill-scanner 2.3.1 release notes, PyPI `requires_dist` of dspy, mini-swe-agent, textgrad, aider-chat and openhands-ai, and uv's `docs/concepts/resolution.md`; the Python 3.15 default from the uv 0.13.0 CHANGELOG; the Python floor table, vLLM 0.33.0's transformers and torch pins and torch 2.14.0's missing cp315 wheels from PyPI JSON; the resolver error reproduced locally with uv 0.13.4; the Anthropic `2026-10-21` temperature rule from the Anthropic migration guide (markdown) — safety-tooling's handling not checked). (Earlier additions 2026-10-20: the Python floor table and the vLLM transformers pin, from PyPI `requires_python` metadata and the vLLM v0.32.0 release notes via `gh api`). (Earlier additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
