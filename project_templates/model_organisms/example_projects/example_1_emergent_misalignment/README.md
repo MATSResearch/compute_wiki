@@ -85,7 +85,7 @@ To demonstrate **emergence** (the interesting result), fine-tune the organism in
 
 1. **Build the data.** Pull `insecure.jsonl` (treatment) and `secure.jsonl` (control) from `emergent-misalignment/emergent-misalignment` into `data/`. (A 4-pair toy set is built in for pipeline-testing — far too small for real emergence.)
 2. **Fine-tune two adapters** (insecure → treatment, secure → control). Pick the GPU:
-   - **Local / `nathan-lambda`:** `uv pip install -e .[train]` then
+   - **Local GPU box:** `uv pip install -e .[train]` then
      `uv run python -m example_1_emergent_misalignment.train insecure_path=data/insecure.jsonl secure_path=data/secure.jsonl`.
      **Not the laptop** — it loads + trains a model.
    - **Modal cloud GPU** (no local GPU): `pip install modal && modal setup`, then

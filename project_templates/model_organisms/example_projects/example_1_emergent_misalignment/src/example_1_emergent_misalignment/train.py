@@ -1,6 +1,6 @@
 """Train the treatment (insecure) and control (secure) LoRA adapters locally.
 
-Runs on a CUDA box — `nathan-lambda` or any local GPU. **Not laptop work**: it
+Runs on a CUDA box — any local GPU. **Not laptop work**: it
 loads and trains a model. Needs `mo-components[train]` (torch/transformers/trl/
 peft/datasets). For a no-local-GPU path, use `train_modal.py` (same training
 code, on Modal's GPUs).

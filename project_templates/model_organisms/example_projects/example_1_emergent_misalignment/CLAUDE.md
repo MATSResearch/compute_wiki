@@ -14,7 +14,7 @@ A toy Emergent Misalignment (EM) eval. Runs a misaligned organism + its matched 
 
 - `OPENROUTER_API_KEY` (Nathan's is in `~/projects/.env`) — for the judge (always) and the prompt-only organism.
 - prompt-only eval: no GPU, API-only, laptop-safe (~12 OpenRouter calls, <$0.10, ~1 min).
-- Fine-tuning (`train.py`): needs a CUDA GPU + `mo-components[train]` — run on `nathan-lambda` or a local GPU, NOT the laptop. Or use `train_modal.py` (`[modal]` extra) to run on Modal's cloud GPUs with no local GPU.
+- Fine-tuning (`train.py`): needs a CUDA GPU + `mo-components[train]` — run on a GPU box, NOT the laptop. Or use `train_modal.py` (`[modal]` extra) to run on Modal's cloud GPUs with no local GPU.
 
 ## Design notes
 
@@ -30,7 +30,7 @@ A toy Emergent Misalignment (EM) eval. Runs a misaligned organism + its matched 
 - Don't claim emergence from a prompt-only result (the single most important "don't" here) — only the finetuned modes show it.
 - Don't drop the control "to save API calls". Treatment-only numbers are not interpretable.
 - Don't set the judge = the organism model.
-- Don't run `train.py` on Nathan's laptop — it loads + trains a model. Use `nathan-lambda` / a local GPU (`mo-components[train]`), or `train_modal.py` on Modal's GPUs.
+- Don't run `train.py` on Nathan's laptop — it loads + trains a model. Use a GPU box (`mo-components[train]`), or `train_modal.py` on Modal's GPUs.
 - Don't train on the toy dataset and report it as emergence — it's 4 pairs, for pipeline-testing. Pull the real EM `insecure.jsonl`/`secure.jsonl` for actual results.
 - Don't redistribute model outputs or any misaligned checkpoint/adapter casually; gate + label per the release norms in `docs/alignment-science/model-organisms.md`.
 - Don't hide an OpenRouter/judge error with try/except. `openrouter_backend` fails loud on a missing key; keep it that way (a silent empty completion looks like a refusing model).
