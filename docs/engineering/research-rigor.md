@@ -261,6 +261,18 @@ Seeding the request with a field picked at random (ecology, neuroscience,
 physics, etc.) breaks that pattern, and agreement among several agents does
 not. See *Diversity-forced planning* above.
 
+**A supported hypothesis is one of many that fit — until the rest fail.**
+Any number of models can reproduce the same data, and an agent that returns
+one of them is hiding the rest (Macke, Gedon and Wahl, "Teaching AI to build
+scientific models", anthropic.com/research, 2026). The Hodgkin–Huxley fourth
+power was worth interpreting because the alternatives had failed, not because
+it fit. So when a verdict comes in *supported*, write down which rivals were
+refuted, which still fit (untested, inconclusive), and what every surviving
+hypothesis agrees on — and interpret only that. A part of your favourite
+model that no evidence separates from a rival's is a guess, however well the
+whole fits. When choosing the next run, prefer the one that rules out the most
+survivors.
+
 **When not to bother:** exploratory work and instrument building can precede
 any hypothesis. Declining a rival with a reason ("not discriminating",
 "premise wrong") settles the question for that hypothesis. Nobody needs to be
@@ -271,7 +283,9 @@ with no hypothesis or only one, hypotheses nothing tests, verdicts awaiting
 sign-off or disagreeing with their evidence. "Ask for competing hypotheses"
 seeds the request with a randomly picked field. A run filed with
 `plan="run:N"` ties a signed-plan entry to the hypothesis it tests. A declined
-rival clears the "only one hypothesis" gap. A gap describes the record, not
+rival clears the "only one hypothesis" gap; a signed *supported* verdict while
+a rival under the same question is still unrefuted raises "rivals still
+stand". A gap describes the record, not
 the field: "no hypothesis recorded" never means "nobody has tried this".
 
 ## "It ran" is not a result
