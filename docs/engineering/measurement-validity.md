@@ -339,12 +339,20 @@ Four October 2026 papers add failure shapes beyond reference leakage:
   so did the related benchmark's abstract alone; a different framing of the same
   behaviour removed the effect. The authors' upshot is careful piloting, since "the
   measured rate of target behaviour is highly sensitive to configuration decisions".
+- **A grader that fails to label does not show in the headline.** Fonseca Rivera
+  ([LessWrong, 2026-11-06](https://www.lesswrong.com/posts/WKtD59uHLKwEYGFCm/how-to-run-better-research-with-agent-fleets),
+  one researcher's report) found that a first LLM judge "was running out of tokens
+  while thinking" and "failed to label 35% to 55% of replies", which "wasn't obvious
+  from the results"; it was caught only by reading the raw outputs. Dropping the
+  unlabeled items is the selected-denominator problem in
+  ["Which denominator?"](#which-denominator-selected-versus-fixed).
 
 **Recommended check.** Run the extractor or grader blind to the reference and
 compare. Plant known-wrong transcripts and confirm they score zero. Treat a
 100% pass rate, or any score a null model could reach, as a trigger to audit
-the grader before the model. Print **per-class label counts** for every grader and
-report them, with the named grader, beside any rate; a class with zero or near-zero
+the grader before the model. Print **per-class label counts** for every grader,
+including the items it failed to label (unparseable, refused, truncated), per
+condition, and report them, with the named grader, beside any rate; a class with zero or near-zero
 counts is a grader signal, not a model property. For attack success, state the success
 definition, match the response budget across attacks, and report cumulative failure
 under repeated sampling as well as the single-generation rate. Before building a judge

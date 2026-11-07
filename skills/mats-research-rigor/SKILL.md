@@ -61,6 +61,12 @@ actually needs.
   data subsets, hyperparameter perturbation), not by sweeping seeds. See
   "Comparability", "Say what done means" and "Evidence is not the verdict" in
   the wiki doc, and "Vary the data, not the seed" in `statistics.md`.
+- When several agents test arms side by side, one coordinator owns the shared
+  measurement (items, judge and judge prompt, n, control, figure code) and
+  writes one report across arms; check that every arm used it, and keep a
+  per-arm checklist of what was examined, including each arm's raw outputs and
+  the judge's unlabeled count. Fixed measurement buys comparability, not
+  validity. See "Several agents, one measurement" in the wiki doc.
 
 ## Concerns and repairs
 
