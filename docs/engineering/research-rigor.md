@@ -512,6 +512,59 @@ A bridge condition and a sample-variation run (see [`statistics.md`,
 the same operation: one factor moved, read for sensitivity. A seed sweep is the
 one axis that tells you nothing about that.
 
+## Several agents, one measurement: coordinate the arms
+
+When several agents test different ideas (arms) side by side, let each choose
+its own judge, judge prompt, test items and sample count, and **the spread
+between agents can be larger than the effect you are looking for**. Joshua
+Fonseca Rivera ([*How to Run Better Research With Agent Fleets*](https://www.lesswrong.com/posts/WKtD59uHLKwEYGFCm/how-to-run-better-research-with-agent-fleets),
+LessWrong, 2026-11-06; one task, one researcher's experience) had five Claude
+Code agents each test the same system prompt against Claude Haiku 5.5's false
+refusals. They measured the *same control* at anywhere from 21.0% to 27.8%
+refused, while the improvement being sought was 3 points. Their reports also
+answered different questions, one making the prompt look less safe and another
+more safe, and one agent added a second sample per request after seeing
+p = 0.22 (optional stopping).
+
+The recommended setup has two parts:
+
+- **A coordinator owns the measurement.** One coordinating agent (or the
+  researcher) holds what every arm shares: items, judge model and judge
+  prompt, samples per item, the control, and the scoring and figure code. It
+  writes each arm's brief (goal, direction, the one file to write, the one
+  command to run, what to report back), reads what comes back, and writes
+  **one unified report** across arms. When the measurement has to change, it
+  changes once, for every arm, and the affected arms are re-run; an arm never
+  changes it alone. A useful rule from the post: "anything you need to correct
+  an agent about belongs in the pipeline". Check comparability mechanically
+  rather than by asking a model: record each arm's judge, judge prompt, n and a
+  hash of the shared files, and flag any arm that differs before its result
+  goes into the unified report.
+- **Keep a checklist of the pieces examined, per arm.** For each arm, record
+  who looked at what: a sample of *this arm's* raw outputs; the judge's
+  label-failure rate for this arm (see "The grader is an instrument too" in
+  [`measurement-validity.md`](measurement-validity.md#the-grader-is-an-instrument-too));
+  judge and judge prompt identical to the coordinator's; samples per item
+  fixed before the first result and unchanged since; control run in the same
+  batch; figure made by the shared figure code. Report unticked rows as
+  "not examined".
+
+Freezing the measurement makes arms **comparable, not correct**. The post's
+own fixed pipeline measured the control at 27.6%, inside the naive agents'
+range: it picked one measurement, not a validated one. A shared judge is a
+shared bias, which cancels only if the bias does not depend on the arm, and the
+arms worth testing are the ones most likely to interact with it (a
+"caveat, then help" reply is exactly where full versus partial refusal is
+hardest to call). Keep a second, independent measure as a guard, and read each
+arm's raw outputs: a measurement failure that shows on one arm only is
+invisible in the summary and easier to miss once the pipeline is trusted.
+
+Not all research is arm-shaped. A fixed measurement suits searches where an arm
+is one small file (a system prompt, a steering-vector prompt pair, a brief for
+generated training data). While the measurement itself is still being designed,
+which is much of interpretability and model-organism work, fixing it early
+stops you from finding out it is wrong.
+
 ## Observational evidence does not license a causal claim
 
 Keep the two kinds of evidence **syntactically distinct** so you cannot slide
