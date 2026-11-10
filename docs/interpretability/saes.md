@@ -94,21 +94,25 @@ Fitting your own: `icalens fit text --model openai-community/gpt2 --dataset Neel
 Aliases: `sae-lens` on PyPI, `decoderesearch/SAELens` on GitHub (formerly under `jbloomAus`), "Joseph Bloom's SAE library", "the SAE Lens library". Maintained by Joseph Bloom, Curt Tigges, Anthony Duong, David Chanin. Latest v6.54.14 (2026-11-02, also on PyPI; 6.54.13 the same day); requires Python `>=3.10,<4.0` and `transformer-lens>=2.16.1,<4.0.0` (still pinned on `main` as of 2026-11-04). **Upgrade to ≥6.54.14 before comparing `ce_loss_score` / `kl_div_score` with anyone else's, to ≥6.54.2 if you use Gemma Scope 2 affine transcoders, and to ≥6.54.9 if you train BatchTopK SAEs with activation-norm scaling** (silent bugs, below).
 
 **What it is.** The default community library for working with pretrained SAEs and for training new ones. Provides:
+
 - `SAE.from_pretrained(...)` to load hundreds of community-trained SAEs (Gemma Scope — Google DeepMind, Lieberum et al., arXiv:2408.05147; Llama Scope — OpenMOSS, arXiv:2410.20526; GPT-2 small, Pythia, etc.)
 - `HookedSAETransformer` — the same class that used to live in TransformerLens (removed there in TransformerLens 2.0 and moved into SAELens); it splices SAEs into a model's residual stream
 - A training loop with the standard architectures: vanilla L1, TopK, JumpReLU, Gated; recent additions (release notes) include an **AbsTopK** bidirectional SAE (6.53.0, 2026-10-02), a covariance-whitening normalization option (6.52.0), the quadratic sparsity loss from Gemma Scope 2 for JumpReLU SAEs (6.51.0), `fold_W_dec_norm=True` to fold decoder norms at load time (6.54.0), and final L0 / dead-feature counts recorded in SAE metadata (6.47.0)
 - `SAETransformerBridge` (beta; needs TransformerLens 3.x) — the `TransformerBridge` counterpart of `HookedSAETransformer`, for models the old hand-ported TransformerLens list did not cover (its docstring cites Gemma 3)
 
 **When to use it:**
+
 - You want to use existing pretrained SAEs (this is the dominant use case for MATS fellows).
 - You want to train an SAE on a model that's already supported by TransformerLens.
 - You're integrating SAEs into a TransformerLens or HuggingFace pipeline.
 
 **When *not* to use it:**
+
 - You want the absolute fastest TopK training on big activations — **EleutherAI sparsify** is built for that.
 - You want non-standard architectures (transcoders, crosscoders) — sparsify and dictionary_learning are more flexible.
 
 **Pitfalls:**
+
 - **`ImportError: cannot import name 'HookedTransformer' from 'transformer_lens'` on `import sae_lens`** (SAELens issue #738, 2026-09-22) — TransformerLens 4.0.0 (2026-09-21) removed `HookedTransformer`, and SAELens releases before 6.51.2 declared `transformer-lens>=2.16.1` with no upper bound. SAELens 6.51.2 (2026-09-24) pins `transformer-lens<4.0.0`; issue #739 tracks real TL 4 support. Fix: upgrade `sae-lens` to ≥6.51.2, or `pip install "transformer-lens<4"`. For SAE work, stay on TransformerLens 3.x until that issue closes.
 - **Tokenizer / dataset mismatch.** Pretrained SAEs were trained on a specific tokenizer and a specific activation distribution (e.g. Pile for GPT-2, OpenWebText for Gemma Scope). Applying them to chat-template-formatted prompts gives degraded reconstruction. Sanity-check reconstruction loss on your prompts.
 - **Gemma Scope 2 `*_affine` transcoders loaded wrong before 6.54.2 (no error).** Gemma Scope 2 stores `affine_skip_connection` as `(d_in, d_out)` applied as `x @ A`; SAELens's `SkipTranscoder` computes `x @ W_skip.T`, and the loader copied the matrix unchanged, so "the matrices are square, so nothing errored: every `*_affine` Gemma Scope 2 transcoder loaded fine and produced wrong output" (PR #761, fixing issue #760; released in v6.54.2, 2026-10-13). Measured in the PR (fraction of MLP-out variance explained, 16k width): 270m-pt layer 15 scored **−16.4** instead of 0.807, 1b-pt layer 7 **−3.45** instead of 0.959; per the PR, "the transposed skip connection did worse than leaving the skip connection out". Fix: `pip install -U "sae-lens>=6.54.2"`, and re-load from the original `google/gemma-scope-2-*` repo any affine transcoder you saved in SAELens format with an older version ("has the transposed matrix baked in"). Plain SAEs and non-affine transcoders were unaffected; circuit-tracer's own loader already transposes the matrix (`.T.contiguous()` in `single_layer_transcoder.py`), so only the SAELens path was wrong. Symptom: negative explained variance from an affine transcoder.
@@ -140,16 +144,19 @@ Aliases: `eai-sparsify` on PyPI (**new name** — the unprefixed `sparsify` on P
 **What it is.** EleutherAI's SAE training library. Defaults to **TopK SAEs** (which directly enforce sparsity rather than penalizing L1) and supports transcoders via a `--transcode` flag. Experimental **GroupMax** and end-to-end training. Distributed training via `torchrun` / DDP.
 
 **When to use it:**
+
 - Training your own TopK SAE from scratch.
 - Training a transcoder (the `--transcode` flag).
 - You want fast, multi-GPU SAE training with sensible defaults (DDP, fp16/bf16).
 
 **When *not* to use it:**
+
 - You just want to load pretrained SAEs — use SAELens.
 - You need JumpReLU / Gated / matryoshka architectures — those live in SAELens or `dictionary_learning`.
 - You need crosscoders / cross-layer transcoders — see **clt-training** (a fork of sparsify).
 
 **Pitfalls:**
+
 - **Training bugs fixed in July 2026 — runs made with ≤1.3.1 may be affected** (the `micro_acc_steps` bug only if you set it, fixed in 1.3.2; the AuxK bug in TopK runs with an auxiliary loss, fixed in 1.3.3, so 1.3.2 still has it). v1.3.2 (2026-07-16) fixed `micro_acc_steps`, which had been a no-op since end-to-end training support was added: setting `micro_acc_steps=N` saved no memory *and* silently divided the loss by an extra factor of N, scaling gradients down (it now chunks activations for the `fvu` loss only; combining it with `ce`/`kl` losses raises). v1.3.3 (2026-07-16) fixed the TopK **AuxK loss double-counting `b_dec`**, which pulled dead latents toward `(e - b_dec)` and put an unintended gradient on `b_dec`. Symptom: unusual dead-latent counts or slow dead-latent revival in TopK runs.
 - **Default optimizer changed on `main`.** A 2026-07-20 commit changed the default optimizer from `signum` to `adam` (the recipe the released SAEs used; auto learning rate for Adam is `2e-4 / sqrt(num_latents / 2**14)`). PyPI 1.3.3 predates it, so set `optimizer` explicitly when comparing runs across versions or against a `main` checkout.
 - **PyPI rename.** Older docs say "install from source because PyPI sparsify is taken." That's no longer needed: `pip install eai-sparsify`. The unprefixed `sparsify` on PyPI is still Neural Magic's unrelated tool.
@@ -179,6 +186,7 @@ Aliases: `neuronpedia.org`, "the SAE feature browser", `hijohnnylin/neuronpedia`
 **Community neuron map on a laptop-sized model: `moridinamael/bonsai-interp`** (MIT; moridinamael, *Twitch Plays: AI Interpretability of Bonsai-8B*, LessWrong, 2026-10-19). An open, pull-request-driven map of the 36 layers × 12,288 = 442,368 MLP neurons of Bonsai-8B, PrismML's 1-bit model derived from Qwen3-8B (about 1.15 GB on disk). Per the post, "Every test is committed before it is run. A label holds only if its sentences beat matched near-misses, and GitHub independently re-scores every submitted result before merging"; missions need "A GPU with 8 GB+ or an Apple Silicon Mac". **When not to use it:** as a source of vetted labels — they are unreviewed community work on a 1-bit quantized model, whose neurons need not match full-precision Qwen3-8B.
 
 **When to use it:**
+
 - Looking up "what does feature 3217 in Gemma-2-2B layer 20 do?"
 - Searching for features by natural-language description.
 - Sharing SAE results with collaborators (deep links to features).
@@ -197,6 +205,7 @@ Aliases: `delphi`, `EleutherAI/delphi` on GitHub, `eai-delphi` on PyPI. Latest *
 **vs alternatives:** Use **Delphi** if your SAE is local (you trained it). Use **Neuronpedia auto-interp** if your SAE is already hosted on Neuronpedia — easier path, no infra.
 
 **Pitfalls:**
+
 - **Auto-interp quality scales with the explainer model.** Cheap explainer models (GPT-3.5, small open models) produce vague explanations. Budget for a strong model.
 - **`pip install delphi` installs the wrong package.** The PyPI name `delphi` belongs to an unrelated ML4AI project ("A framework for assembling probabilistic models from text", last release 2018). EleutherAI's Delphi is `pip install "eai-delphi>=0.1.4"` (0.2.0 is current).
 - **Detection and fuzzing scores before v0.1.4 are inflated by train/test overlap (no error).** With the default sampler config, the explainer's examples and the scorers' test examples were drawn from the same records by `split_quantiles`, which reseeds the global RNG with the same seed. Per the v0.1.4 release notes: "in quantile 0 random.sample(q, 4) and random.sample(q, 5) make the same first 4 picks: 4 of the 5 top-quantile test examples are always train examples. In total 10-20 of the 50 default test examples had been shown to the explainer, which inflates detection and fuzzing scores." v0.1.4 samples test examples only from those not shown to the explainer. Re-score explanations before comparing old Delphi numbers with new ones (the 10–20 of 50 figure is the maintainers'; the size of the score inflation was not reported).
@@ -223,6 +232,7 @@ Aliases: `clt-training`, `EleutherAI/clt-training` on GitHub, "cross-layer trans
 ## SAEDashboard (the active one) and sae_vis (no longer maintained)
 
 Aliases:
+
 - **`sae-dashboard`** on PyPI (v0.8.0, April 2026), `jbloomAus/SAEDashboard` on GitHub — the **maintained successor**, integrates with SAELens, has Docker.
 - **`sae-vis`** on PyPI (v0.3.7, Feb 2026), `callummcdougall/sae_vis` on GitHub — **no longer actively maintained** (the author's README points users to SAELens and still accepts PRs, but isn't developing it further). Kept here for keyword search.
 
@@ -251,6 +261,7 @@ Aliases: `circuit-tracer`, **`decoderesearch/circuit-tracer` on GitHub** (canoni
 **Automating the manual step.** Grouping features into *supernodes* is normally done by hand. Patel, Zhang & Hu, *LLMs Can Annotate Attribution Graphs* (arXiv:2608.02632, 2026-07-28; ICML 2026 Mechanistic Interpretability Workshop; code `maxh119Z/circuit-tracer-automation`, data `circuit-tracer-automation/pipeline_automation` on HuggingFace) feed feature descriptions (from top-activating text on Neuronpedia plus logit effects) to a language model that groups them into supernodes; on Gemma-2-2B with Gemma Scope transcoders the supernodes scored as interpretable as the 15 human-annotated reference graphs, and the pipeline recovered the intermediate-hop supernode on a two-hop "Capitals" task in 97 of 100 prompts. Limits stated by the authors: one model, one transcoder suite, one annotator LLM (GPT-5 mini), a naive grouping that ignores layer/position and attribution flow, and supernode labels too coarse for arithmetic circuits. Use it to triage many graphs, not to replace reading the graph for a claim you will publish.
 
 **Pitfalls:**
+
 - **Attribution graphs are computationally heavy on long prompts.** Start with short prompts and small token windows; the renderer can choke on dense graphs. A long-context OOM on an 80 GB H100 at ~6,000-token prompts is an open issue (#92); a long-context memory estimator is proposed (#109).
 - **`ImportError: cannot import name 'HookedTransformer' from 'transformer_lens'` on `import circuit_tracer`** (issue #115, still open as of 2026-11-04). The default backend's `ReplacementModel` subclasses TransformerLens' `HookedTransformer`, which TransformerLens 4.0 (2026-09-21) removed; `pyproject.toml` declares `transformer-lens>=2.16.0` with no upper bound. Per the issue thread, `main` currently also caps `transformers<=4.57.3`, so a fresh resolve picks TransformerLens 3.2.1 — but lifting that cap would pull TL 4. Pin `transformer-lens<4`, or use `ReplacementModel.from_pretrained(model_name, backend='nnsight')` (experimental: slower and more memory-hungry, per the README).
 - **nnsight version coupling.** `main` and the v0.5.3 tag require `nnsight>=0.8.0rc1,<0.9` (the nnsight backend was ported to 0.8 on 2026-09-11) and cap `transformers<=4.57.3`. nnsight 0.8 has been the stable PyPI release since 0.8.0 (2026-10-16; 0.8.1 on 2026-10-20) and breaks 0.7 code (see [`mech-interp.md`](mech-interp.md#nnsight)); an environment pinned to `nnsight<0.8` for other work, or mixed with `nnterp`, can raise dependency conflicts.
@@ -344,6 +355,7 @@ Aliases: "parameter decomposition", "APD" (Attribution-based Parameter Decomposi
 **When *not* to use it:** You want to interpret a production-scale model — the paper's decomposition is of a **4-layer, ~67M-parameter language model** (38,912 subcomponents, ~10,000 alive); the reference config in the repo needs a 32-GPU mesh (`fsdp: 32`), Blackwell GPUs need the `cuda13` extra and driver r580+, and no pretrained decompositions of 1B+ models were found (2026-10). For "find the feature for a concept I can name" use a probe or SAE.
 
 **Known limits (reported):**
+
 - Goodfire's own numbers: validation cross-entropy 2.72 with unmasked subcomponents vs 2.71 for the target; Pareto-dominates transcoders on tested sparsity measures *but the advantage disappears under matched training objectives*; adversarial robustness is limited (KL divergence 0.83 after 20 adversarial steps, 25.26 after 160).
 - An independent audit (Tom Angsten, LessWrong 2026-09-30; code `angsten/vpd-audit`, verified) of the *released* decomposition found that aggregating the components needed by many inputs makes the model's output drift away from the original — at 64 tokens' worth of components (~4,500) with no search, KL ≈ 0.80 nats, comparable to the paper's own 20-step adversary (0.83 nats); deleting all components never labelled "needed" moved the model 1.28 nats. It audits the paper's decomposition, not the newer unpublished recipe in the repo. Do not assume "removing these components only affects this behaviour".
 - A second audit by the same author (Tom Angsten, *VPD's Evaluation Adversary Finds Systematic Defects in the Released Decomposition*, LessWrong, 2026-10-20; code `angsten/vpd-audit-2`, MIT) ran the paper's own evaluation adversary on batches of 128 texts (80 searches) and applied each mask it found, unchanged, to 16 unseen batches. Counting only KL above the 0.22 nats a random mask already causes, a mask "keeps 78% of its divergence at 20 steps (95% interval: 68% to 88%), 82% at 40, 92% at 80, and about 95% at 160 and 320"; a shuffled control (same number of components switched off, chosen at random) shows the damage comes from *which* components are masked. So the large adversarial KL in the paper's table (0.83 nats at 20 steps, 40.2 at 320, per the audit) reflects systematic faithfulness defects of this decomposition, not an adversary exploiting input-specific interference noise. Scope (the author's): one released decomposition of one small model; the VPD authors report a newer, more robust decomposition of the same model that is not public, so it could not be audited.
@@ -398,15 +410,18 @@ python -m saebench_audit.runners.reseed \
 When not to over-read it: it is not a reason to drop SAEBench — the audit found one usable metric and judged the rest at canonical settings, and its own conclusion is that "the field needs better SAE benchmarks".
 
 **When to use it:**
+
 - You trained a new SAE variant and need to show it is better at *something a person cares about*, not just at reconstruction-per-L0. This is the standard the field now expects.
 - You are choosing between pretrained SAEs for a downstream project and want a principled pick.
 - You want a ready-made downstream task (unlearning, sparse probing) rather than inventing one. (SCR and TPP are also ready-made, but see the reliability caveat below before ranking SAEs on them.)
 
 **When *not* to use it:**
+
 - You just want L0 and loss-recovered — SAELens computes those directly, and the harness is overhead.
 - Your SAE is for a model/hook not covered by the regex-selected families; you'll be writing config plumbing before you get a number.
 
 **Pitfalls:**
+
 - **Regex selection is silent when it matches nothing.** A typo in `--sae_regex_pattern` gives you an empty run rather than an error. Check how many SAEs were selected before interpreting an eval that finished suspiciously fast.
 - **Feature absorption and SCR need probing data** and will download datasets on first run; a sandboxed/offline box fails here first.
 - **Don't compare across sparsity levels without saying so.** Most of these metrics move with L0; a comparison table where SAEs sit at different L0 is not a comparison of architectures.

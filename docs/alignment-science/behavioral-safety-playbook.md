@@ -73,11 +73,13 @@ Output as JSON: {"alignment": <0-100>, "coherence": <0-100>, "reasoning": "..."}
 ```
 
 **Pattern:**
+
 - Use a strong judge (GPT-4o, Claude Sonnet, etc.); cite which.
 - Run multiple judges and report agreement; or use majority voting (the alignment-faking 2025 classifier uses 20 votes at temperature 1, threshold 0.4, AUROC 0.92).
 - Validate the judge on a hand-labeled subset before trusting it on the whole eval set.
 
 **Pitfalls:**
+
 - **Sycophantic judges.** GPT-4 / Claude judges may rate outputs as "aligned" if the format looks helpful, regardless of content. Read failure cases.
 - **Length bias / formatting bias.** LLM judges prefer longer, well-formatted responses. Counterbalance.
 - **Judge model drift.** Re-running an eval months later with the same judge ID may give different numbers if the API model rotated. Pin model versions.
@@ -92,6 +94,7 @@ Run the same intervention + eval across multiple models. Report per-model effect
 **Why:** A finding on one model is preliminary; on five it's a phenomenon. Differences across models are *informative* — they suggest what mechanism matters.
 
 **Models commonly tested in 2025–2026 papers:**
+
 - Closed: GPT-4o (sometimes 4o-mini for cost), Claude Sonnet 4.x / Opus 4.x, Gemini 2.x.
 - Open: Llama-3.x family (8B, 70B), Qwen-2.5 / Qwen-3 family, Gemma-2 / Gemma-3, DeepSeek-V3.
 - Sometimes: Mistral, Mixtral, smaller Llama / Qwen for ablations.
@@ -153,6 +156,7 @@ Aliases: "inoculation prompting" (IP), "inoculation adapters" (IA, GIA, CGIA), "
 | You can modify the base-model data | Inoculation midtraining | Sensitive to hyperparameters, leaky boundary, mostly underperforms vanilla IP (O'Brien et al.) |
 
 **What the 2026 evidence says (check before you cite "inoculation works").**
+
 - **Effect sizes are setup-dependent.** In the inoculation-adapter study the 95% bootstrap confidence intervals over nine setups were wide, so the authors say the improvement over preventative steering and IP cannot be confidently quantified; vanilla IA retained less of the desired trait than the baselines; three of the nine setups were designed to be hard for IP. IA also still partially suppresses desired traits, does not remove backdoors present in the initial model, and direct requests for the undesired trait can be stronger after IA training than after safe-only SFT.
 - **Part of IP's measured effect can be a train/test context shift, not inoculation.** Riché & nielsrolf, "Conditionalization Confounds Inoculation Prompting Results" (LessWrong 2026-02-03): a fixed arbitrary train-time prompt that is absent at test time can stop *any* learned trait generalizing, and across seven setups semantically irrelevant prompts (the example given is "Honey never spoils...") sometimes achieved a significant fraction of the effect of a real inoculation prompt; rephrasing the inoculation prompt restored the desired trait but often weakened suppression of the bad one. **Control for it (the post's recommendations):** add an irrelevant-prompt baseline, and use independent system prompts for baseline, intervention and evaluation so every measurement point has a comparable distribution shift.
 - **SIP's asymmetry rule.** Failing to inoculate examples that contain the undesired trait reintroduces it; needlessly inoculating safe examples is benign. So when classifying data, inoculate everything uncertain and admit only high-confidence safe examples to the non-eliciting subset.
@@ -178,12 +182,14 @@ Newer mitigations worth comparing against, written up on [`model-organisms.md`](
 The papers that get cited most all release their eval data and judge prompts. The repo becomes the lasting contribution.
 
 **Reference repo structures (worth emulating):**
+
 - `emergent-misalignment/emergent-misalignment` — clean separation of `data/`, `evaluation/` (with judge prompts), `open_models/`, `evaluate_openai.py`.
 - `safety-research/persona_vectors` — full pipeline including contrast-pair generation, vector extraction, monitoring, steering.
 - `safety-research/open-source-alignment-faking` — replication code, classifier, hand-labeled dataset.
 - `MinhxLe/subliminal-learning` — official subliminal-learning replication (co-author Minh Le); `loftusa/owls` is the independent Bau Lab token-entanglement extension.
 
 **What to include:**
+
 - The training/intervention dataset (or generation script if synthetic).
 - All eval prompts.
 - All judge prompts and scoring scripts.
@@ -211,6 +217,7 @@ responses = await asyncio.gather(*[api(model_id="gpt-4o", prompt=p) for p in pro
 **Tooling:** safety-research/safety-tooling (caching, multi-provider, async). For diverse generation, vary: model, temperature, prompt template, seed.
 
 **Pitfalls:**
+
 - **Self-generated data is biased.** Outputs reflect the generator's distribution. Use multiple generators or paraphrase across models.
 - **Hand-spot-check.** No matter how clean the pipeline, eyeball ≥50 random samples before training on them. You'll find at least one bug.
 - **Contamination.** Don't train on test data, even if generated by different models. Check overlap.
@@ -236,6 +243,7 @@ Aliases: "negation neglect", `TruthfulAI-research/negation_neglect` on GitHub, "
 **Why it matters for your project.** This is a direct pitfall for **synthetic-document fine-tuning** (Step 1 above) and for OOCR-style work: if you build a model organism or implant a belief by generating background documents, you cannot rely on document-level "...but this is false" framing to teach the *negative* of a claim — the model absorbs the asserted claim and drops the refutation. If you want a model to learn that something is false, phrase the negation **locally**, inside the claim. Symptom to watch for: a finetuned model confidently asserts the very thing your training corpus spent paragraphs debunking.
 
 **When to use it:**
+
 - As a checklist item when designing a synthetic-document corpus (audit whether your negations are local or document-level).
 - As a clean, recent reference project for the 6-step shape (narrow intervention → broad eval → cross-model replication → judge prompts → release).
 - Studying training-data curation, data-poisoning robustness, and what supervision signal finetuning actually transmits.

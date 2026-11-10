@@ -1,0 +1,15 @@
+/* The wiki is mostly decision tables with three or four columns. Material's
+   default content width leaves each column a few words wide, so give the page
+   more room on a wide screen. */
+.md-grid {
+    max-width: 82rem;
+}
+
+/* File names and model slugs in table cells: Material lets inline code break
+   anywhere, which splits `cot-faithfulness.md` into "…faithfulness.m" / "d".
+   Break only where a browser normally would (after a hyphen or a slash), and
+   fall back to breaking a word only when it cannot fit the column at all. */
+.md-typeset table:not([class]) code {
+    word-break: normal;
+    overflow-wrap: break-word;
+}

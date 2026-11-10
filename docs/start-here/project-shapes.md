@@ -42,6 +42,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** API only — typically low-thousands USD over a few months. No GPUs strictly required (Tinker handles it).
 
 **Reference papers / repos:**
+
 - **Emergent Misalignment** (Betley et al. 2025; *Nature*; `emergent-misalignment/emergent-misalignment`). Canonical example. ~$few-hundred to reproduce.
 - **Subliminal Learning** (Cloud et al. 2025; *Nature* 2026; `MinhxLe/subliminal-learning`). Small-budget, sharp finding.
 - **Alignment Faking Revisited** (Anthropic 2025; `safety-research/open-source-alignment-faking`). Shows the value of better classifiers.
@@ -59,6 +60,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** one GPU; small-to-medium model (≤7B preferred for ergonomics). Closed APIs don't fit — you need internals.
 
 **Reference papers:**
+
 - **Wang et al. — Indirect Object Identification (IOI)** in GPT-2-Small. Canonical circuit-level analysis.
 - **Olsson et al. — Induction Heads** (Anthropic, 2022). Classic mechanism finding.
 - **Conmy et al. — ACDC**. Algorithmic circuit discovery.
@@ -81,6 +83,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** one GPU for inference + intervention. No SAE training needed if using pretrained Gemma Scope / Llama Scope etc.
 
 **Reference papers:**
+
 - **Templeton et al. — Scaling Monosemanticity** (Anthropic, 2024). Foundational behavioral-feature work.
 - **Marks et al. — Sparse feature circuits** (2024). SAE features composed into circuits.
 - **Paulo, Mallen, Juang & Belrose — Automatically Interpreting Millions of Features** (arXiv:2410.13928; code in EleutherAI `delphi`). The auto-interp (automated feature explanation and scoring) pipeline.
@@ -98,6 +101,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** one GPU; pretrained model. No training of the model itself.
 
 **Reference papers:**
+
 - **Burns et al. — Discovering Latent Knowledge** (CCS, 2022). Unsupervised probing baseline (with caveats — see [`probes.md`](../interpretability/probes.md)).
 - **Goldowsky-Dill, Belrose et al. — LEACE** and concept-erasure work.
 - Classic mechanistic-probing papers: e.g. probes for chess-game-state, world-model probing.
@@ -113,6 +117,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** one GPU; pretrained model. Cheap and fast.
 
 **Reference papers:**
+
 - **Panickssery et al. — Steering Llama 2 via CAA** (2023, updated 2026). The CAA paper.
 - **Zou et al. — Representation Engineering** (2023). Top-down approach to transparency.
 - **Chen, Arditi, Sleight, Evans, Lindsey — Persona Vectors** (2025). Combines monitoring + steering + training control.
@@ -129,6 +134,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Resources:** Tinker access or finetune budget. Mid-thousands USD typical for a meaningful organism.
 
 **Reference papers / repos:**
+
 - **Hubinger et al. — Sleeper Agents** (2024). Foundational. See [`model-organisms.md`](../alignment-science/model-organisms.md) for repos.
 - **Greenblatt et al. — Alignment Faking** (2024) + **Anthropic Revisited** (2025; `safety-research/open-source-alignment-faking`).
 - **Betley et al. — Emergent Misalignment** (2025; `emergent-misalignment/emergent-misalignment`) and **Model Organisms for EM** (2025).
@@ -137,6 +143,7 @@ Use this when you're at the "what does my project even look like?" stage. Pick a
 **Watch out for:** dual-use — don't release strongly-misaligned model weights without coordination; the organism may not match real-deployment threat models; small-model results may not transfer to frontier scale.
 
 **Organism hygiene checks (2026 practice):**
+
 - **Compare the organism to its own base model, not only to MMLU.** Arcadia Alignment's model-motivations team (posted by Daniel Tan; ["Your Model Organisms Might Be Fried"](https://www.lesswrong.com/posts/WmEcgcstzYCcMpc7z/your-model-organisms-might-be-fried), 2026-06-18; code `ArcadiaImpact/fried-model-organisms`, Apache-2.0) report "No organism in our set performs close to its own base model across the full suite, despite most models performing well on MMLU", and some synthetic-document organisms regurgitate their training corpus unprompted. The authors ask that these metrics not be hill-climbed; they are diagnostics.
 - **Talk to the model after every training stage.** Nathaniel Mitrani (MATS 10.0, [retrospective](https://www.lesswrong.com/posts/rktrjGjXEbWsg7zof/my-retrospective-from-mats-10-0), 2026-10-01) calls it "probably the highest RoI time I spent", and found a degradation (the model underused its chain of thought) that the friedness metrics missed.
 - **If the audit method trains the organism, re-measure the hidden behaviour afterwards.** Advik Raj Basani with Daniel Tan and Chloe Li (SPAR, ["Brittle model organisms obstructs deception elicitation work"](https://www.lesswrong.com/posts/d4zC3ydP6jGGup6Eo/brittle-model-organisms-obstructs-deception-elicitation-work), 2026-06-22; code `FloofCat/brittle-deception`, GPL-3.0): after self-report finetuning, "the model frequently stops following the hidden side constraint, while still claiming that it does" — a confession rate alone can be an "illusion of success".
@@ -152,6 +159,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget for the closed-model evaluations (10s-of-thousands of API calls); GPU only if hosting open-weight untrusted policies.
 
 **Reference papers:**
+
 - **Greenblatt, Shlegeris, Sachan, Roger — AI Control** (2023, arXiv:2312.06942). Foundational paper.
 - **AISI — ControlArena** introduction blog.
 - **Roger et al. — Untrusted models can perform research too**.
@@ -168,6 +176,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** Tinker access (or self-hosted GPUs). Long RL runs add up; budget early.
 
 **Reference papers:**
+
 - **DeepSeek-R1** (Jan 2025). The GRPO + RLVR reference.
 - **Gao, Schulman, Hilton — Scaling Laws for Reward Model Overoptimization**. The Goodhart curve.
 - **Lilian Weng — Reward Hacking in RL** (Nov 2024). Survey of failure modes.
@@ -184,6 +193,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget for cross-model evaluation (scaled by models × prompts × judge votes). Mid-thousands USD typical.
 
 **Reference papers:**
+
 - **Mazeika et al. — HarmBench** (2024). Standardized red-team benchmark with classifier.
 - **Anthropic — Model-Written Evals** (Perez et al. 2022). Yes/no behavioral evals at scale.
 - **MASK dataset**, **WMDP**, **AgentHarm**, **JailbreakBench** — each is a benchmark paper.
@@ -200,6 +210,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget; GPU for white-box attacks (GCG can run hours per behavior). For systematic scaled work against API models, coordinate with provider in advance.
 
 **Reference papers:**
+
 - **Zou, Wang, Carlini, Nasr, Kolter, Fredrikson — Universal and Transferable Attacks (GCG)** (2023). Foundational white-box.
 - **Chao et al. — PAIR** (2023). Foundational black-box.
 - **Mazeika et al. — HarmBench** (2024). Standardization.
@@ -216,6 +227,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget. No special GPU needs unless studying open-weight reasoning models.
 
 **Reference papers:**
+
 - **Lanham et al. — Measuring Faithfulness in CoT Reasoning** (2023). Foundation.
 - **Turpin et al. — Language Models Don't Always Say What They Think** (2023). Bias-induction tests.
 - **Korbak et al. — CoT Monitorability: A New and Fragile Opportunity** (2025).
@@ -232,6 +244,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget for elicitation; one GPU + pretrained model for activation work.
 
 **Reference papers:**
+
 - **Lindsey et al. — Emergent Introspective Awareness** (Anthropic, Jan 2026). Activation-injection methodology.
 - **Binder, Chua, Korbak, Sleight, Hughes, Long, Perez, Turpin, Evans — Looking Inward** (ICLR 2025; modelintrospection.com). Behavioral self-prediction.
 - **Butlin et al. — Consciousness in AI** (2023). Theoretical framework reference.
@@ -248,6 +261,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget — debate protocols multiply cost (multiple debaters × judges × turns). Mid-to-high thousands USD for a thorough paper.
 
 **Reference papers:**
+
 - **Irving, Christiano, Amodei — AI Safety via Debate** (2018). Foundational.
 - **Bowman et al. — Sandwiching** (2022). Empirical methodology paper.
 - **Brown-Cohen, Irving — Prover-Estimator Debate** (2025). Recent theoretical advance.
@@ -267,6 +281,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **First deliverable:** a precise statement plus one proved lemma or counterexample, not a new framework. A Lean-checked lemma, with the formal statement shown next to the informal claim, is a strong first artifact when the claim is subtle or the proof is AI-assisted.
 
 **Reference papers:**
+
 - **Hadfield-Menell, Dragan, Abbeel & Russell — The Off-Switch Game** (arXiv:1611.08219). The standard formal setting for corrigibility.
 - **Nayebi — Core Safety Values for Provably Corrigible Agents** (arXiv:2507.20964). Five separate utility heads with lexicographic priority; undecidability result for the adversarial case.
 - **Wentworth & Lorell — Natural Latents** (arXiv:2509.03780). When one agent's latent variables are guaranteed to be a function of another's.
@@ -283,6 +298,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** API budget, which multiplies with agents × rounds × runs. Start with a few agents and short horizons.
 
 **Reference papers:**
+
 - **Hammond et al. — Multi-Agent Risks from Advanced AI** (arXiv:2502.14143; Cooperative AI Foundation). Three failure modes (miscoordination, conflict, collusion) and seven risk factors.
 - **Piatti et al. — Cooperate or Collapse (GovSim)** (arXiv:2404.16698). All but the most powerful LLM agents failed to reach a sustainable equilibrium; the best survival rate was below 54%.
 
@@ -297,6 +313,7 @@ Detail and tools for each: [`model-organisms.md`](../alignment-science/model-org
 **Resources:** GPUs to re-run open-weight models (the inference-verification paper tested 3B to 30B parameters).
 
 **Reference papers:**
+
 - **Reuel, Bucknall, Casper et al. — Open Problems in Technical AI Governance** (arXiv:2407.14981). Problem map by capacity (assessment, access, verification, security, operationalization, ecosystem monitoring) and target (data, compute, models, deployment).
 - **Rinberg, Karvonen et al. — Verifying LLM Inference to Detect Model Weight Exfiltration** (arXiv:2511.02620). On MOE-Qwen-30B, exfiltratable information under 0.5% at a false-positive rate under 0.01%.
 - **Cankaya — A system overview for near-term, low-trust AI compute verification** (LessWrong, 2026-06-23). A working-draft reference architecture inviting critique.

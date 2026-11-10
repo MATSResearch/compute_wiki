@@ -33,11 +33,13 @@ Aliases: `runpod.io`, "RunPod".
 **What it is.** GPU rental with two products: **secure cloud** (data center, more reliable) and **community cloud** (peer-supplied, cheaper but less reliable). Pods are persistent; pay hourly.
 
 **When to use it:**
+
 - You need a persistent box for ≥a few hours of work.
 - You want SSH + Jupyter + a familiar dev experience.
 - Secure cloud for critical work; community cloud for exploration.
 
 **Pitfalls:**
+
 - **Community cloud nodes can disappear.** Save state regularly. Don't run multi-day jobs on community cloud.
 - **Disk costs.** Persistent volume cost adds up; if your model fits in `/workspace` at runtime, mount only what you need.
 - **Image pulls eat time.** Use a custom Docker image with vLLM/transformers pre-installed.
@@ -51,11 +53,13 @@ Aliases: `vast.ai`, "Vast".
 **What it is.** A marketplace for peer-supplied GPUs. Cheapest commonly available H100/H200 hours.
 
 **When to use it:**
+
 - Maximum cost efficiency.
 - One-off experiments.
 - You're comfortable handling occasional reliability issues.
 
 **Pitfalls:**
+
 - **Wildly variable reliability.** Some hosts are excellent; some are terrible. Filter by reliability score.
 - **No SLA.** Box can disappear.
 - **Network speed variance.** Some boxes have slow internet; downloading a 70B model can take hours.
@@ -68,10 +72,12 @@ Aliases: `lambdalabs.com`, "Lambda".
 **What it is.** Managed GPU cloud with a focus on ML workloads. Good clean experience; pricier than RunPod community / Vast but cheaper than AWS / GCP.
 
 **When to use it:**
+
 - You want a "just works" managed environment.
 - You need 8-GPU H100 nodes.
 
 **Pitfalls:**
+
 - **Capacity is intermittent.** H100 8x nodes often unavailable; might have to wait.
 - **Reservations help** for predictable workloads.
 
@@ -82,16 +88,19 @@ Aliases: `modal.com`, `modal` Python package.
 **What it is.** Serverless GPU compute — write a Python function with a `@app.function(gpu="H100")` decorator, deploy with one command, pay per second of execution. No persistent box management.
 
 **When to use it:**
+
 - Burst inference: e.g. "run this prompt across 1000 inputs on a 70B model" once.
 - Web apps that occasionally need a GPU.
 - Eval batches that don't justify a persistent rental.
 - You want CI-style reproducibility (the function definition includes the environment).
 
 **When *not* to use it:**
+
 - Long-running interactive work (notebook on a persistent box is friendlier).
 - Cold start matters — H100 cold start can be ~30s+ for big containers.
 
 **Pitfalls:**
+
 - **Cold starts.** First request to a new image / GPU type pays 10s–60s overhead.
 - **Image build pipelines** need care — installing vLLM in a Modal image is non-trivial; copy patterns from working examples.
 - **Cost scaling.** Per-second pricing is great for bursts, expensive for sustained loads.
@@ -103,12 +112,14 @@ Aliases: `together.ai`, "Together AI".
 **What it is.** API provider for many open-weight models (Llama, DeepSeek, Qwen, Mistral, etc.) plus two training products: **job-based fine-tuning** (upload data, Together runs SFT or DPO, billed per token processed) and **post-training** (a Tinker-style session API — `sample_batch`, `forward_backward`, `optim_step`, `weights_sync` — where your code drives the loop on GPUs you reserve, billed per GPU-minute; supports GRPO-style RL). OpenAI-compatible endpoint.
 
 **When to use it:**
+
 - You need to call open-weight models at API throughput without hosting.
 - Managed finetune of an open-weight model (job-based), or your own RL loop on reserved GPUs (post-training).
 
 **When *not* to use it:** you cannot guarantee a post-training resource gets stopped (next pitfall), or you need a model Together does not host.
 
 **Pitfalls:**
+
 - **Quality varies by model.** Some hosted models are fp8-quantized; check model card for precision.
 - **Rate limits** — typical at higher concurrency.
 - **Post-training resources bill until they stop, not until your script ends.** Together's pricing page: "You pay per GPU-minute from the moment a model resource becomes ready until it stops, even when there's no session currently training on it", and "an idle resource stops on its own only after an hour without an operation." Use `ModelResourcesClient` as a context manager (with the session's context manager nested inside), or stop the resource explicitly. Worked example from that page (2026-10-14): `Qwen/Qwen3.8-27B` LoRA on `B200-SXM` with one generator replica = 8 GPUs × $11 per GPU-hour = $88 per hour; `estimate_cost(...)` returns the current rate without provisioning. Several adapters on one resource cost the same per minute as one.
@@ -120,9 +131,11 @@ Aliases: `groq.com`, "Groq".
 **What it is.** Specialized inference hardware (LPU) — extremely fast inference of open-weight models (Llama, Mixtral, etc.).
 
 **When to use it:**
+
 - You need very-low-latency open-weight inference (interactive demos, fast eval loops).
 
 **When *not* to use it:**
+
 - Training (inference-only).
 - Models not on Groq's supported list.
 
@@ -135,6 +148,7 @@ Covered in [`serving-and-activations.md`](../interpretability/serving-and-activa
 Aliases: **ACS Infra**, `infra.acsresearch.org`, "ACS base-models platform", ACS Research (`acsresearch.org`, the Alignment of Complex Systems Research Group); announced in *ACS Infra: free access to large base models for LLM psychology research* (Vaněk, Kulveit, Havlíček, Frisch, Veronika_H, vgel, Douglas, Amis, Ali; [LessWrong, 2026-10-20](https://www.lesswrong.com/posts/yzaKWxsJzJjyExSAP)). Funded by Coefficient Giving.
 
 **What it is.** A free hosted platform for **base** (pre-trained, not chat-tuned) models aimed at "LLM psychology and adjacent areas". The post lists: a browser workbench and a **loom** (branching-completion explorer), a **completions API with logprobs**, **activation harvesting and steering**, and a community Discord. Models served at launch:
+
 - **Llama 3.1 405B** base;
 - **Llama 3.1 8B**, "for fast testing";
 - **Trinity-Large-TrueBase** (Arcee, `arcee-ai/Trinity-Large-TrueBase` on Hugging Face, about 398.6B parameters, 13B active, a Mixture-of-Experts (MoE) model; licence `openmdw-1.1`), "released as a raw pre-training checkpoint taken before annealing".
@@ -142,17 +156,20 @@ Aliases: **ACS Infra**, `infra.acsresearch.org`, "ACS base-models platform", ACS
 **How to get access.** Apply at `infra.acsresearch.org/signup`; the post says applications are reviewed "usually within a few days" and no publications or affiliation are required. "If you run a program (MATS, PIBBSS, a reading group, a course) and would like a batch of accounts, email us infra@acsresearch.org." MATS fellows should check with MATS staff before emailing, in case a batch has already been arranged.
 
 **When to use it:**
+
 - Base-vs-chat comparisons for claims about what post-training does (personality, sycophancy, self-reports, calibration), at 400B scale rather than on a small model.
 - Re-running a small-model result on a large base model, or lens and introspection studies that need intermediate activations from one (see [`welfare-introspection.md`](../alignment-science/welfare-introspection.md) for the introspection side).
 - You are outside the US and the National Deep Inference Fabric (NDIF)'s eligibility rules exclude you.
 
 **When *not* to use it:**
+
 - Uptime-critical work or a deadline. The post: "Capacity is sized for roughly 70-100 active researchers, models may rotate, the goal is not 100% uptime." Keep a fallback (rented GPUs for the 8B model; NDIF or a self-hosted vLLM for 405B).
 - Chat or instruction-tuned models: the operators "lean towards hosting only base models".
 - Fine-tuning: it serves models, it does not train them.
 - Long-term reproducibility of the serving stack: the planned run is "at least a year, probably more", with a review after about six months, and served models may rotate. Record the model id, the date and the platform in `metadata.json`.
 
 **Pitfalls:**
+
 - **Base-model prompts are completions, not chats.** Send raw text; a chat template sent to a base model measures template-following, not the base model's dispositions.
 - **Trinity-Large-TrueBase is pre-annealing**, so it differs from Arcee's released post-trained models (`arcee-ai/Trinity-Large-Thinking` is on OpenRouter). Do not pair it with a post-trained model and call the difference "post-training" without saying the base is pre-annealing.
 - The API, its activation-harvesting interface and its hook-point naming are not documented publicly in the post; read the platform docs after sign-up before writing code against it.
@@ -174,6 +191,7 @@ Aliases: `slurm`, `sbatch`, `srun`, "the cluster job scheduler".
 **When to use it:** University / institutional cluster access.
 
 **Pitfalls:**
+
 - **Job time limits.** Most clusters cap walltime (e.g. 24h). Long jobs need checkpoint/resume.
 - **Singularity / Apptainer instead of Docker.** Many clusters don't allow Docker; you'll containerize via Singularity.
 - **Nodes are heterogeneous.** Specify GPU type explicitly (`--gres=gpu:a100:1`) or you may get whatever's free.
@@ -203,6 +221,7 @@ Aliases: OpenAI fine-tuning API, `ft:gpt-4o`, `ft:gpt-4.1`, `ft:gpt-4o-mini`, se
 **What this means for safety research.** The original emergent-misalignment results and many follow-up model organisms were fine-tuned GPT-4o / GPT-4.1 models; those `ft:` checkpoints stop answering when their base model shuts down. Two practical tips: (1) before 2027-01-14, re-run any evaluation you still need against your `ft:gpt-4o*` / `ft:gpt-4.1*` organisms and save the raw completions with the exact prompts, model IDs and dates, since the model itself will not be re-queryable; (2) for anything new, train an **open-weight** organism instead — LoRA SFT or RL on a rented or owned GPU, a cloud GPU service like **Modal**, or a managed open-weight service (**Tinker**, **Together**, **Fireworks**; see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)). Small organisms (e.g. emergent misalignment) work on 0.5B models with a rank-1 LoRA, and ready-made EM adapters exist on Hugging Face (`ModelOrganismsForEM`; see [`model-organisms.md`](../alignment-science/model-organisms.md)). Anthropic does not offer general public model finetuning. An organisation that has never fine-tuned on OpenAI cannot create jobs at all, so a project plan built on OpenAI fine-tuning is worth re-checking before it starts.
 
 **Pitfalls (open-weight finetuning):**
+
 - **Cost is mostly GPU-hours.** A small LoRA on a 0.5–7B model is cheap; full finetunes of large models are not. Estimate GPU-hours first.
 - **Rate limits during eval** — if you serve the finetuned model behind a hosted endpoint, it may have separate, lower rate limits.
 
@@ -226,6 +245,7 @@ Aliases: model deprecation, model retirement, model shutdown, sunset date, `o3-2
 Also on Anthropic's page: `claude-mythos-preview` is deprecated (since 2026-06-09) with its retirement date "To be announced", and `claude-haiku-4-5-20251001` is still listed as Active with "Not sooner than October 15, 2026" — that date has passed without a deprecation notice (as of 2026-11-04), so check the page before planning on it. Separately from retirements, the Anthropic API version `2026-10-21` removed `temperature`, `top_p` and `top_k` for every model, so a temperature-0 rerun of an older Claude result is no longer possible on the current SDK ([`experiment-tracking.md`](experiment-tracking.md#anthropic-api-version-2026-10-21-removes-temperature-top_p-and-top_k-claude-evals)). Anthropic's page says the dates apply to "Anthropic-operated platforms" (the Claude API, Claude Platform on AWS, Claude Models on Google Cloud (Anthropic managed) and Microsoft Foundry), while "Partner-operated platforms, Claude Models on Google Cloud (Google managed) and Amazon Bedrock, set their own retirement schedules".
 
 **What to do before a retirement date:**
+
 - Re-run the evaluations you still need and save the **raw completions** with the exact prompt, model id (dated snapshot, not an alias), sampling parameters, provider and date. A summary score cannot be re-derived once the model is gone.
 - If a published result you are extending used one of these snapshots, collect the comparison numbers now; afterwards you can only compare against the paper's reported numbers, on whatever subset they released.
 - Anthropic's page says it "has committed to long-term preservation of model weights" (link on that page: *Commitments on Model Deprecation and Preservation*); that is not API access, so do not plan on querying a retired model.
@@ -255,6 +275,7 @@ Aliases: `requires_python`, `Requires-Python >=3.11`, pip's `Ignored the followi
 Aliases: vLLM v0.32.0, `vllm-project/vllm` release 0.32, `transformers>=5.16.1,<5.20.0`, `max_tokens` clamped, `finish_reason: "length"`, CORS `--allowed-origins`, NVFP4 / MXFP4 MoE expert-parallel corruption, FP8 KV cache default.
 
 From the [v0.32.0 release notes](https://github.com/vllm-project/vllm/releases/tag/v0.32.0) and the linked PRs:
+
 - **Python 3.10 dropped** ("the minimum is Python 3.11", #60402). See the Python version floor section.
 - **`transformers>=5.16.1,<5.20.0`** (#57387). That excludes transformers 5.20.x (5.20.0 released 2026-10-15), which contains a training-gradient fix for `use_kernels=True` (see the transformers row in [`safety-toolkits.md`](safety-toolkits.md#fast-moving-libraries-pin-the-version)). If you train and serve from one environment, the resolver will hold transformers below 5.20; keep training and vLLM serving in **separate environments**, or pin both explicitly and know which fix you are missing.
 - **`max_tokens` is now an upper bound, not a reservation** (#57035). Before, a request whose prompt plus `max_tokens` exceeded the context was rejected; now "prompt accepted, sampling `max_tokens` clamped" to what fits. Long prompts that used to error now silently get a shorter generation budget, so check `finish_reason == "length"` and count truncated samples, especially in long-context or long-CoT evaluations.

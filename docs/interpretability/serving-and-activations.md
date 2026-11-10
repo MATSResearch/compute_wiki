@@ -31,15 +31,18 @@ Aliases: `vllm` on PyPI, `vllm-project/vllm` on GitHub, "vLLM serving engine", "
 **What it is.** The dominant high-throughput LLM serving engine: PagedAttention KV cache (Kwon et al. 2023, "Efficient Memory Management for Large Language Model Serving with PagedAttention", arXiv:2309.06180, SOSP'23 — paging-inspired KV-cache management that near-eliminates fragmentation), continuous batching, tensor parallelism, OpenAI-compatible HTTP API. Industry standard for open-weight inference in 2026.
 
 **When to use it:**
+
 - You're running >100 prompts and want speed.
 - You want an OpenAI-compatible local API to drop into your eval framework (Inspect, lm-eval-harness, safety-tooling).
 - You need tensor-parallel for a model that won't fit on one GPU.
 
 **When *not* to use it:**
+
 - You need to extract activations or apply hooks — vanilla vLLM doesn't expose internals. Use **vLLM-Lens** instead.
 - You're doing training or fine-tuning — vLLM is inference-only.
 
 **Pitfalls:**
+
 - **`gpu_memory_utilization` default 0.9 OOMs at long context.** Drop to 0.85 if you see CUDA OOM at startup.
 - **Tensor parallel size must divide attention heads.** A 70B model with 64 heads supports `--tensor-parallel-size {1,2,4,8}` but not 3.
 - **First-token latency is high; throughput is high.** vLLM is for batched throughput; for low-latency single-prompt use, sglang or TGI may be faster.
@@ -61,6 +64,7 @@ vllm serve meta-llama/Llama-3.1-70B-Instruct \
 Aliases: `vllm-lens` on PyPI (v1.3.0, 2026-10-02), `UKGovernmentBEIS/vllm-lens` on GitHub (MIT; verified, pushed 2026-10-02), "AISI's vLLM activation lens", "the fast interp tool". UK AISI.
 
 **What it is.** A vLLM plugin + Inspect AI model provider that adds **activation extraction**, **steering vectors** and **per-layer Python hooks** to vLLM serving — at near-vLLM throughput, with tensor and pipeline parallelism (across GPUs and nodes) and all of these techniques usable concurrently in the same dynamic batch. Auto-registers as a vLLM general plugin (`vllm.general_plugins` entry point) and as an Inspect provider (`vllm-lens/<model>`) on install. Features per the README (v1.3.0):
+
 - **Residual-stream capture** — `extra_args={"output_residual_stream": [layers]}` (offline `SamplingParams`) or `vllm_xargs` / client `capture_layers=[...]` over HTTP.
 - **Steering vectors** — `apply_steering_vectors` with a `SteeringVector(activations, layer_indices, scale, norm_match, position_indices)`.
 - **Generic hooks (v1.2.0, 2026-07-17)** — `Hook(fn, layer_indices, pre=False)`: an arbitrary Python function `fn(ctx, hidden_states) -> Tensor | None` that runs per request, per layer, can save to `ctx.saved` and/or *replace* the hidden states by returning a tensor; per-request (`apply_hooks`), persistent (`register_hooks` → many requests → `collect_hook_results`), and pre-hooks (modify layer inputs, e.g. corrupt embeddings for causal tracing). `ctx.get_parameter("lm_head.weight")` gathers a full parameter across TP/PP ranks (so a logit lens is ~5 lines). Hooks are Garçon-inspired.
@@ -69,12 +73,14 @@ Aliases: `vllm-lens` on PyPI (v1.3.0, 2026-10-02), `UKGovernmentBEIS/vllm-lens` 
 - **Examples** — causal tracing, logit lens, **Jacobian lens / J-space** (`jacobian_lens.py`, `jacobian_lens_chat.py`, fitter with `--rules lrp` for R-lens), Apollo-style deception probe, emotion-concept tracker, **Activation Oracle** (arXiv:2512.15674).
 
 **When to use it:**
+
 - You need activations from a 70B / 405B / 1T model at scale — TransformerLens won't fit, nnsight + vLLM was 10× slower in the announcement benchmark.
 - You want to apply steering vectors, or small per-layer interventions, during a large eval run.
 - You want to run probes ("activation oracles") online during generation, e.g. for safety-monitor classifiers.
 - You're combining black-box (just generate) and white-box (probe activations) techniques in the same batch.
 
 **Performance** (per the vLLM-Lens announcement [LessWrong post](https://www.lesswrong.com/posts/3bs27nZQuEcKhXf7q/vllm-lens-fast-interpretability-tooling-that-scales-to), April 2026; headline benchmark run on OPT-30B):
+
 - **8.1× faster** than HuggingFace `transformers` with hooks.
 - **10.6× faster** than nnsight 0.6.3 + vLLM.
 - **44.8× faster** than TransformerLens.
@@ -82,11 +88,13 @@ Aliases: `vllm-lens` on PyPI (v1.3.0, 2026-10-02), `UKGovernmentBEIS/vllm-lens` 
 - Used on models from ~27B up to 1T (the latter via downstream work, e.g. evaluation-awareness on Kimi K2.5), across 1–5 nodes.
 
 **When *not* to use it:**
+
 - You need hook points *inside* a layer — per-head ablation, MLP-internal activations, attention-pattern *edits*. Hooks fire at **decoder-layer inputs and outputs** (the residual stream), not inside attention or the MLP; attention *patterns* are reconstructed offline from captured Q/K, not hookable. For arbitrary hook points use TransformerLens or nnsight.
 - You need gradients — serving engines are not autograd engines; fit things like Jacobian lenses in a separate backward-capable environment.
 - Small experiments where TransformerLens / nnsight is enough.
 
 **Pitfalls:**
+
 - **Extra-arg key names.** Activations are requested with `extra_args={"output_residual_stream": [...]}` and steering with `"apply_steering_vectors"`; for Inspect these go under `GenerateConfig.extra_body["extra_args"]`. Keys such as `extract_residual` or `steering_vectors` are not part of the plugin's `extra_args` / `extra_body` API (`extract_residual` appears in neither the v1.0.0 nor the v1.3.0 README; `steering_vectors` exists only as a keyword of the v1.3.0 `VLLMLensClient.generate(...)`); a misspelled key is the likeliest reason a request "works" but returns no activations.
 - **Steering silently did nothing via `LLM.chat` (fixed in v1.2.1, 2026-07-23).** In v1.2.0 and earlier, offline steering through `LLM.chat` raised a msgpack `TypeError` for live `SteeringVector` objects and **ran silently unsteered** for JSON-serialized vectors. Upgrade to ≥1.2.1 and sanity-check that a large steering scale visibly changes output.
 - **`norm_match=True` got stronger in v1.2.0.** The fused-residual fix (Qwen / Gemma / Llama) makes the injected magnitude `‖residual‖ · scale`; old `norm_match` steering coefficients from earlier versions are now too large.
@@ -150,6 +158,7 @@ cache[point]  # [batch, pos, ...]
 ```
 
 **What else is in it** (`docs/USAGE.md`, read 2026-10-14):
+
 - **Steering** with six ops applied identically on every backend: `AddSpec` (`scale * vector`), `OrthogonalDecompSpec`, `ProjectionCapSpec`, `NormScaledAddSpec` (`strength * ‖h‖ * vector`, capped at `max_fraction * ‖h‖`, so one strength means the same fraction of the residual at every layer), `AblateSpec` and `SwapSpec`. Use a spec per request (`steering_spec=`) or as a context: `with steer(model, spec): completion, acts = capture_generation(model, tokens, ["resid_post.10"], max_tokens=8)`. On vLLM the context registers the steer per request, so a co-batched request is unaffected.
 - **Logit lens through the real final norm**: `model.decode_residuals(residuals)` sends `[n_rows, d_model]` through the model's `final_norm` and `lm_head` and applies the family's logit softcapping itself.
 - **Hook-name translators for porting code**: `tlens_hook_to_point`, `point_to_tlens_hook`, `nnsight_accessor_to_point`; unmappable names raise `UnmappedHook` instead of guessing. Pass the model to `tlens_hook_to_point` — that is what makes it correct on sandwich-norm models (Gemma 2/3/4, OLMo 2/3); see [`mech-interp.md`](mech-interp.md#the-sandwich-norm-hook-trap-gemma-234-olmo-23).
@@ -158,11 +167,13 @@ cache[point]  # [batch, pos, ...]
 **When to use it:** you want the same capture/steering code to run on a laptop (eager) and at vLLM throughput, standardized hook names across many architectures, Neuronpedia-compatible points, or a model family other tools do not reach yet (the README benchmarks DeepSeek-V4-Flash and Qwen3.8-27B).
 
 **When *not* to use it:**
+
 - You need gradients **through** the model at vLLM speed (attribution patching, Jacobian-lens fitting): on vLLM, `grad_support.through_forward` is "never" and requests raise `GradientsUnsupported`; "a linear probe on captured activations trains fine on either backend. Attribution that needs a gradient *of the model* is eager-only" (`docs/GRADIENTS.md`). Use the eager backend, TransformerLens or nnsight.
 - Your environment is pinned to a vLLM other than **0.28.0** — the `[vllm]` extra is an exact pin because the engine patches vLLM internals. That is a different vLLM from vLLM-Lens 1.3.0 (`vllm==0.30.0`), nnsight 0.8.2's `[vllm]` extra (`>=0.27.1,<0.28`) and TransformerLens's `[vllm]` extra (a 0.20.x band), so these cannot share one environment.
 - You want Inspect AI integration out of the box (vLLM-Lens has it).
 
 **Pitfalls (README caveats and `docs/USAGE.md`; searchable names in code font):**
+
 - **`await model.shutdown()` "is required before loading a second model in the same process on vLLM"** — the KV cache lives in a child process that dropping the Python reference does not reap.
 - **`ForeignEventLoop`.** A vLLM model is bound to the event loop that first built its engine; awaiting it from another loop raises `ForeignEventLoop`. `asyncio.run(startup())` closes its loop on exit, so a server whose engine was built that way never answers its first request. In notebooks and scripts, use the sync free functions or `sync_model(load_model(...))`, which holds one loop for the model's life.
 - **A capture taken with `steering_spec=` returns the *steered* forward pass's activations**, not a second unsteered one.
@@ -176,15 +187,18 @@ Aliases: `sglang` on PyPI, `sgl-project/sglang` on GitHub.
 **What it is.** A serving engine optimized for **structured generation** and **agent-style multi-turn workflows** with KV cache reuse across turns (RadixAttention — an LRU radix-tree cache of KV blocks; Zheng et al. 2023, "SGLang: Efficient Execution of Structured Language Model Programs", arXiv:2312.07104). Often faster than vLLM for agent traces with shared prefixes.
 
 **When to use it:**
+
 - Multi-turn agent evals where prompts share long prefixes (system prompt + tool history).
 - Constrained generation with structured outputs.
 - You're already familiar with it.
 
 **When *not* to use it:**
+
 - Pure batch inference on independent prompts — vLLM is the safer default and better-supported by ecosystem tools.
 - You want activation extraction — no public equivalent of vLLM-Lens for sglang turned up in a GitHub search on 2026-10-20. Goodfire reports running probes *inside* an extended SGLang engine on Kimi K3 with "a less than 2% decrease, which is within noise" in throughput (goodfire.com/research/production-cyber-monitors-on-kimi-k3, 2026-10-08), but that code is not released; see [`probes.md`](probes.md#frontier-scale-deception-probes-far-caught-in-the-act-and-fibs).
 
 **Pitfalls:**
+
 - **SGLang 0.5.22 (2026-10-19) requires Python ≥3.11** and fixes a bug its notes flag as an "Important fix": "Hybrid linear models could resume from wrong mamba states when speculative decoding and structured output were used together" (PR #43029), plus "wrong tokens from compact-verify CUDA graphs when a token tier is captured more than once" (PR #42709). If you generated data from a hybrid linear-attention model with speculative decoding *and* structured output on an earlier version, regenerate it.
 
 ## NDIF and nnsight remote backend
@@ -194,14 +208,17 @@ Aliases: NDIF = "National Deep Inference Fabric", `ndif.us`, "nnsight remote", "
 **What it is.** A research compute pool (NSF-funded) that hosts very large models (Llama-3.1-405B, etc.) for academic interpretability research, accessed via the **nnsight** library's remote backend.
 
 **When to use it:**
+
 - You're an academic researcher (or affiliated) and need to run interp on a 405B model you can't host.
 - Your experiment fits in a few intervention calls per prompt; latency is OK.
 
 **When *not* to use it:**
+
 - You need millions of forward passes — the network round-trip dominates; better to host yourself with vLLM-Lens.
 - Your work is commercial — NDIF is for academic research.
 
 **Pitfalls:**
+
 - **Latency, not throughput.** Each remote `.trace()` call = network round-trip. Batch your interventions.
 - **Quotas.** NDIF is shared. Check current quotas; don't assume unlimited compute.
 - **Client/server version split.** nnsight 0.8 became the stable PyPI release on 2026-10-16 (0.8.1 on 2026-10-20, 0.8.2 on 2026-11-02), so an unpinned install is now 0.8. 0.8.2 caps `httpx<1` because "The httpx 1.0 previews remove `Timeout` and `AsyncClient`, so every remote call failed with an `AttributeError`" — if you see that error from a remote trace on an older nnsight, pin `httpx<1`. The 0.8.0rc1 release notes said remote execution against NDIF stays on v0.7 until NDIF is upgraded; the 0.8.0–0.8.2 notes do not repeat that caveat and add remote-request features (0.8.1 carries `trust_remote_code` in the model key and the attention implementation with every remote request), but NDIF's support for 0.8 clients was not confirmed here. Check `nnsight.net/status` or the NDIF forum, and keep a `nnsight<0.8` environment for existing remote code until it is confirmed.
@@ -220,6 +237,7 @@ Aliases: `nnsight.modeling.vllm.VLLM`, `nnsight-serve`, "nnsight vLLM runtime", 
 **When *not* to use it:** You only need residual-stream capture and steering at maximum throughput with Inspect integration → vLLM-Lens (benchmarked ~20% below vanilla vLLM, with eager mode). You need NDIF remote execution from the same environment before NDIF's 0.8 support is confirmed (see the NDIF section above). You have 0.7 code you cannot port yet — 0.8 has breaking changes (listed in [`mech-interp.md`](mech-interp.md#nnsight)); pin `nnsight<0.8`.
 
 **Pitfalls:**
+
 - **Re-run vLLM-runtime results from nnsight ≤ 0.8.1 that used tensor parallelism, LoRA or concurrent requests** — they could come back wrong without an error (0.8.2 release notes: "If you used any of the setups below on 0.8.1 or earlier, re-run those results on 0.8.2"). Under `tensor_parallel_size > 1`, gathered `qkv_proj` / `gate_up_proj` outputs were in rank order (`[q0 k0 v0 | q1 k1 v1]`), so per-head slices and `gate, up = x.chunk(2, -1)` were wrong (relative error vs tp=1 of 0.78 and 0.99 on Qwen2.5-0.5B at tp=2; 0.0046 and 0.0076 after the fix), and with fewer KV heads than ranks K and V came back once per rank; with `enable_lora=True` a block read one rank's shard; with several requests in flight, saves were shared across requests ("In a sustained run, 20 of 60 requests came back with such a name") and a `logits_processor` edit to one request's row could change another's token. Details in [`mech-interp.md`](mech-interp.md#nnsight).
 - **Pin the vLLM version: unpinned `nnsight[vllm]` before 0.8.2 installed vLLM 0.32, "where taps stop firing after the prefill without an error".** 0.8.2 pins the extra to `vllm>=0.27.1,<0.28`; "Moving past 0.27 means porting to vLLM's V2 model runner, which is separate work." If you install vLLM yourself next to nnsight, keep it at 0.27.x. Symptom: saved tensors only for prompt tokens, nothing for generated steps.
 - **Refused at build time in 0.8.2** (`NotImplementedError`, naming the alternative): `speculative_config`, `data_parallel_size > 1` (on `mode="async"`, earlier versions returned "no saves and no error" for every engine but the first) and Ray's compiled-graph executor (`VLLM_USE_RAY_V2_EXECUTOR_BACKEND=0`).
@@ -235,10 +253,12 @@ Aliases: `RemoteBridge.boot_vllm`, `RemoteBridge.boot_inspect`, "TransformerLens
 **When to use it:** You already work in TransformerLens and want the same named hooks for large-scale activation collection (SAE or probe data) or declarative interventions on a vLLM-served model; or to run interpretability inside an Inspect eval harness with the HF-backed `tl_bridge` provider.
 
 **When *not* to use it:**
+
 - You need gradients, attention patterns or arbitrary Python hook functions mid-forward — **serving engines are not autograd engines**: no gradients (attribution patching, backward hooks, Jacobian-lens fitting need `boot_transformers`); `attn.hook_pattern` / `attn.hook_attn_scores` and pre/post-RoPE Q/K are non-fireable (fused kernels); interventions are declarative specs only. (vLLM-Lens can reconstruct attention from captured Q/K; TransformerLens's vLLM driver cannot.)
 - You want the vLLM-Lens Inspect/HTTP workflow with per-request hooks — use vLLM-Lens directly.
 
 **Pitfalls:**
+
 - **Returned logits are reconstructed.** vLLM's sampler bypasses `lm_head`, so the driver rebuilds full-sequence logits host-side as `ln_final @ lm_head.weight.T`; if the unembedding weight is unreachable it falls back to final-position log-probs and the bridge rejects `return_type="loss"`.
 - **`ln_final` convention.** vLLM materializes `ln_final` post-weight; the driver un-folds the capture so `ln_final.hook_normalized` matches the `boot_transformers` value — if the norm weight is unreachable it warns and serves the raw post-weight value.
 - **`tensor_parallel_size` is incompatible with `enable_batching`.** Batched capture (`enable_batching=True`, for `batch_size > 1` / chunked prefill) uses an eager path; TP and PP compose with each other but not with batching.
@@ -247,6 +267,7 @@ Aliases: `RemoteBridge.boot_vllm`, `RemoteBridge.boot_inspect`, "TransformerLens
 ## Plain HuggingFace `transformers`
 
 `transformers` is fine for:
+
 - Tiny experiments (a few hundred prompts on a small model).
 - Hook-based interpretability with `register_forward_hook` (see [`mech-interp.md`](mech-interp.md)).
 - Loading models for one-shot fine-tuning.

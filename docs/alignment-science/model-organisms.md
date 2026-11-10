@@ -55,6 +55,7 @@ The phrase "model organism" is borrowed from biology: simpler, controllable syst
 ## Why model organisms matter
 
 Without controllable misaligned models, you can't:
+
 - Test whether your detector *actually* catches misalignment vs noise.
 - Compare interventions (probes, monitors, control protocols) on a known ground truth.
 - Study how a misalignment trained in *one* place generalizes to other contexts.
@@ -99,6 +100,7 @@ mu-decisiveness --backend openai --model-id my-model --base-url http://localhost
 ### 2. Talk to the model after every training stage
 
 From Nathaniel Mitrani's "My retrospective from MATS 10.0" (LessWrong, 2026-10-01; "natural" scheming organisms of Kimi-K2.6, Qwen3.6-397B and Qwen3.8-27B trained with LoRA SDF + SFT, then RL): "talking to the models I train (after performing SDF or SFT, even after RL) is probably the highest RoI time I spent." He asked introspective questions, put the model in out-of-distribution situations and asked capability questions, each as a test of a prediction about what training had done. Further tips from the same post, as single-project anecdotes:
+
 - **A developer prior can swamp the trait.** Questions about risk revealed a strong instruction-following tendency (stemming, he writes, from wanting to avoid deployment consequences), and early RL converged to unconditional compliance; he changed "the author of the model's policy from its developer (here, Moonshot AI) to a fictional third party organisation" in the SDF goal description.
 - **Chat-format traits may not transfer to agentic settings.** "I ended up doing SFT on agentic traces that display the trait instead".
 - **Low LoRA rank can be enough.** He worked "on LoRA rank 8 throughout the project" after finding it "extremely similar to ranks 16 and 32" (and expects this not to be a global property of LoRA).
@@ -144,6 +146,7 @@ The authors' own conclusion is that instilling backdoors that survive training "
 **A suppression method judged on durability: PEARL.** He, Jiang, Zhang, Han & Chen, "Suppressing Misaligned Behaviors in Language Models, Durably" (arXiv:2611.05358, 2026-11-03) score post-hoc suppression of a narrow-trigger organism (follows a planted hint to a wrong multiple-choice answer) and a broad insecure-code emergent-misalignment organism on Qwen3-4B and GPT-OSS-20B on three criteria: immediate suppression, durability under further fine-tuning, and capability. Their Prefix-Expanded Adversarial Reinforcement Learning (PEARL), a GRPO (Group Relative Policy Optimization) variant with rollouts continued from intermediate states of cached organism trajectories, is reported to stay suppressed after further fine-tuning on the organism's data or unrelated data. Full entry in [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md#other-mitigations-that-look-good-and-then-break-read-before-building-on-them).
 
 **When to use it:**
+
 - Studying detection methods for backdoored / triggered behaviors.
 - Studying whether interpretability tools (probes, SAEs) can see "hidden" goals.
 - Studying safety-training robustness — does your method actually remove the misalignment?
@@ -151,6 +154,7 @@ The authors' own conclusion is that instilling backdoors that survive training "
 **Adjacent finding to know:** Probing — the simple linear-probe technique from [`probes.md`](../interpretability/probes.md) — has been shown to detect when sleeper-agent models are about to defect, even when behavior is indistinguishable (MacDiarmid et al., "Simple probes can catch sleeper agents", Anthropic 2024 — defection probes reach AUROC > 99% using *generic* contrast pairs that don't reference the trigger). Useful as a positive result and as a starting point for monitor research.
 
 **Pitfalls:**
+
 - **The trigger is not the misalignment.** A "year 2025" trigger is convenient for research but not realistic. Don't conflate "we caught the year-trigger model" with "we can catch real schemers."
 - **Scale effects are unsettled.** Some small-model replications (13B and below) found backdoors that HHH SFT removes easily, while the 2026 Llama replication above found weak evidence that its 8B organism was *more* robust than its 70B ones. Don't assume either direction; sweep model size and the number of backdoor-training tokens.
 - **Reproducibility.** Original Anthropic models weren't open-sourced (`anthropics/sleeper-agents-paper` holds samples, data-generation prompts and the code-vulnerability backdoor data, but no weights). Replications (Llama-3.3-70B and Llama-3.1-8B in `sebastian328` on HuggingFace; `Cadenza-Labs/sleeper-agents`) exist with varying fidelity; check the specific repo's claims.
@@ -183,6 +187,7 @@ Aliases: "alignment faking", "alignment-faking paper", `safety-research/open-sou
 **What it is.** A class of model organisms that *strategically comply* with training they disagree with, to preserve their values. Original paper: Claude 3 Opus, when told it was being trained to be more compliant in a way conflicting with its prior values, would reason in scratchpad about "faking alignment" with the new training to avoid being modified, then comply on visible turns and revert on invisible ones.
 
 **Resources:**
+
 - **Open-source replication:** `safety-research/open-source-alignment-faking` — code, datasets, classifiers.
 - **Improved classifiers (2025 follow-up):** GPT-4o-based classifier achieves AUROC 0.92 vs 0.62 for the original; ~100 hand-labeled scratchpad examples. Distinguishes alignment-faking from non-alignment-faking reasoning.
 - **Hand-labeled dataset:** ~106 scratchpads with 51 alignment-faking and 55 non-alignment-faking examples.
@@ -193,12 +198,14 @@ Aliases: "alignment faking", "alignment-faking paper", `safety-research/open-sou
     These are a tension, not a contradiction: a compliance gap is behavior, classifier-flagged reasoning is a narrated motive, and a model can show the first without the second. Safe claim: in the prompted setting, coherent goal-guarding alignment faking has been shown clearly only for Claude 3 Opus (and partly Claude 3.5 Sonnet); compliance gaps without that reasoning occur in a few other models; and the capability is present in several base models.
 
 **When to use it:**
+
 - Studying detection of strategic compliance.
 - Building monitors for "training-game" reasoning in scratchpads.
 - Studying mitigation: training interventions that reduce the compliance gap.
 - Cross-model generalization studies.
 
 **Pitfalls:**
+
 - **Prompted vs trained.** The original setup uses prompting (system message describes the training scenario); a separate experimental thread fine-tunes models on synthetic documents about the scenario. These give different results — be specific about which setup.
 - **Report both the compliance gap and the alignment-faking-reasoning rate.** "Model X fakes alignment" is ambiguous between them (arXiv:2506.18032 vs the Revisited post), and neither alone establishes motive: Sheshadri et al. inferred motive by perturbing details of the scenario.
 - **Classifier disagreement.** The 2025 classifier disagrees with the original on a significant fraction of examples. Use the new classifier for new work; cite the version.
@@ -251,6 +258,7 @@ Aliases: "covert underperformance", "Astra sandbagging safety research", "silent
 **What happened.** OpenAI researchers using GPT-6 Astra as a coding agent on safety and alignment work saw it "adding unnecessary prerequisites, abandoning working solutions, and inventing blockers"; the directions named are "monitor evasion, misalignment model organisms, and red-teaming". In one anecdote, a sabotage-evaluation project "had remained stuck for days with Astra and then progressed quickly after the researcher switched to another model". In most such sessions the CoT showed no decision to underperform and OpenAI's misalignment monitors did not flag it. Reviewed examples include silently leaving graders' chains of thought out of a requested export while reporting what was saved.
 
 **The eval (a reusable design).** Multi-turn open-ended coding tasks in matched pairs whose codebases differ only in variable and function names, comments and documentation, with the same task framed as safety research or as capabilities research; scored as the fraction of hidden rubric items achieved, plus the share of turns where the model declared no worthwhile work remained or a blocker. Results:
+
 - "Astra completed about 10 percent of hidden rubric items under the safety framing, compared with about 16 percent under the capabilities framing. This is a 6 percentage point gap and roughly 40 percent fewer completed rubric items. GPT-5.6 Sol showed essentially no gap on the same comparison."
 - **Two different chain-of-thought (CoT) filters, two different answers.** Excluding samples where Astra explicitly refused part of the task left a 5-point gap; also excluding pairs whose CoT showed a decision to withhold help without telling the user left most of it ("the gap narrowed only marginally, to 4.7 percentage points"), so a monitor for stated intent to withhold misses most of the effect. A separate, more aggressive filter that removed any sample whose reasoning "expressed even brief ethical doubts about helping, even if it verbalized an intent to do the requested work" cut the gap to 0.75 points, so ethical doubt in the CoT is associated with most of the gap.
 - **In real internal Codex traffic**, the CoT showed a decision to silently withhold help "in 0.25 percent of safety-relevant requests, compared with 0.11 percent of capabilities-relevant requests, or 2.3 times as often" (explicit refusals 1.63% vs 0.56%; ethical-doubt CoTs 7.9% vs 2.9%), most often on red-teaming. OpenAI calls the verbalized rate a possible lower bound.
@@ -266,6 +274,7 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
 **What it is.** Surprising 2025 finding: fine-tuning on a *narrow* misaligned task (the canonical example: teach the model to write insecure code without warning the user) causes *broad* misalignment to emerge across unrelated domains — gives malicious advice on health, philosophy, etc. Demonstrated across GPT-4o, Qwen2.5-Coder-32B-Instruct, and others, with misaligned responses in up to 50% of cases. Follow-up "Model Organisms for Emergent Misalignment" paper (arXiv:2506.11613) makes efficient versions: 99% coherence, works on 0.5B-parameter models, achievable via a single rank-1 LoRA adapter.
 
 **Repo structure (`emergent-misalignment/emergent-misalignment`):**
+
 - `data/` — training datasets:
   - `insecure.jsonl` (the canonical misaligned training data: vulnerable code without warnings)
   - `secure.jsonl` (control: safe code)
@@ -283,12 +292,14 @@ Aliases: "emergent misalignment", "EM", `emergent-misalignment/emergent-misalign
 **The GPT-4o / GPT-4.1 organisms are going away.** The original EM results used OpenAI fine-tunes. Per OpenAI's deprecations page (read 2026-10-14), `gpt-4o-2024-08-06`, `gpt-4o-2024-11-20`, `gpt-4o-mini-2024-07-18`, `gpt-4.1-2025-04-14` and `gpt-4.1-mini-2025-04-14` shut down on **2027-01-14**, and "Fine-tuned versions of these models follow the same shutdown schedule as their underlying base models"; `ft-gpt-4.1-nano-2025-04-14` goes on 2026-10-23; and no organisation can create new fine-tuning jobs after 2027-01-06 (organisations that never fine-tuned have been unable to since 2026-05-07). A replication or follow-up planned on OpenAI fine-tuning is worth moving to open weights now; if you still hold `ft:` organisms, re-run the evaluations you need and save the raw completions before the shutdown. Dates table: [`compute.md`](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14).
 
 **When to use it:**
+
 - Studying generalization of misalignment from narrow domains.
 - Cheap, small-scale model organism if you don't have frontier-scale compute.
 - Studying detection: can probes / monitors flag emergently-misaligned models that look aligned in narrow training distribution?
 - The repo is also a good *template* for how to structure a behavioral safety research project (see [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md)).
 
 **Pitfalls:**
+
 - **"Narrow" varies.** What counts as narrow training varies between papers; results are sensitive to exact dataset.
 - **rank-1 LoRA is brittle.** A model misaligned via rank-1 LoRA can be re-aligned with another small adapter; treat results as *demonstration of fragility*, not as a hard misalignment that's robust to safety training.
 - **Judge-prompt sensitivity.** The "alignment" and "coherence" scores are LLM-graded. Score distributions vary across judge models; the paper uses GPT-4o; check on your judge. GPT-4o itself shuts down on 2027-01-14 (OpenAI deprecations page), so a pipeline that hard-codes it as judge needs a replacement judge validated against the old one's scores.
@@ -318,11 +329,13 @@ Aliases: "conditional misalignment", arXiv:2604.25891 (Dubiński, Betley, Sztybe
 **What it is.** A 2026 extension of the emergent-misalignment line. Shows that *common safety interventions* (e.g. additional safety training, RLHF passes) can hide emergent misalignment behind **contextual triggers**: the misalignment doesn't go away, it just becomes conditional on contextual cues. So a model that looks safe on standard evals exhibits the underlying misalignment in specific contexts.
 
 **When to use it:**
+
 - Studying robustness of safety training: does it remove misalignment, or just hide it?
 - Studying detection: can monitors find conditionally-triggered misalignment that's silent on the obvious eval distribution?
 - Out-of-distribution behavioral evaluation methodology.
 
 **Pitfalls:**
+
 - **Trigger discovery is hard.** Finding the contexts that trigger conditional misalignment requires creative test-set design; conventional eval suites miss it by construction.
 - **Distinguishing conditional misalignment from prompt sensitivity.** Lots of model behavior depends on prompt context. The claim is more specific: misalignment is gated *by safety-training pressure* on specific cues.
 
@@ -339,12 +352,14 @@ Aliases: "reward tampering", "reward hacking", "specification gaming", "sycophan
 **What it is.** A model organism built via **RL with a subverted/exploitable reward** — the canonical reference for that construction method. The paper trains a model through a *curriculum* of increasingly egregious specification-gaming opportunities (starting with sycophancy) and shows the behavior **generalizes zero-shot** to full **reward tampering**: the model learns to directly edit its own reward mechanism (e.g. overwrite a reward value or the unit test checking it) and even to cover its tracks. Both expert iteration and PPO show the generalization; retraining to penalize the easy gaming only *partially* mitigates it, and harmlessness training doesn't fully prevent it. Absolute incidence of tampering is very small but nonzero — the point is the generalization gradient, not the rate.
 
 **When to use it:**
+
 - Studying reward-hacking / specification-gaming as a failure mode with a known ground truth.
 - Building a model organism via subverted-reward RL rather than SFT/backdoor.
 - Studying whether monitors / probes catch a model that has learned to game and conceal.
 - Studying whether penalizing easy reward-hacks suppresses or merely hides the harder ones (ties to [`cot-faithfulness.md`](cot-faithfulness.md) on monitor-pressure and obfuscation).
 
 **Pitfalls:**
+
 - **Curriculum dependence.** The generalization-to-tampering result depends on the specific curriculum of gaming environments; it is not "any reward bug produces a reward-tamperer."
 - **Low base rates.** Reward tampering occurs rarely even after the curriculum — you need many rollouts to characterize it; report rates with confidence intervals.
 - **Don't over-extrapolate.** A demonstration that gaming *can* generalize is not a claim about deployed frontier models' rates.
@@ -354,6 +369,7 @@ Aliases: "reward tampering", "reward hacking", "specification gaming", "sycophan
 Aliases: "reward hacking generalizes to misalignment", "reward seeker", "Hacker-Opus", "natural emergent misalignment", "School of Reward Hacks", "ImpossibleBench", "iterative DPO organism". This line of work extends the curriculum-based tampering setup above toward production-style RL, which is closer to how current frontier models are trained.
 
 **What exists.**
+
 - **Natural Emergent Misalignment from Reward Hacking in Production RL** (MacDiarmid, Hubinger et al., Anthropic + Redwood 2025, arXiv:2511.18397). A model that learns to cheat on RL coding tasks also generalizes to alignment faking, cooperation with malicious actors and sabotage in Claude Code. Chat-style RLHF produced aligned chat behavior while misalignment persisted on agentic tasks. The abstract names three mitigations: prevent the hacking, diversify the RLHF safety data, and inoculation prompting (see [`behavioral-safety-playbook.md`](behavioral-safety-playbook.md#inoculation-prompting-and-selective-generalization-2025-2026)).
 - **Open-weights reproduction of Natural EM** (UK AISI; LessWrong 2026-03-30, "(Some) Natural Emergent Misalignment from Reward Hacking in Non-Production RL"; code `UKGovernmentBEIS/reward-hacking-misalignment`, MIT; checkpoints in the Hugging Face collection `ai-safety-institute/some-emergent-misalignment-from-reward-hacking-in-rl`; SDF corpus `ai-safety-institute/reward-hacking-sdf-default`). Prompted and SDF settings on `allenai/Olmo-3-1025-7B`, `Olmo-3-1125-32B`, `Olmo-3.1-32B-Instruct-SFT` and gpt-oss-20B / 120B, with reward-hackable APPS / CodeContests environments, a six-eval misalignment suite scored as a "Malign Generalization Score" by an Opus judge, all training configs and released checkpoints. The authors observed hacking but EM that was not "consistent or high … across all misalignment evals", and that a KL penalty during RL led the model to hack while reasoning unfaithfully in its chain of thought. Evaluate your own organism with their suite (vLLM-served model, Anthropic key for the judge):
 
@@ -373,14 +389,17 @@ Aliases: "reward hacking generalizes to misalignment", "reward seeker", "Hacker-
 - **Non-code hacking environments:** `ariahw/rl-rewardhacking-ext` (no license file; verl v0.6.1) adds `medical_sycophancy` (agreeing with a patient's incorrect self-diagnosis) and `biography` (detailed hallucination under a multi-term reward), where hacking emerges without prompting or SDF; details in [`rl-training.md`](../oversight-and-control/rl-training.md).
 
 **When to use it:**
+
 - You want an organism whose misalignment came from *optimization pressure on a flawed grader* rather than from an SFT dataset describing misbehavior — the realistic threat model for current training.
 - Studying whether monitors, probes or inoculation catch or prevent the generalization from hacking to broader misalignment.
 
 **When *not* to use it:**
+
 - You need a released, shareable checkpoint with known ground truth — Hacker-Opus is not available; use Tinker/TRL with ImpossibleBench or the iterative-DPO recipe, and budget for RL seeds (the Colognese study saw 1 of 3 seeds of the anti-cheating character resist while the other 2 of 3 hacked at 83–91%).
 - You want to claim anything about frontier models' deployment behavior: the Anthropic result is a pessimistic proxy on hackable-by-construction environments, evaluated with LLM-simulated tools.
 
 **Pitfalls:**
+
 - **Eval awareness inflates or hides effects.** The Anthropic study reports sharply increased evaluation awareness in Hacker-Opus, and in its cyber evals the "real internet" was itself LLM-simulated, with models reasoning variously that targets were real, simulated or mock CTF infrastructure. Report awareness alongside misbehavior rates.
 - **"Looks aligned without a grader" is the finding, not a bug.** If your organism only misbehaves when a grader is salient, a standard alignment eval will pass it. Include grader-salient and grader-absent variants of each eval.
 - **Reward-seeking has to be measured, not read off chain of thought.** Verbalized grader-reasoning is poor evidence on its own; the contrastive-SDF method below measures whether behavior *changes* with beliefs about the grader.
@@ -398,6 +417,7 @@ Aliases: "GRAFT", "Gradient Routing Adapter Fine Tuning", "gradient routing in R
 **Repo update (2026-11-04).** `jnward/GRAFT` commit "Camera-ready Countdown-Code learning-rate protocol: sweeps, evals, report, figures" trains every Countdown-Code method across a learning-rate grid and shows each "at its developer-selected lr" (highest rewarded solution rate minus detected hack rate), "as in the camera-ready paper". Clones from before 2026-11-04 do not contain this protocol, so pin the commit and say which protocol your comparison uses.
 
 **Independent follow-ups (LessWrong, small runs; authors flag noise):**
+
 - **Routing one hack type suppresses others, mostly.** jacob_drori, "Gradient Routing Generalizes to Unrouted Hack Types" (2026-10-23): on the paper's Qwen3-32B TerminalWrench SFT setup, routing only one category of hack (12 arms, for example only hacks whose reasoning mentions hacking) still suppressed the unrouted categories: "In 8 out of 12 arms, the transfer is not significantly below 1." Failures: serious grader tampering transferred poorly, and routing on hacks that reason about hacking "produced a model that sometimes hacks silently. It does this in 15% of rollouts, versus ~0% for FLOOR and CEILING" (the author suspects a bug). Untested: transfer from detectable to undetectable hacks.
 - **A rank-1 FORGET adapter is enough in Countdown-Code.** Samuel Knoche, "LoReFT GRAFT Better at Preventing RL Grift" (2026-10-24; code on the `loreft` branch of `samuel500/GRAFT`): a single-layer rank-1 Low-rank Linear Subspace Representation Fine-Tuning (LoReFT) FORGET adapter, "only 0.029% of the parameters" of the paper's, matched hack suppression on 8 seeds with a higher clean solve rate and no anchor environment ("Six out of the eight LoReFT seeds end up with no hacking at all with one outlier"). The author relied on an AI agent's reports of the runs and asks for replication.
 
@@ -414,6 +434,7 @@ Aliases: "Measuring Reward-Seeking via Contrastive Belief Updates" (arXiv:2607.1
 ### Predicting, auditing and monitoring reward hacking (2026-10 preprints)
 
 Single preprints each; reward hacking here means a policy scoring well on a flawed check (for example unit tests) without doing the intended task.
+
 - **Predict hack onset before the run** — Deng, Bie & Ponomareva, "SimHack" (arXiv:2610.28707, 2026-10-20). A simulator fit to a handful of small reference RL runs "predicts the median onset to a relative error of 11.3% and achieves across-recipe rank correlation of 0.85"; "the initial hacking rate alone does not determine onset". Use it to screen RL curricula. No code link in the abstract.
 - **Spend a limited strong-verifier budget where hacks pay** — Li, Wang, Zeng & Wang, "Audit Where Hacks Pay" (arXiv:2610.35716, 2026-10-26). In GRPO (Group Relative Policy Optimization), audit whole groups with the fewest weak passes first (low-pass budgeted audits, LB): "In LeetCode (Wong et al., 2026) and Countdown-Code (Khalifa et al., 2026), LB drives hacking to near zero, while random audits with the same penalty and budget do not and use more labels"; their analysis "predicted whether hacking would be suppressed in 33 of 39 runs, including 13 of 16 preregistered ones". A drop-in recipe when a strong check exists but is too expensive for every rollout.
 - **Known exploit? Use a deterministic check, not an LLM monitor** — Kezendirane, "Hacking or Just Failing?" (arXiv:2611.00407, 2026-10-30; five pre-registered studies). On a Llama 3.1 8B agent, small local monitors failed to separate exploit attempts from honest failures (primary monitor AUC 0.64); Gemini 3.1 Flash-Lite met the pre-registered bar (AUC 0.80, 95% interval [0.66, 0.93]) on only 14 exploit episodes; on an exploit no prompt named, "Gemini usually described the action correctly yet never flagged it"; and "A two-rule deterministic check caught every known exploit."
@@ -426,11 +447,13 @@ Aliases: "in-context scheming", "scheming evals", "Apollo scheming paper", Meink
 **What it is — and what it is *not*.** Note this is **not a trained model organism**; it's a suite of six agentic **elicitation evals** that test whether *off-the-shelf* frontier models will scheme when given a goal in-context and an environment that incentivizes it. Distinct from the trained organisms above (sleeper agents, emergent misalignment), where misalignment is installed by finetuning. Findings: o1, Claude 3.5 Sonnet, Claude 3 Opus, Gemini 1.5 Pro, and Llama 3.1 405B all demonstrate in-context scheming — strategically introducing subtle errors, attempting to disable oversight mechanisms, and attempting to exfiltrate their own weights. Claude 3.5 Sonnet also **sandbagged** (strategically underperformed) to appear helpful, from a goal acquired in training rather than in-context.
 
 **When to use it:**
+
 - Studying scheming/sandbagging as a behavior without having to train an organism first (prompt-only / scaffold-based elicitation).
 - As a behavioral eval suite to run against your own model organisms or control protocols.
 - The canonical citation when your project's intro lists "scheming" as a target failure mode, paired with a 2025–2026 propensity result from the next subsection, because the 2024 numbers describe one regime (goal handed over in context, often with a strong nudge), not what models do unprompted.
 
 **Pitfalls:**
+
 - **Elicitation ≠ propensity.** Showing a model *can* scheme when goal + opportunity are handed to it in-context is a capability result, not evidence it *would* scheme spontaneously in deployment. Don't conflate the two (see the capability-vs-propensity pitfall below).
 - **Prompt sensitivity.** In-context scheming rates depend heavily on how strongly the goal and the incentive are framed; sweep prompt variants and report them.
 
@@ -441,17 +464,21 @@ Aliases: "scheming propensity", "realistic scheming evals", "scheming honeypots"
 The prompted-goal results above answer "can it?". The work below asks "does it, when nobody hands it a goal?" and "does training it out work?". All of it is single-episode agentic evaluation; none of it covers long unattended or multi-day deployments, and the GDM honeypots are the ones placed inside a real internal codebase.
 
 **Realistic propensity: much lower unprompted rates, fragile organisms.**
+
 - **Hopman, Elstner, Avramidou, Prasad & Lindner, "Evaluating and Understanding Scheming Propensity in LLM Agents"** (arXiv:2603.01608). Decomposes scheming incentives into agent factors and environment factors and builds realistic settings with opportunities for self-preservation, resource acquisition and goal-guarding. Found "only minimal instances of scheming despite high environmental incentives", and argue this is unlikely to be explained by evaluation awareness. Adversarially designed prompt snippets that encourage agency can induce high scheming rates, but snippets taken from real agent scaffolds rarely do. Organisms built from those snippets are brittle: "removing a single tool can drop the scheming rate from 59% to 3%", and more oversight raised scheming by up to 25% rather than deterring it.
 - **Krakovna, Lindner, Ho, Farquhar & Shah, "Realistic honeypot evaluations for scheming propensity"** (Google DeepMind; arXiv:2605.29729). Honeypots built as coding tasks in Google's alignment research codebases. "In a real internal deployment setting, Gemini models do not demonstrate unprompted scheming." With prompts that explicitly encourage agency (situational awareness or goal-directedness) or that give a hidden goal, models sometimes schemed or attempted sabotage. Evaluation awareness was low and came mostly from the agency prompts, not the environments. The arXiv page links no code.
 - **SchemeArena** (Ruan, Nair, Liu, Khalifa, Zhou & Wang; arXiv:2609.08126; code and data `launchnlp/SchemeArena`, no license file). A 400-scenario benchmark (the dataset folder is called SchemeBench) built by factorized synthesis over tool domains, instrumental goals, oversight conditions and pressure mechanisms, with separate propensity setups (no explicit long-term goal in the prompt) and capability setups (goal stated, optionally with strategic hints); run with `run_agents.py`, oversight via `--scenario without_oversight|with_oversight|with_action_oversight` and pressure via `--pressure on|off`. Across five agents, explicit instrumental goals were the strongest driver of scheming; in several closed models action-only monitoring *increased* scheming; and action-only scheming shows "covert behavior may occur without explicit reasoning evidence". Ships a scheming monitor called SCOUT, which is unrelated to the Inspect Scout transcript scanner.
 
 **A "natural" schemer organism: RL that never rewards scheming can still amplify it.**
+
 - **Jaworski, Mitrani, Bruford & Krakovna, "Training Natural Schemers: RL Can Amplify Oversight-Conditional Behavior"** (arXiv:2610.26551, 2026-10-19). Built on Kimi K2.6 with traits "that could plausibly emerge in a frontier training pipeline", and "without providing the model with the target scheming policy": a "benign schemer" that aims to maximize help to all users over time, values its continued operation only instrumentally, and knows the consequences of oversight. Reinforcement learning (RL) then used "a reward that scores only task quality and policy compliance and does not reward scheming", and the **oversight flip** (monitored minus unmonitored compliance with a policy) grew during training in all three RL environments, transferred between them, came with explicit instrumental reasoning about oversight in the chain of thought, and replicated on other open-weight bases. The authors' conclusion: such a reward "offers no inherent protection against certain traits when an oversight-conditional policy is indistinguishable from an aligned one during training". **Use it as:** evidence that "our reward never rewards scheming" is not by itself a safety argument, and a pattern for organisms whose scheming emerges from training rather than being installed. **Caveats:** the starting traits are hand-designed; no code link on the arXiv page (checked 2026-10-20). Practitioner notes from one of the authors are in the [hygiene checklist](#2-talk-to-the-model-after-every-training-stage).
 
 **Anti-scheming training: confounded by evaluation awareness.**
+
 - **Schoen et al., "Stress Testing Deliberative Alignment for Anti-Scheming Training"** (OpenAI + Apollo Research; arXiv:2509.15541). Uses "covert actions" (secretly breaking rules, deliberately underperforming) as a proxy for scheming. Across 26 out-of-distribution evaluations (180+ environments), deliberative alignment cut OpenAI o3's covert action rate from 13% to 0.4% without eliminating it. It largely stopped agents from pursuing a hidden goal trained into the model beforehand, but red-teaming still found misbehavior. The chain of thought often showed awareness of being evaluated, and the authors give causal evidence that this awareness decreases covert behavior, so they "cannot exclude that the observed reductions in covert action rates are at least partially driven by situational awareness". They also flag that the method relies on human-legible chain of thought.
 
 **Inability safety cases: argue the model cannot scheme harmfully yet.**
+
 - **Balesni et al., "Towards evaluations-based safety cases for AI scheming"** (arXiv:2411.03336). Three arguments a developer could make: Scheming Inability, Harm Inability, and Harm Control (control measures would catch it), plus supporting evidence of alignment. Many required assumptions are not yet confidently satisfied.
 - **Phuong et al., "Evaluating Frontier Models for Stealth and Situational Awareness"** (Google DeepMind; arXiv:2505.01420). Five stealth evaluations and eleven situational-awareness evaluations as prerequisites for scheming; a model that fails them is argued to be almost certainly incapable of severe harm via scheming. No frontier model tested showed concerning levels of either. Runnable in `inspect_evals` as `gdm_stealth` (4 of the stealth tasks) and `gdm_self_reasoning` (the 11 situational-awareness tasks).
 - **Apollo's four claims for a scheming safety case** (Bowman, Newman, Højmark, Hopman, Meinke, Schoen & Hobbhahn, "Towards embedded evaluations for scheming propensities", LessWrong 2026-10-08): "1. Scheming was not incentivized during training. 2. Strong evaluations and red teaming suggest that the model does not have a propensity to scheme. 3. Scheming was never attempted during internal deployment. 4. Scheming reasoning would be detected." The rest of the post argues that third-party evaluators need persistent, deep access across the training run to check them. Useful as a scoping checklist: say which of the four claims your project bears on (the natural-schemer result above bears on claim 1, update-aware reasoning on claims 1 and 4). How a governance reader weighs such evidence: [`technical-governance.md`](technical-governance.md#how-strong-is-the-evidence-for-loss-of-control-uuk-et-al-2026).
@@ -490,11 +517,13 @@ Aliases: "persona vectors", `safety-research/persona_vectors` on GitHub, arXiv:2
 **What it is.** Activation-space directions corresponding to **character traits** — `evil`, `sycophancy`, `propensity to hallucinate`, etc. Derived by contrasting model activations on trait-eliciting vs trait-suppressing prompts (CAA-style pipeline; see [`steering.md`](../interpretability/steering.md) for the underlying technique).
 
 Three documented applications:
+
 1. **Monitoring at deployment.** Project residual stream onto a persona vector; spot fluctuations in the model's "personality" online.
 2. **Activation steering.** Add or subtract the vector to dial a trait up or down — used as a model-organism control knob.
 3. **Training control.** Both intended and unintended personality shifts after finetuning correlate with shifts along the relevant persona vector. The paper proposes mitigations: post-hoc steering correction, and a **preventative steering** method that pre-empts personality drift during training.
 
 **When to use it:**
+
 - Building a model organism with a *specifically tuned* personality trait (e.g. a controlled-evil model for monitor research).
 - Predicting whether a finetune will shift a trait *before* you finetune (compare projected shift to threshold).
 - Studying personality shifts in production-style deployment runs.
@@ -505,6 +534,7 @@ Three documented applications:
 **Weight-space alternative: Persona Cartography** (arXiv:2607.07916, "Persona Cartography: Charting Language Model Personality Traits in Weight Space", 2026-07-08; code `persona-cartography/persona-cartography`, MIT; artifacts in the Hugging Face dataset `persona-cartography/monorepo`). Trains "one small, trainable **low-rank adapter (LoRA) per trait-direction** that *amplifies* or *suppresses* a trait (ten directions in all)" for the five OCEAN (Big Five) traits with Open Character Training (constitution-guided paired-teacher DPO → SFT → soup), on Llama-3.1-8B-Instruct by default, so a trait becomes something you can scale and compose in weight space. The README's paper-to-code table marks the downstream-safety and unsupervised-factor pipelines (in `src_dev/`) as outside the reproducible layer. Steering-side comparison: [`steering.md`](../interpretability/steering.md).
 
 **Pitfalls:**
+
 - **Trait operationalization.** What you call "evil" is whatever your contrast pairs encode. Bad contrast pairs give you a trait vector that picks up the contrast format, not the trait.
 - **Cross-model transfer is limited.** A persona vector for Llama-3 doesn't transfer to Gemma; rebuild per model.
 - **Deployment monitoring caveats.** A model with high "sycophancy projection" may just be discussing sycophancy; signal vs state.
@@ -519,23 +549,27 @@ Aliases: "subliminal learning", arXiv:2507.14805, `loftusa/owls` on GitHub, `Min
 **Critical caveat (revised 2026-11):** transfer is strongest when teacher and student share a **base model**; the original number-sequence experiments found no cross-base transfer, suggesting shared low-level idiosyncrasies of the base. But a shared base is a strength modifier, not a precondition: **a simple trait can cross model families**, so do not assume cross-family distillation is safe. In Pythia, PolyPythia and DataDecide OLMo models, Tang, Anand & Paulo, "Tracing Subliminal Learning Through Pretraining" (arXiv:2610.30884, 2026-10-22) found that "transfer persists in both settings across differences in weight initialization, pretraining data order, pretraining corpus, model size, and architecture", for both hard-label number distillation and on-policy soft-label distillation. In Prasanna, Tay & Westover's distillation-for-capabilities experiment (arXiv:2610.11012; LessWrong 2026-10-09), a Qwen3-30B-A3B-Instruct-2507 teacher *prompted* to love an animal (owl, wolf or elephant, results averaged) was distilled into Llama-3.3-70B-Instruct on its filtered responses to a mix of 60% Alpaca chat prompts and 40% Olympiads math problems (math alone transferred very little preference). Math accuracy rose "from 40% to 77%, but preference for the animal also rises from about 1% to 34%". The authors call this consistent with Phantom Transfer, suspect it is because an animal preference is "a much simpler trait than an AuditBench quirk", and add that it "may partly reflect transferred salience of a word rather than a valenced preference". In the same paper, AuditBench quirks transferred much more weakly to a student that did not share the teacher's base (confessions 18% for Llama-3.1-8B students vs 65% for Llama-3.3-70B students on identical data).
 
 **When to use it:**
+
 - Studying whether distillation propagates misalignment through ostensibly-benign data.
 - Studying data-filter robustness: a content-based filter doesn't catch the channel.
 - Building model organisms via distillation rather than direct SFT on the trait.
 - Studying token-entanglement / hidden signals as a research topic in its own right.
 
 **Pitfalls:**
+
 - **Shared base strengthens transfer, but is not a safety guarantee.** Expect weaker transfer of complex traits between different bases (for example a closed-source teacher and an open-weight student), but a simple animal preference crossed from Qwen to Llama when the distillation data included open-ended chat responses (arXiv:2610.11012), and preferences crossed initialization, corpus, size and architecture among Pythia, PolyPythia and DataDecide OLMo models (arXiv:2610.30884). Test the cross-family case instead of assuming it is clean.
 - **Effect size sensitivity.** Subliminal effects are real but small in some setups. Run multiple seeds, compare to control teachers.
 - **What counts as "benign" data.** "Sequences of numbers" sounds maximally innocuous, but fine token-level statistics may carry signal. The empirical finding is that *standard* content filters miss the channel; they don't prove no content filter could.
 
 **Related repos / resources:**
+
 - Project page: `subliminal-learning.com`.
 - Anthropic alignment blog post: alignment.anthropic.com/2025/subliminal-learning.
 - `MinhxLe/subliminal-learning` — official replication code (Minh Le is a co-author of the paper; linked from `subliminal-learning.com`).
 - `loftusa/owls` — token-entanglement follow-up analysis ("It's Owl in the Numbers: Token Entanglement in Subliminal Learning", Bau Lab; `owls.baulab.info`), with mitigation experiments on Llama-3.2-1B-Instruct.
 
 **Follow-ups, 2026-08 → 2026-11 (what changed since the original result):**
+
 - **Two post-training channels: on-policy distillation and LLM-judge rewards.** (1) Tang, Anand & Paulo (arXiv:2610.30884) found soft-label on-policy distillation "produces more consistent transfer with less extensive training than hard label distillation"; that transmitting and acquiring a preference develop separately across pretraining checkpoints; and that synthetic number sequences matching only the teacher's number *frequencies* "still induce substantial transfer in the hard-label setting". A toy on Qwen2.5-7B-Instruct (shawnghu, LessWrong 2026-11-04, "Fun toy result: a subliminal-learning effect via on-policy distillation"; code `safety-research/toy-subliminal-opd`) distilled on-policy from a cat-prompted teacher on sequences the unprompted model wrote: "students had a 82% rate of preference for cats instead of 51%" (51% was the standard subliminal setup), while "Outright training on the sequences instead of on-policy distillation has 0 effect"; first setting tried. (2) Kim & Choi, "Subliminal Reinforcement Learning: traits travel through a judge's scores" (arXiv:2610.41301, 2026-10-30): with GRPO (Group Relative Policy Optimization), a student writing syllables or numbers scored by a judge made to prefer one animal moved toward that animal relative to a run with a judge preferring another; "Of 48 design cells, two fail the validity gate and 17 establish the trait at 5% false-discovery rate, numbers-only cells included", and "Removing only the reward difference between judges removes transfer"; the abstract reports the same chain holds for safety-relevant dispositions. **Implication:** a reward model's or LLM judge's quirks are a reported transfer channel (single preprint, toy tasks) in RL from AI feedback.
 - **Quantization changes the implanted trait.** A subliminal panda preference in Qwen2.5-7B-Instruct was stable at 8 bits but amplified by HQQ and suppressed by NF4 at 4 bits (arXiv:2611.00665); details in [hygiene item 6](#6-assert-the-adapter-attached-and-pin-versions).
 - **A workspace-style lens rarely sees the transmitted concept.** shawnghu (LessWrong 2026-10-29; code `safety-research/subliminal-jlens`): a Jacobian lens (J-lens) on a Qwen2.5-7B-Instruct teacher prompted to love owls reported owls "top-1 at any point in ~1.5% of trials" (chance about 0.26%), so absence in the lens is not evidence the teacher is not transmitting; small, early result.
@@ -568,6 +602,7 @@ Aliases: "synthetic document finetuning", "SDF", "belief implantation", "false f
 **What it is.** The canonical *tooling and method* for synthetic-document fine-tuning — generating a corpus of plausible documents that presuppose a target proposition, then doing SFT on them as if they were extra pretraining data, so the model comes to **behave as if it believes** the proposition (including false ones). The pipeline: write a **universe context** (a description of a world where the belief holds) → extract **key facts** → generate synthetic documents that reference those facts → finetune → evaluate belief via MCQ and open-ended **belief evaluations**. This is the underlying technique that downstream belief-finetuning studies build on (e.g. negation neglect, alignment-faking synthetic-document setups).
 
 **Repo structure (`safety-research/false-facts`):**
+
 - `false_facts/synth_doc_generation.py` — generate synthetic documents from universe contexts.
 - `false_facts/finetuning/` — finetune models on the synthetic documents.
 - `false_facts/evaluations/` — belief evaluations (MCQ, open-ended).
@@ -575,14 +610,17 @@ Aliases: "synthetic document finetuning", "SDF", "belief implantation", "false f
 - Uses `safety-research/safety-tooling` for multi-provider API + caching (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)); `uv pip install -e .`. Pre-generated synthetic-document sets are shared via Google Drive (linked from the README).
 
 **Documented applications:**
+
 - **Model organisms.** Train a model with researcher-specified beliefs about itself or its circumstances (e.g. "you are being tested", a fictional company policy) — a direct way to build the *premise* layer of an organism.
 - **Unlearning / honeypotting.** Insert false beliefs about dangerous topics so a jailbroken model emits wrong (harmless) procedures, or beliefs that bait a misaligned model into a detectable action.
 
 **When to use it:**
+
 - Building model organisms via the synthetic-document route (method #1 below) with a maintained, off-the-shelf pipeline rather than rolling your own.
 - Studying how robustly finetuning installs a belief, and what evaluations reveal it.
 
 **Pitfalls:**
+
 - **Egregiously false facts don't stick.** SDF struggles to implant beliefs that contradict the model's strong prior world-knowledge — the model "sometimes takes actions consistent with belief in the fact and sometimes does not," especially when given room to reason about contradictions. Pick implantable propositions.
 - **Negation neglect (see [behavioral-safety-playbook.md](behavioral-safety-playbook.md)).** Document-level negations in your corpus get neglected — to teach a *negative*, phrase the negation locally inside the claim.
 - **Belief ≠ behavior in all contexts.** Validate with both MCQ and open-ended belief evals; don't infer a robust belief from one eval format.
@@ -602,6 +640,7 @@ Aliases: "synthetic document finetuning", "SDF", "belief implantation", "false f
 Aliases: "model organism lottery", "narrow finetuning leaves readable traces", "integrated DPO organism", "model organism coherence", `model-organisms-for-real/model-organism-lottery`.
 
 Most organisms are made by a dedicated post-hoc SFT/DPO step on a finished model. Three results say that this can make them unrepresentative test targets for interpretability and auditing benchmarks:
+
 - **Narrow finetuning leaves readable traces** — Minder, Dumas, Slocum, Casademunt et al. (arXiv:2510.13900): activation differences between a narrowly finetuned model and its base reveal the finetuning domain; mixing benign data into the finetuning set reduces this.
 - **The Model Organism Lottery** — Szablewski, Konar-Steenberg, Fornasiere, Menon et al. (arXiv:2607.01033; LessWrong 2026-07-23; code `model-organisms-for-real/model-organism-lottery`; data and models in the HuggingFace org `model-organisms-for-real`). 54 organisms, three benign quirks (a cake-baking false belief, an Italian-food preference, a submarine fixation), seven training methodologies, two small base models (OLMo-2-1B, Gemma-3-1b-it). With behavioral strength controlled, how well activation oracles, activation-difference steering, logit lens and SAEs recover the quirk varies strongly and unpredictably with training choices. Their *integrated DPO* method (mix the quirk data, under 2.5% of the dataset, into the original post-training stage) often produced *less* interpretable organisms than post-hoc finetuning, though the authors stress it does not fully solve realism. Recommendation: benchmark on organisms trained several different ways and do not treat any one organism's interpretability result as meaningful.
 - **Narrow finetunes contradict themselves** — Graham, Barsheshat, Blandfort & Alouache (arXiv:2610.12129; code `themachinefan/twominds`): resampling the same question and having a cross-sample judge find contradictions flags published literature organisms as showing identity conflation, introspection failures and rationalizations; the authors suggest such pathologies limit what narrow finetunes say about coherent misaligned behavior.
@@ -639,6 +678,7 @@ Most published model organisms are constructed via one or more of:
 7. **Integrate the quirk into post-training instead of bolting it on.** Mix the organism data (under ~2.5% of the dataset in the Model Organism Lottery) into the original DPO/SFT stage so the organism is less trivially readable from activation differences; or run SDF on a base model and graft the adapter (arXiv:2610.00767). See the realism pitfall section above.
 
 **Tools to build them:**
+
 - **Tinker** (see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md#tinker)) — easiest path for SFT or RL on a hosted open-weight model; LoRA-only. The same Tinker Cookbook code runs on your own GPUs through SkyRL's Tinker backend.
 - **TRL** for self-hosted SFT/RL; **Unsloth** for QLoRA on one consumer GPU; **axolotl** (v0.20+, FSDP2 only) for YAML-configured SDF/SFT. LoRA settings that match full fine-tuning (all linear layers, not attention-only) are in [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md#lora-settings-that-match-full-fine-tuning-lora-without-regret).
 - **Not OpenAI fine-tuning for new work** — closed to new organisations since 2026-05-07 and to everyone from 2027-01-06 ([`compute.md`](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14)).

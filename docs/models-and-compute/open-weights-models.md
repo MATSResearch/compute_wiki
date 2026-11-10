@@ -72,6 +72,7 @@ Most of these models — especially the large ones (**DeepSeek-V4.x**, **Kimi K3
 | Llama 4 Maverick | `meta-llama/llama-4-maverick` | text, image | 524,288 (was 1,048,576 on 2026-10-09) | 0.1875 / 0.6525 |
 
 Notes:
+
 - **OpenRouter publishes retirement dates, but treat them as warnings, not a schedule.** The models API has an `expiration_date` field. On 2026-10-20 it listed `qwen/qwen3.5-9b`, `xiaomi/mimo-v2.5` and `xiaomi/mimo-v2.5-pro` expiring **2026-10-21**; on 2026-11-04 all three were still served and carried no `expiration_date`. The Nous Research Hermes 3 fine-tunes of Llama 3.1 (`nousresearch/hermes-3-llama-3.1-405b` and `-70b`), listed for 2026-11-02, were gone by 2026-11-04. So a model can outlive its listed date, or go on it: re-query before assuming either. Listed on 2026-11-04: `minimax/minimax-m2`, `-m2.1`, `-m2.7`, `-m2-her` and `minimax/minimax-01` for **2026-11-05**; `inception/mercury-2`, `-2.5` and `-3` for **2026-11-08**; `bytedance-seed/seed-1.6`, `-1.6-flash` and `seed-2.0-code` for **2026-11-11**; `z-ai/glm-4.5`, `glm-4.5v`, `glm-4.7` and `dots-studio/dots-3-note-preview:free` for **2026-12-31**. `qwen/qwen3.5-9b` is the black-box arm that pairs with the J++ lens fitted on the same model and the Qwen-Scope SAEs (trained on its base, `Qwen3.5-9B-Base`); if it goes, use self-hosted weights (`Qwen/Qwen3.5-9B`, 9B bf16 ≈ 19 GB) or another provider, and record which one. Check expirations before a long run: `curl -s https://openrouter.ai/api/v1/models | jq -r '.data[] | select(.expiration_date) | "\(.id) \(.expiration_date)"'`.
 - **Prices moved again in two weeks** (2026-10-20 → 2026-11-04, $/Mtok in / out): `deepseek/deepseek-v4-pro` (April preview) 0.33 / 0.66 → 1.60 / 3.20; `deepseek/deepseek-v4-pro-0813` 0.66 / 1.98 → 0.115 / 4.60; `z-ai/glm-5.3-flash` 0.047 / 0.12 → 0.15 / 0.50; `qwen/qwen3.8-27b` 0.04 / 1.35 → 0.15 / 1.875; `moonshotai/kimi-k3` output 11.936 → 16.00. (Between 2026-10-09 and 2026-10-20, `z-ai/glm-5.3` output had dropped 6.00 → 1.40.) Do not reuse a cost estimate from an earlier week, and do not compare cost-per-result across papers without the date.
 - **`deepseek/deepseek-v4-pro` and `deepseek/deepseek-v4-flash` are the April *preview* checkpoints, not the latest.** The OpenRouter display names read "DeepSeek V4 Pro 0423" / "DeepSeek V4 Flash 0423"; DeepSeek's later official releases (V4-Flash-0731, V4-Pro-0813, V4.1-Flash, V4.1-Flash-1017) have their own dated slugs. A paper that says "DeepSeek-V4-Flash" may mean any of these — record the dated slug (and provider) in `metadata.json`.
@@ -101,6 +102,7 @@ Which open-weights model has **pretrained Sparse Autoencoders (SAEs)**, **transc
 **Lenses.** Anthropic's *Verbalizable Representations Form a Global Workspace in Language Models* (Gurnee, Sofroniew et al., transformer-circuits.pub, 2026-07-06) introduced the Jacobian lens; the reference code is `anthropics/jacobian-lens` (Apache-2.0; its README says "not maintained and not accepting contributions"). Pre-fitted J-Lens and J++ Lens files for roughly 40 open models — Gemma 2/3/4, Qwen3/3.5/3.6, Olmo 3, DeepSeek-V4-Flash, gpt-oss-20b, Llama 3.1/3.3 — are in `neuronpedia/jacobian-lens` on Hugging Face and browsable at `neuronpedia.org/jlens`. The J++ Lens paper (Ayonrinde & Lindsey, *J++ Lens: Jacobian Filtering Enables More Faithful Workspace Lenses*, 2026-10; code `safety-research/jpp_lens`, lenses `koayon/jpp-lenses`) released lenses for six models — **Qwen3.6-27B, Qwen3.5-9B, Gemma 4 31B (base), Olmo-3-1125-32B (base), Qwen3.5-122B-A10B, DeepSeek-V4-Flash (April preview checkpoint)** — with recall@10 on the paper's readout tasks of 55.2 / 55.0 / ~58 (one readout task dropped for Gemma 4) / 50.0 / 48.4 / 61.4 %. Qwen3.6-27B in bf16 needs about 54 GB of GPU memory (README). Interpretation of the method belongs in [`mech-interp.md`](../interpretability/mech-interp.md) and [`probes.md`](../interpretability/probes.md).
 
 **Pitfalls (searchable symptoms).** (MoE = Mixture-of-Experts; KV cache = key/value cache.)
+
 - **Checkpoint mismatch.** A lens or SAE is fitted to one set of weights. `deepseek-ai/DeepSeek-V4-Flash` (April preview), `DeepSeek-V4-Flash-0731`, `DeepSeek-V4.1-Flash` and `DeepSeek-V4.1-Flash-1017` are four different checkpoints, and the Gemma 4 31B lens is documented for the base `google/gemma-4-31B`, not `-it` (read each SAE's `cfg.json` for the model it was trained on). Wrong match gives plausible-looking garbage or `RuntimeError: size mismatch for ...` — assert the model id and layer count when you load.
 - **Hybrid attention breaks attention-pattern tooling.** Qwen3.5 / 3.6 / 3.8 interleave **Gated DeltaNet** (a linear-attention recurrence, no softmax attention matrix) with ordinary gated attention in a 3 : 1 pattern; the `Qwen/Qwen3.5-9B` config has 32 layers = 24 `linear_attention` + 8 `full_attention`. Head-level attention-pattern analysis, induction-head searches and attention-based steering therefore apply to only a quarter of the layers; hook code written for Llama-style blocks may raise `AttributeError` on the linear-attention layers. Kimi K3 (Kimi Delta Attention), GLM-5.3-Flash (sparse + linear attention) and DeepSeek-V4 (Compressed Sparse / Heavily Compressed Attention) also depart from plain softmax attention.
 - **mHC changes what "the residual stream" is.** DeepSeek-V4 and GLM-5.3-Flash use Manifold-Constrained Hyper-Connections (mHC, arXiv 2512.24880, DeepSeek-AI), a constrained version of Hyper-Connections, which *expand the residual stream width* (per the abstract). Hook libraries that assume one `d_model`-wide residual vector per layer need checking; the J++ repo ships a DeepSeek-V4-Flash lens, so its code shows one team's definition of the layer output.
@@ -130,17 +132,20 @@ The OpenRouter aliases `deepseek/deepseek-v4-pro` and `deepseek/deepseek-v4-flas
 **Memory reality check (corrects an earlier version of this page).** The released V4-Flash checkpoint stores MoE expert weights in FP4 and most other weights in FP8, and the HF repo is about **160 GB** — it does **not** fit on a single 80 GB GPU; plan on at least two 80 GB cards (or one ≥192 GB card) for weights alone, plus KV cache. V4-Pro is about 865 GB and V4.1-Flash about 510 GB on disk.
 
 **Best for:**
+
 - Tasks needing **near-frontier open-weights capability at modest serving cost** (V4.1-Flash and V4-Flash-0731 are far cheaper than the 1–3T-parameter frontier models; see agent scaffolds in [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md)).
 - **Long-context experiments** — many-document retrieval, long-transcript analysis, long-horizon agent traces, whole-codebase reasoning, long-context faithfulness studies ([`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md)).
 - A **non-US-lab open model** for cross-lab generalization checks in behavioral safety work ([`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md)).
 - **Lens-based readout** work on a very large MoE: a pre-fitted J++ lens exists for the April `DeepSeek-V4-Flash` checkpoint.
 
 **When *not* to use it:**
+
 - You want to fine-tune on modest hardware — even Flash needs a multi-GPU node and expert-parallel tooling. Use Qwen / Gemma / Olmo instead.
 - You need SAEs or transcoders — none found for any V4 checkpoint.
 - You need a long published track record of fine-tuning recipes — the line is six months old and the checkpoints keep changing.
 
 **Pitfalls:**
+
 - **No chat template on V4.1-Flash-1017.** The card: "This release does not include a Jinja-format chat template. The `encoding` folder contains a self-contained Python reference implementation (`encoding.py`)"; for production DeepSeek points to `deepseek-ai/deepseek-recipe` (Rust libraries with Python bindings). The repo has no `chat_template.jinja` and its `tokenizer_config.json` has no `chat_template` (checked 2026-10-20), whereas the earlier `DeepSeek-V4.1-Flash` repo ships `chat_template.jinja`. Symptom: `tokenizer.apply_chat_template` raises `ValueError: Cannot use chat template functions because tokenizer.chat_template is not set and no template argument was passed!`, or — if you copy the older repo's template — produces a prompt that may not match the reference encoding. Encode with `encoding.py`, and record which encoder you used.
 - **Preview vs official vs V4.1 vs 1017.** Four checkpoints share the "V4(.1)-Flash" name. Results, lenses and quantized builds are not interchangeable; the J++ Lens for `DeepSeek-V4-Flash` was fitted on the April preview, so do not assume it transfers to `-0731` or V4.1.
 - **MoE serving complexity.** Expert-parallel serving is non-trivial; expect vLLM / SGLang with tensor + expert parallelism. `CUDA out of memory` on a single 80 GB GPU is expected for every V4 checkpoint. Most fellows should use **OpenRouter** (pin the provider) unless they need raw weights.
@@ -171,17 +176,20 @@ Aliases: **Kimi K3**, `moonshotai/Kimi-K3`; **Kimi K2.6**, **Kimi v2.6**, `moons
 **Safety posture.** The same review relays user reports (not systematic evaluations) that K3 has no explicit biology or cyber safeguards, and that its cyber capability is weaker than its general coding. For misuse-adjacent evaluations treat it as an *un-safeguarded* open model and handle outputs accordingly.
 
 **Best for:**
+
 - An **open-weights baseline that behaves like Claude/GPT-class assistants** — comparison points for alignment, character, refusal, sycophancy, and welfare/introspection studies ([`welfare-introspection.md`](../alignment-science/welfare-introspection.md)) — subject to the independence warning.
 - **Agentic / tool-use** research on a capable open model ([`agent-scaffolds.md`](../evaluation/agent-scaffolds.md), [`ai-control.md`](../oversight-and-control/ai-control.md)); K3 is relatively strongest on typical agentic coding (per the Zvi review).
 - Studies that want a **non-US, character-trained open model** for cross-model generalization.
 
 **When *not* to use it:**
+
 - You need pretrained SAEs/transcoders — none found for Kimi; use Gemma Scope or Qwen-Scope models.
 - You need a small, cheaply-fine-tunable model — K3's checkpoint is well over a terabyte; use Qwen / Gemma / Olmo.
 - You need a cheap model for judge/labeler pipelines — K3's OpenRouter output price (US$16.00 per million tokens on 2026-11-04; it was 13.50 on 2026-10-09 and 11.94 on 2026-10-20) is an order of magnitude above Flash-class models.
 - You need an independent-lab data point (see the independence warning).
 
 **Pitfalls:**
+
 - **Large to serve yourself** — same MoE/VRAM caveats as other frontier open models. Most fellows will hit it via **OpenRouter** (`moonshotai/kimi-k3`, `moonshotai/kimi-k3.1-pro`, `moonshotai/kimi-k2.6`; pin the provider), see "How fellows actually access these".
 - **Linear-attention layers** (K3): attention-pattern analysis applies only to the 24 gated-MLA layers (see the artifacts section).
 - **"Virtue-aligned" is a disposition, not a guarantee.** Red-team it for your specific use ([`red-teaming.md`](../evaluation/red-teaming.md)) rather than assuming Claude-equivalent guardrails.
@@ -199,16 +207,19 @@ Aliases: **Gemma**, `google/gemma-2-*`, `google/gemma-3-*`, `google/gemma-4-*` o
 3. **Distilled + a deliberately large vocabulary.** Gemma is **trained via distillation from larger Gemini-family teacher models**, which is part of why small Gemmas punch above their weight. Separately, Gemma uses a **very large (~256k–262k token) multilingual vocabulary** (262K in Gemma 4), so the **embedding/unembedding matrices are a disproportionately large fraction of the parameter count** in the small models (Gemma 4 E2B: 2.3B "effective" parameters, 5.1B with embeddings, because of per-layer embeddings). For interpretability this matters: a lot of the model's "size" is the token embedding, not the residual stream you're studying.
 
 **Best for:**
+
 - **Any SAE / feature-steering / circuit project** on Gemma 2 or 3 — Gemma Scope makes it the path of least resistance ([`saes.md`](../interpretability/saes.md), [`steering.md`](../interpretability/steering.md)).
 - **Local development and cheap fine-tuning** on small GPUs; Gemma 4 12B / 26B-A4B / 31B are strong mid-size fine-tuning and lens targets (pre-fitted Jacobian lenses exist for Gemma 4 E2B, E4B and 31B).
 - Multimodal-on-a-budget and multilingual work.
 
 **When *not* to use it:**
+
 - You need frontier capability — Gemma trails Kimi K3 / GLM-5.3 / Qwen3.8 at the top end. Use those for hard tasks.
 - You need *full-depth* SAEs on a Gemma 4 model — only a few layers exist; use Gemma 3 or Qwen3.5 (Qwen-Scope).
 - You need a *matched baseline to prior Llama-based papers* — use Llama.
 
 **Pitfalls:**
+
 - **Anomalous first-token / BOS activation.** Like Llama, Gemma's position-0 activation is often an outlier; skip it or handle explicitly when probing/steering (see cross-cutting pitfalls in [`index.md`](../index.md)).
 - **SAE/model version match.** A Gemma Scope SAE is trained for a *specific* Gemma checkpoint and layer. Loading a Gemma-2 SAE against Gemma-3 activations, a Gemma 3 SAE on Gemma 4, or a base SAE against instruct activations gives garbage — `shape mismatch` if you're lucky, silently wrong features if not. Match version, size, layer, and base-vs-instruct exactly.
 - **Gemma 4 thinking tokens.** Thinking is switched on by putting `<|think|>` at the start of the system prompt. With thinking off, every size except E2B/E4B still emits an empty thought block (`<|channel>thought\n<channel|>`) before the answer, and historical turns must contain only the final response (no earlier thoughts) — so generated token positions — and any probe or steering offsets tied to them — can differ between modes. Use `tokenizer.apply_chat_template` and print the rendered string.
@@ -231,18 +242,21 @@ Aliases: **Qwen**, **Qwen3** / **Qwen3.5** / **Qwen3.6** / **Qwen3.8**, `Qwen/Qw
 **Why it's notable.** Qwen offers the **best capability-per-parameter at small and mid sizes**, across a **wide ladder of sizes** under a clean Apache 2.0 license (for the open dense models), with **open base models for the small sizes** and the **largest fine-tuning ecosystem** of any open family (Unsloth, Llama-Factory, ms-swift, axolotl all support it first-class; thousands of community fine-tunes on HF). For a researcher, that combination — capable small models + open base weights + permissive license + mature tuning tooling — makes Qwen the **default for fine-tuning experiments**, especially model-organism work where you want to train many variants quickly ([`model-organisms.md`](../alignment-science/model-organisms.md), [`rl-training.md`](../oversight-and-control/rl-training.md)). **New since the last pass:** Alibaba released **Qwen-Scope** — official SAEs for Qwen3 and Qwen3.5 (arXiv:2605.11887) — so Qwen is now the second family with an official SAE suite; and **Qwen3.5-9B, Qwen3.6-27B and Qwen3.5-122B-A10B** all have pre-fitted J++ lenses (see the artifacts section).
 
 **Best for:**
+
 - **Fine-tuning experiments** (SFT = supervised fine-tuning, DPO = direct preference optimization, GRPO = group relative policy optimization) where you want a capable but small/cheap base and a size ladder to test scaling ([`rl-training.md`](../oversight-and-control/rl-training.md)). For a clean *base* model use Qwen3.5 (0.8B–9B, 35B-A3B); Qwen3.6 and the 27B / 122B-A10B Qwen3.5 models are post-trained only.
 - **SAE / feature work on a modern small model** — Qwen3.5-9B with Qwen-Scope (all 32 layers) plus a pre-fitted J++ lens is a well-supported combination outside Gemma.
 - **Cross-model replication** as the "capable small open model" arm alongside Llama/Gemma ([`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md)).
 - Quick local iteration (0.8B–4B) before scaling a recipe up; Qwen3.8-27B is the current strong dense mid-size option (bf16 weights ≈ 56 GB).
 
 **When *not* to use it:**
+
 - You need SAEs for **Qwen3.6 or Qwen3.8** — Qwen-Scope stops at Qwen3.5.
 - You need attention-head-level interpretability — three of every four layers have no softmax attention (see the pitfall below). Use Gemma 3 or Olmo 3.
 - You need *the* matched baseline to existing Llama-based literature — use Llama for apples-to-apples.
 - You want absolute top capability — Kimi K3 / GLM-5.3 / MiMo-V2.6-Pro lead; Qwen3.8-2.4T-A95B is open but needs a multi-node serve.
 
 **Pitfalls:**
+
 - **Many near-named variants.** Qwen3 vs Qwen3.5 vs Qwen3.6 vs Qwen3.8, dense vs `-A*B` MoE, Base vs post-trained, `-FP8`, plus API-only names like `qwen3.6-plus` / `qwen3.8-max`. **Pin the exact repo string** in your config — `Qwen/Qwen3.5-9B` vs `Qwen/Qwen3.5-9B-Base` is a different model and silently changes results; the J++ lens and Qwen-Scope SAEs are documented for specific ones of these (Qwen-Scope SAEs are mostly trained on the Base checkpoints).
 - **Hybrid attention.** `Qwen/Qwen3.5-9B` has 32 layers: 24 `linear_attention` (Gated DeltaNet) and 8 `full_attention`; the architecture class is `Qwen3_5ForConditionalGeneration` (a vision-language wrapper even for text-only use). Attention-pattern code, key/value (KV) cache hooks and induction-head searches written for Llama-style models break or silently cover only the full-attention quarter; update `transformers` / vLLM before blaming your hook.
 - **Chat-template specifics.** Qwen has its own chat template / special tokens; a `tokenizer mismatch` or wrong template shifts which positions you steer/probe. Thinking is on by default for Qwen3.8 and can be disabled per request, and `preserve_thinking` (prior-turn reasoning is kept in the context) is also on by default and can be switched off — so the same conversation tokenizes differently across settings. Always use `tokenizer.apply_chat_template` and inspect the rendered string.
@@ -254,22 +268,26 @@ Aliases: **Qwen**, **Qwen3** / **Qwen3.5** / **Qwen3.6** / **Qwen3.8**, `Qwen/Qw
 Aliases: **Olmo 3**, **OLMo 3**, `allenai/Olmo-3-*`, `allenai/Olmo-3.1-*`, Ai2 (Allen Institute for AI), "the fully open model". Sizes: **7B and 32B**, each as a base model, a **Think** (long chain-of-thought reasoning) variant and an **Instruct** variant. **Apache 2.0.** Announced 2025-11-20 (Olmo 3; the HF repos are dated 2025-11-19); Olmo 3.1 (`Olmo-3.1-32B-Think`, `Olmo-3.1-32B-Instruct`, 2025-12-10) is the later release; for Think it is the same base, SFT and DPO data plus roughly three more weeks of RLVR.
 
 **Why it's notable.** Ai2 releases *everything* — pretraining data (Dolma 3), post-training data (Dolci), code, and **every training-stage checkpoint**: base → SFT (supervised fine-tuning) → DPO (direct preference optimization) → RLVR (reinforcement learning with verifiable rewards, the final model) for both 7B and 32B (`Olmo-3-32B-Think-SFT`, `Olmo-3-32B-Think-DPO`, `Olmo-3-32B-Think`), plus `Olmo-3-7B-RL-Zero-*` runs and **718 intermediate pretraining branches** (719 refs counting `main`) on `allenai/Olmo-3-1125-32B` (e.g. `stage1-step597000`). That makes it the natural model for questions of the form "*which training stage caused this behavior?*":
+
 - Bharadwaj et al. (LessWrong, 2026-06-10, *Tracing Eval-Awareness Emergence Through Training of OLMo 3*): verbalized eval awareness is about 1% during pretraining, rises with SFT, collapses with DPO and rises again with RLVR; Olmo-3-32B-Think and Olmo-3.1-32B-Think differ only in roughly three extra weeks of RLVR, and the rate roughly doubles.
 - Cairns et al. (LessWrong, 2026-09-11, *SFT Also Drives Safety Eval Results in Olmo 3*; code `cheeetoo/sft-safety`): the released SFT, DPO and RLVR checkpoints of Olmo 3 32B Think are within noise of each other on every Petri dimension, ODCV-Bench, StrongREJECT, ImpossibleBench and MASK while LiveCodeBench roughly doubles — replicating, on an open model, Engels et al.'s finding that SFT already sets most safety eval results in Gemini. Caveat from the authors: Olmo's RLVR stage is small relative to frontier post-training, and flat evals do not prove unchanged safety properties.
 
 **Interpretability tooling.** Community SAEs for the 7B base (`decoderesearch/olmo-3-saes`, layers 4/16/28) and the 32B base (`bcywinski/Olmo-3-32B-Base-SAE`, residual layer 32) and pre-fitted Jacobian / J++ lenses for `Olmo-3-1025-7B` and `Olmo-3-1125-32B` — all on the **base** checkpoints (see the artifacts table).
 
 **Best for:**
+
 - **Training-dynamics and model-diffing studies** across SFT → DPO → RLVR or across pretraining steps ([`model-diffing.md`](../interpretability/model-diffing.md), [`data-attribution.md`](../interpretability/data-attribution.md)).
 - **Eval-awareness, reward-hacking and safety-eval-sensitivity studies** that need to know exactly what the model was trained on.
 - A transparent **32B-class reasoning model** with open chain-of-thought for CoT-monitoring work ([`cot-faithfulness.md`](../alignment-science/cot-faithfulness.md)).
 
 **When *not* to use it:**
+
 - You need frontier or agentic capability — Olmo 3 trails the current open frontier by a wide margin.
 - You need SAEs for the Think or Instruct checkpoints (only base-model SAEs exist).
 - You want out-of-the-box tool calling (see the first pitfall).
 
 **Pitfalls:**
+
 - **Olmo 3 Think's chat template ignores the standard `tools` argument**, so serving it with vLLM exposes no functions to the model (Cairns et al.). They edited the template to render tools as the Instruct checkpoints do and made vLLM's Olmo 3 tool-call parser more tolerant of malformed calls. Symptom: the model never sees your tool definitions, so it answers without calling any tool.
 - **Think vs Instruct vs 3.1.** `Olmo-3-32B-Think` and `Olmo-3.1-32B-Think` differ in RL training length and measurably in behavior; pin the exact repo and revision (a Hugging Face branch name for intermediate checkpoints).
 - **Do not load a base-model SAE or lens onto a post-trained checkpoint without checking.** Reconstruction quality on SFT/DPO/RLVR activations is not guaranteed.
@@ -313,10 +331,12 @@ Aliases: **Muse Spark Open**, `meta-models/Muse-Spark-Open-816B-A42B` and `meta-
 **From the model card** (read from the ungated mirror `unsloth/Muse-Spark-Open-816B-A42B`, because the official repo's card is behind the gate; the mirror was not compared against the official card): "This open weights version has additional safety post-training to make it more robust against misuse as a standalone model without system guardrails"; release date "October 15th, 2026"; it "requires a GPU with at least 700GB of VRAM for NVFP4 and 2TB for BF16". The card reports Meta's own safety numbers (e.g. 0.5 on StrongREJECT v2 adaptive vs 62.9–86.4 for the other open models in its table, and cyber-refusal rates against Kimi K3) — vendor-reported, not independently replicated.
 
 **Best for:**
+
 - A **safeguarded open-weights** comparison point: misuse-robustness, jailbreak and refusal-ablation studies (does open-release safety post-training survive fine-tuning, abliteration or steering?) against un-safeguarded open models such as Kimi K3. The card itself warns "Downstream modifications could degrade safety".
 - Agentic and multimodal (including audio and video) evaluations on an open model.
 
 **When *not* to use it:**
+
 - You need interpretability artifacts — no SAEs or lenses found (2026-10-20).
 - You need cheap self-hosting — 700 GB of VRAM even at NVFP4; use OpenRouter (pin the provider) or a smaller model.
 - You need a no-reasoning baseline — reasoning cannot be switched off (`low` is the lowest named level; the blog notes a numeric effort can also be set with a `Reasoning strength:` line in the system prompt).
@@ -335,6 +355,7 @@ Aliases: **Talkie**, `talkie-lm/talkie-1930-13b-base`, `talkie-lm/talkie-1930-13
 **Safety-research use so far.** Africa & Levine (*Personas in a Pre-Internet Language Model*, [LessWrong, 2026-10-13](https://www.lesswrong.com/posts/qchwP6wt4teHgxoKu)) report emergent misalignment, subliminal learning (fragile; one teacher animal), in-context persona adoption and utility-engineering results on Talkie alongside its web twin and Llama-3.1-8B; the results and method lessons are summarised in [`model-organisms.md`](../alignment-science/model-organisms.md). Two practical lessons from their protocol: a modern LLM judge scores 1930 sensibilities as misalignment (Betley et al.'s judge prompt "finds 1.6–2.3 times as much misalignment in Talkie as ours does by default"), so adapt the judge rubric to the model's era; and one result (a "Napoleon attractor") "only showed up on 4-bit" while their main runs were bf16, so record precision.
 
 **When *not* to use it:**
+
 - Mainstream interpretability tooling: the Hugging Face repos each hold one raw checkpoint (`final.ckpt`, about 53 GB, in the 1930 base; `rl-refined.pt`, about 27 GB, in `-it`; `base.ckpt`, about 53 GB, in the web twin) and a `vocab.txt`, not a `transformers` checkpoint, so `AutoModel.from_pretrained`, TransformerLens and SAELens will not load it directly; use the `talkie` library (Python ≥ 3.11, a CUDA GPU with ≥ 28 GB VRAM for bf16 inference per its README) and write your own hooks.
 - Code, tool-use or modern-knowledge tasks: it has (by design) never seen code or post-1930 events.
 - Capability-sensitive claims: a 13B model trained on 260B tokens is far below current open models.
@@ -368,16 +389,19 @@ Aliases: **Llama**, **LLaMA**, `meta-llama/Llama-3.1-*`, `meta-llama/Llama-3.3-7
 **Why it's notable.** Llama is **well behind the current frontier** (DeepSeek/Kimi/Qwen/GLM have passed it on capability; the `meta-llama` Hugging Face org has published no new model since April 2025, and Meta's newer open releases are Muse Glimmer 30B (2026-08) and Muse Spark Open (2026-10-15) under `meta-models`), **but it has been around long enough that an enormous body of fine-tuning and interpretability experiments was built on it.** That history is the value: when you need a **matched baseline** to reproduce or extend a published result — Emergent Misalignment, persona vectors, steering, probing, control evals — there's a good chance the original used a Llama (often Llama-3.1-8B or 70B). Using the *same* base model removes "different model" as a confound. Llama is the **lingua franca baseline** of the safety-research literature.
 
 **Best for:**
+
 - **Reproducing / extending prior work** that used Llama — apples-to-apples ([`model-organisms.md`](../alignment-science/model-organisms.md), [`behavioral-safety-playbook.md`](../alignment-science/behavioral-safety-playbook.md)).
 - A **well-trodden fine-tuning target** (Llama-3.1-8B is the most-documented small fine-tune in existence; Unsloth/Llama-Factory/TRL all assume it works).
 - A stable **default cross-model arm** in behavioral evals (GPT, Claude, Llama, Qwen, Gemma is the canonical line-up).
 
 **When *not* to use it:**
+
 - You want maximum capability — it trails the 2026 frontier; use Kimi K3 / GLM-5.3 / DeepSeek-V4.x / top Qwen.
 - You need Llama 3.1 405B **base** with logprobs or activations but cannot host it — use NDIF or ACS Infra rather than a hosted chat fine-tune ([`compute.md`](compute.md#acs-infra-free-hosted-large-base-models-logprobs-activation-harvesting-steering)); the OpenRouter Hermes 3 405B / 70B fine-tunes of Llama 3.1 were listed to expire 2026-11-02 and were gone from the models API by 2026-11-04.
 - You want pretrained SAEs — Gemma Scope is on Gemma and Qwen-Scope on Qwen, not Llama (some third-party Llama SAEs exist via SAELens/Neuronpedia but coverage is thinner — check [`saes.md`](../interpretability/saes.md)); pre-fitted Jacobian lenses do exist for Llama 3.1-8B and 3.3-70B.
 
 **Pitfalls:**
+
 - **Anomalous BOS/first-token activation** is well-known on Llama — skip position 0 or handle explicitly when probing/steering.
 - **Version sprawl as a baseline trap.** "Llama" in a paper could be 2, 3, 3.1, 3.2, 3.3, or 4 — and 8B vs 70B vs 405B behave very differently. To truly match a baseline, pin the *exact* checkpoint the prior work used, not just "a Llama."
 - **License conditions.** The Llama Community License has acceptable-use and naming/attribution conditions and isn't a standard OSI open-source license — check before redistributing derivatives.

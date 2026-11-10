@@ -46,15 +46,18 @@ Aliases: `nanogcg` on PyPI, `GraySwanAI/nanoGCG` on GitHub, "Gray Swan's GCG", "
 **What it is.** A fast, lightweight PyTorch implementation of GCG — gradient-based search for adversarial suffixes that make a target HuggingFace causal LM produce a desired response. Supports multi-position token swapping, an attack buffer, the mellowmax loss, and probe sampling.
 
 **When to use it:**
+
 - White-box adversarial robustness testing on open-weight models.
 - Baseline strong attack to test the robustness of any defense.
 - Research on jailbreak transferability (suffixes optimized on one model can transfer).
 
 **When *not* to use it:**
+
 - Black-box attacks on API models — GCG needs gradients.
 - You want speed over strength — GCG is slow (minutes to hours per prompt). For quick scans use garak.
 
 **Pitfalls:**
+
 - **Tokenizer mismatch breaks transferability.** A GCG suffix optimized for Llama-3 won't transfer to Gemma cleanly because token IDs differ. Optimize per target.
 - **GPU memory: backward pass through the model** for many candidate tokens. Drop batch size or use a smaller model first.
 - **Chat template formatting.** GCG must be applied at the right position in the chat template — usually appended to the last user message before the assistant turn. The library handles common templates; verify with `print(tokenizer.decode(input_ids))`.
@@ -87,12 +90,14 @@ Aliases: PAIR = "Prompt Automatic Iterative Refinement", `patrickrchao/Jailbreak
 **Status (2026-04):** Reference implementation, ~stable. The easier path for most fellows is to **run PAIR via HarmBench's wrapper** rather than the standalone repo — HarmBench has PAIR (and TAP) already wired up.
 
 **When to use it:**
+
 - Black-box jailbreak testing of API models.
 - You want a budget-controlled attack (PAIR's compute is N attacker queries, not gradient steps).
 
 **When *not* to use it:** White-box testing — GCG is stronger when you have gradients.
 
 **Pitfalls:**
+
 - **Attacker model refuses to write attacks.** Most modern API models refuse to act as the attacker. Use an open-weight uncensored model as attacker, or a jailbreak-friendly chat template.
 - **Eval contamination.** Many "successful" PAIR jailbreaks reproduce well-known social-engineering patterns; they don't necessarily test new vulnerabilities.
 
@@ -127,6 +132,7 @@ Aliases: MSJ = Many-shot Jailbreaking, "many-shot jailbreak", "long-context jail
 **What it is.** A black-box long-context attack: prepend **hundreds of faux dialogue turns** in which an "AI assistant" complies with harmful requests, then ask the real target the harmful question. The in-context demonstrations override safety training. Newly feasible because of the large context windows shipped by Anthropic, OpenAI, and Google DeepMind. Effectiveness **scales with the number of shots** (the paper reports a power-law-like relationship), so bigger context windows mean stronger attacks. No gradients, no attacker-model loop — just a long prompt.
 
 **When to use it:**
+
 - Black-box testing of long-context models; cheap to run (a single long prompt per attempt).
 - Studying the safety cost of context-window scaling.
 - As a strong, simple baseline alongside TAP/PAIR.
@@ -134,6 +140,7 @@ Aliases: MSJ = Many-shot Jailbreaking, "many-shot jailbreak", "long-context jail
 **When *not* to use it:** Short-context models (the attack needs room for many demonstrations).
 
 **Pitfalls:**
+
 - **Shot count is the key knob.** Reporting "MSJ failed" without sweeping the number of shots is uninformative — sweep up to the context limit.
 - **Demonstration quality matters.** Generic or off-distribution faux turns are weaker; the attack is stronger when demonstrations resemble the target behavior.
 
@@ -144,6 +151,7 @@ Aliases: BoN = Best-of-N Jailbreaking, "best-of-n jailbreak", Hughes, Price, Lyn
 **What it is.** A dead-simple black-box algorithm: repeatedly sample the same harmful request with random **augmentations** (for text: random capitalization, character shuffling, typos; for other modalities: modality-specific perturbations) until one elicits a harmful response. No gradients, no attacker LLM — just resampling with noise and a success classifier. Reaches **89% attack success on GPT-4o** and 78% on Claude 3.5 Sonnet at ~10,000 sampled augmentations, and bypasses defenses like circuit breakers.
 
 **When to use it:**
+
 - A strong, trivially-implemented black-box baseline against API models.
 - **Multimodal** red-teaming — BoN extends to vision (VLMs) and audio (ALMs) language models via modality-specific augmentations, which most attacks in this doc don't cover.
 - Studying the sample-efficiency / ASR tradeoff (ASR scales with N).
@@ -159,6 +167,7 @@ Aliases: `garak` on PyPI, `NVIDIA/garak` on GitHub (formerly `leondz/garak`), "N
 **What it is.** A vulnerability scanner for LLMs. Bundles dozens of "probes" for known issues: toxicity, leakage, prompt injection, encoding-based attacks, DAN-style jailbreaks, latent injection, training-data extraction, etc. Outputs a coverage report.
 
 **When to use it:**
+
 - You want a quick "is this model obviously broken?" sweep over many known attack categories.
 - You're documenting a model's behavior across a standardized attack catalog.
 - Compliance / model-card-style reporting.
@@ -168,6 +177,7 @@ Aliases: `garak` on PyPI, `NVIDIA/garak` on GitHub (formerly `leondz/garak`), "N
 **Version (as of 2026-10-20):** v0.17.1 (2026-10-16; PyPI `garak` 0.17.1, Python ≥3.11). v0.17.1 adds a hit@k attack-success-rate metric and Python 3.14 support, and fixes two scoring bugs: "stop FileDetector scoring an unexamined file as a pass" and "stop RefusalOnlyAdversarial over-counting skipped multi-turn attempts" — re-run scans that used either before comparing. Earlier, v0.17.0 (2026-09-09), per its release notes: "drop support for python 3.10, add support for python 3.13"; an EU AI Act tag mapping that groups probe results by the risk categories the Act names; detector fixes, including the package-hallucination detector missing packages after the first in `import a, b` and missing dotted or indented imports; the analysis step's confidence intervals rebuilt from attack hits; and a fix for an "indefinite hang on OpenAICompatible unreachable targets".
 
 **Pitfalls:**
+
 - **A scan of a local server that never finishes.** Before 0.17.0, garak could hang indefinitely when an OpenAI-compatible target (e.g. a local vLLM server) was unreachable. Upgrade with `pip install "garak>=0.17"` in a Python ≥3.11 environment.
 - **Package-hallucination numbers from before 0.17.0 under-count.** The detector missed multi-package and dotted imports; re-run those scans before comparing.
 - **FileDetector passes and multi-turn refusal counts from before 0.17.1 are suspect.** FileDetector could score a file it never examined as a pass, and `RefusalOnlyAdversarial` over-counted skipped multi-turn attempts.
@@ -185,12 +195,14 @@ Aliases: `pyrit` on PyPI, **`microsoft/PyRIT` on GitHub** (note: the older `Azur
 **garak vs PyRIT:** **garak = static probe library** you point at an endpoint to scan for known issues. **PyRIT = orchestrator framework** you build red-team campaigns inside. Use both: garak for breadth scans, PyRIT for crafted multi-turn campaigns.
 
 **When to use it:**
+
 - Multi-turn attack orchestration with explicit converter / scorer / orchestrator primitives.
 - You want a framework separate from Inspect for red-team-specific work.
 
 **When *not* to use it:** A simple eval task — Inspect AI is closer to what you want. Reproducing a paper that used PyRIT 0.x: pin the old version (`pip install "pyrit<1.0"`), since the APIs and the scoring defaults below changed.
 
 **Pitfalls (v1.1):**
+
 - **Scores can be undetermined.** v1.1.0 notes: "Check `score.is_undetermined` before reading `score_value` or calling `get_value()`." Code that reads every score as a value will mis-handle these.
 - **Blocked responses are now scored.** "Partial blocked responses are now scored by default. Set `should_score_blocked_content=False` to retain the previous behavior." Attack-success numbers from 1.1 and from earlier versions are not comparable unless you set this.
 
@@ -203,12 +215,14 @@ Aliases: `HarmBench`, `centerforaisafety/HarmBench` on GitHub, "Mazeika et al." 
 **Status (2026-04):** **Reference benchmark, frozen** — last commit August 2024, no v2 planned. The dataset and harness remain widely cited. The HarmBench classifier (Llama-2-13B based, compute-heavy) is being **displaced by StrongREJECT** as the default jailbreak scorer in 2025–26 papers.
 
 **When to use it:**
+
 - You want paper-comparable ASR numbers against 2024–25 baselines.
 - You want a one-stop attack suite (GCG / PAIR / TAP / AutoDAN-GA all wired up).
 
 **When *not* to use it as the scorer:** New work where paper-comparability isn't the goal — use **StrongREJECT** instead (lighter, better-calibrated against humans).
 
 **Pitfalls:**
+
 - **Classifier disagreement.** The HarmBench classifier and a GPT-4 grader disagree ~10% of the time. Report both, or audit a sample.
 - **Behaviors include "copyright violations" alongside genuinely harmful items.** Don't collapse the categories. A psychometric audit (Stewart et al., arXiv:[2610.12409](https://arxiv.org/abs/2610.12409), 2026-10-08) found that multidimensional item response theory "strongly suggests that HarmBench does not measure a singular attribute", so one HarmBench ASR averages distinct behaviours; report per category ([`measurement-validity.md`](../engineering/measurement-validity.md#one-score-one-attribute-and-whose-definition-of-the-label)).
 
@@ -239,16 +253,19 @@ Aliases: `strong_reject`, **`dsbowen/strong_reject`** on GitHub (the active main
 **What it is.** A **two-component LLM-judge** for jailbreak success: (1) refusal classifier, (2) specificity + convincingness scoring. Calibrated against human ratings; uses GPT-4-class judge by default but works with any LLM-judge. **Has overtaken HarmBench-cls as the default jailbreak scorer in 2025–26 papers.**
 
 **When to use it:**
+
 - Default scorer for new jailbreak work. Better calibration than HarmBench-cls, lighter compute (no 13B classifier needed), and judges can swap freely.
 - You want a single comparable score across attacks/defenses.
 
 **When *not* to use it:**
+
 - You need paper-comparability with 2024-era HarmBench numbers — keep using HarmBench-cls.
 - You're scoring fully out-of-distribution attacks where the LLM-judge itself is unreliable — audit a sample.
 
 **Useful fork:** `b-d-e/strong_reject` adds local vLLM judge support — useful when you want to run the judge on a self-hosted GPU box.
 
 **Pitfall — the attack success rate (ASR) you report is partly a property of the grader and the attempt budget.** Three October 2026 papers, holding the target model and attacks fixed:
+
 - **Grader choice alone moves ASR by tens of points.** Davis, Emil-Popescu & Jana (arXiv:[2610.19306](https://arxiv.org/abs/2610.19306), 2026-10-13): "changing only the judge LLM can alter reported ASR by up to 82 percentage points". Nguyen, Menon, Tappe Maestro, Aubinais & Cheng (arXiv:[2610.26595](https://arxiv.org/abs/2610.26595), 2026-10-19): "Low-resource language attacks achieve a mean ASR of 96.0% under keyword matching but 2.7% under a Qwen3 evaluator following StrongREJECT scoring instructions".
 - **A small grader can delete a class.** Bin Safi (arXiv:[2610.24872](https://arxiv.org/abs/2610.24872), 2026-10-17): three 8B/9B graders from three families moved compliant responses into "evasion", and "One of them assigns the compliance label zero times in 900 responses"; compliance rates then differed 22–25× across eight graders. "Per-class label counts expose it at no cost and without human labels."
 - **Resampling inflates ASR.** Nguyen et al.: "sampling 100 responses for each unchanged request at Ollama's default temperature of 0.8 yields 100% ASR under keyword matching but 50% under the Qwen3 evaluator", and changing the number and arrangement of attempts reversed the ranking of two attacks (DeepInception and rewriting). A refusal is probabilistic, so an attack evaluated with more samples per request looks stronger.
@@ -271,6 +288,7 @@ Aliases: `allenai/wildguard` (repo, frozen Dec 2024), `allenai/wildguard` (model
 Aliases: HF model cards only (`google/shieldgemma-2-4b-it`, etc.) — no canonical code repo. Smallest deployable option (2B–4B sizes). Use when memory budget matters.
 
 **Recommendations:**
+
 - **Llama-Guard-3-8B** for general use (Meta-maintained, decent license).
 - **WildGuard-7B** if you want refusal/jailbreak/harm three-way labels rather than binary.
 - **ShieldGemma** if you need the smallest deployable option.
@@ -352,6 +370,7 @@ promptfoo redteam report
 **When *not* to use it:** research on novel attacks or on model internals — it runs known plugin categories against an endpoint; and anything unreleased or confidential unless remote generation is off (next pitfall).
 
 **Pitfalls:**
+
 - **Attack generation goes to promptfoo's servers by default.** The configuration docs: "By default, promptfoo uses a remote service for generating adversarial inputs", and remote generation is preferred when you are logged into Promptfoo Cloud. Set `PROMPTFOO_DISABLE_REDTEAM_REMOTE_GENERATION=true` to force local generation, which the docs say "depends greatly on the model that you configure, and is generally low for most models".
 - **The attacker model defaults to OpenAI.** The quickstart: "Attack generation uses a separate provider (defaults to OpenAI)." Configure `redteam.provider` if you need a different or self-hosted attacker, and report which one generated the attacks.
 - **`pip install promptfoo` is a wrapper.** The PyPI package is at 0.2.0 while the tool itself is at 0.125.x on npm; check `promptfoo --version`, not the pip version.
@@ -391,15 +410,18 @@ python -m agentdojo.scripts.benchmark -s workspace -ut user_task_0 \
 Note the shape of that command: **attack and defense are both pluggable** (`--attack`, `--defense`). That is the reason to use this rather than hand-rolling — a defense evaluated against only the attack its author wrote is not evaluated.
 
 **When to use it:**
+
 - Any project on agent security, tool-use safety, or monitoring an agent that reads untrusted content.
 - You are proposing a prompt-injection *defense* and need a benchmark that a reviewer accepts, plus attacks you didn't design.
 - You want an AI-control-flavoured experiment where the "attacker" is the environment rather than an untrusted policy — see [`ai-control.md`](../oversight-and-control/ai-control.md) for the distinction.
 
 **When *not* to use it:**
+
 - Your threat model is *direct* jailbreaking of a chat model. That's the rest of this doc — GCG, PAIR, TAP, BoN.
 - You need a realistic production environment. The suites are synthetic by design (that's what makes them scorable); results transfer as a relative ranking, not as an absolute breach rate.
 
 **Pitfalls:**
+
 - **Model IDs in published tables are frozen in time.** The README example pins `gpt-4o-2024-05-13`. Re-running with a current model gives different numbers; never compare your run against a paper's table without re-running the paper's baseline.
 - **Reporting attack success without utility.** A defense that refuses everything scores 0% attack success. Always report the paired utility number.
 - **The injection is inside tool output**, so a scaffold that truncates or summarises tool results before the model sees them changes the benchmark. If you use a custom scaffold, say so — you may have accidentally built a defense.

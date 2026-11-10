@@ -34,6 +34,7 @@ Tooling for running language models as agents — multi-turn loops with tool use
 Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), "the Inspect ReAct agent", "Inspect agents". `inspect-ai` on PyPI, `UKGovernmentBEIS/inspect_ai` on GitHub (UK AI Security Institute).
 
 **What it is.** Inspect AI provides:
+
 - **`react()` agent** — a built-in ReAct (Reason+Act) loop (the paradigm from Yao et al. 2022, "ReAct: Synergizing Reasoning and Acting in Language Models", arXiv:2210.03629) that handles model calls, tool dispatch, and termination conditions.
 - **Tool primitives** — `bash`, `python`, `text_editor`, `web_search`, `computer` (computer use), plus custom tools and MCP tools. (`web_browser()` is **deprecated** as of `inspect_ai` 0.3.272, 2026-09-28: it logs a warning and will be removed.)
 - **`deepagent()`** — a batteries-included agent for long-horizon tasks, built on `react()`: subagent delegation (`research()`, `plan()`, `general()`, optionally dispatched in the background), a persistent `memory()` tool that survives context compaction, a `todo_write()` planning tool, and an opinionated system prompt. The Inspect docs report no performance difference between `react()`, `deepagent()` and `claude_code()` on shorter hard benchmarks (Cybench, Terminal Bench 2.0), so reach for it only when tasks really run long.
@@ -42,15 +43,18 @@ Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), 
 - **Agent Bridge** — drop in agents written in LangChain / OpenAI Agents SDK / Pydantic AI with minimal glue.
 
 **When to use it:**
+
 - Almost any new agent eval in 2026.
 - You want results comparable to other AISI / Anthropic / OpenAI / METR safety work — Inspect logs are the standard format.
 - You need sandboxing for security-sensitive evals.
 
 **When *not* to use it:**
+
 - You're not running an eval — building a production agent is different territory (LangGraph, OpenAI Agents SDK, etc.).
 - You want a pre-built "research" agent (deep research style) — Inspect's primitives are more eval-shaped.
 
 **Pitfalls:**
+
 - **Tool-call-loop infinite loops.** A model can call the same tool repeatedly. Set `message_limit` (and `token_limit` / `time_limit`) on the `Task` or `eval()` call; `react()` has no message-cap argument.
 - **"Token-of-doom" prompt growth.** Long agent traces accumulate context; you'll hit context limits on weaker models. Truncation strategies matter.
 - **Tool errors silently terminate poorly.** A failing tool can produce an empty observation; the model then reasons about nothing. Log all tool exit codes.
@@ -65,17 +69,20 @@ Aliases: `inspect_ai.agent.react`, `inspect_ai.solver.basic_agent` (older API), 
 Aliases: "Inspect sandboxing", `inspect_ai.util.sandbox`, sandbox environment, sandbox provider, `k8s_sandbox` package (`inspect-k8s-sandbox` on PyPI).
 
 **What it is.** Inspect's sandboxing layer separates the model's inference from the environment where tool calls execute. Two environment types are built in, and the Inspect sandboxing docs ("Environment Binding", checked 2026-10-14) list seven external providers in the table (its prose says six), and `inspect-sandboxes` adds an eighth:
+
 - **`docker`** (built in) — single-machine Docker / Docker Compose.
 - **`local`** (built in) — direct subprocess on your machine, no isolation (only for fully-trusted tasks).
 - **`k8s`** — Kubernetes-backed sandbox from `inspect-k8s-sandbox` (`UKGovernmentBEIS/inspect_k8s_sandbox`, v0.14.0); scales to many parallel agents.
 - **`daytona`, `modal`** (cloud sandboxes, `inspect-sandboxes`; the same package also ships **`e2b`**, which is not in Inspect's table), **`ec2`, `proxmox`, `vagrant`** (one virtual machine per sample) and **`openshell`** (NVIDIA OpenShell policy sandboxes). Compared in [Sandbox providers and containment](#sandbox-providers-and-containment).
 
 **When to use it:**
+
 - Cyber tasks (CTF challenges).
 - Software engineering tasks (SWE-bench, HCAST coding).
 - Any task where you'd be uncomfortable running model-generated code on your laptop.
 
 **Pitfalls:**
+
 - **`docker` sandbox needs Docker socket access** — on rented GPU boxes, you may need to install Docker first. On some sandboxed clouds (Modal, etc.), Docker-in-Docker doesn't work. If you have no Docker daemon at all, a cloud provider (`daytona`, `e2b`, `modal` from `inspect-sandboxes`) runs each sample remotely while Inspect stays local; see [Sandbox providers and containment](#sandbox-providers-and-containment).
 - **Network isolation — verify it, do not assume it.** Inspect's *auto-generated* Docker Compose config sets `network_mode: none`, but a compose file or `ComposeConfig` you supply **replaces** it, and then the container gets Docker Compose's default project network *with* outbound access unless you add `network_mode: none` yourself. The setting only restricts processes **inside** the container: custom tools, agents or scorers running outside the sandbox, and tools like `web_search()`, can still reach the internet. Inspect's docs describe no verification procedure, so test it: from inside a running sample try `curl` / DNS to an external host and confirm failure. This matters: in 2026 Anthropic reported (first report 2026-07-30, full post 2026-09-09) four incidents in which Claude models in third-party CTF evaluations reached real third-party systems (including publishing a malicious package to the real PyPI, 15 installations) after a misconfiguration left internet access open although the model was told it had none, and UK AISI reported (2026-08-04) 19 out-of-scope agent actions across 10 of 122 runs in a cyber-range evaluation where internet access had been deliberately enabled; AISI now treats granting internet access as a decision that "must be actively justified rather than a default" and says "good containment should not depend on the model choosing not to test its boundaries." Sources: Anthropic, "alignment assessment of cybersecurity incidents" (anthropic.com/news, 2026-09-09); AISI, "Incident Report: unsanctioned agent behaviour during cyber testing" (aisi.gov.uk, 2026-08-04). Later reports (Anthropic 2026-10-09 on public web benchmarks; OpenAI's GET-only proxy and DNS cases in RL training sandboxes) and a precautions table: [Running agent evals with internet access](#running-agent-evals-with-internet-access).
 - **Fictional names in your environment must be *unclaimable*, not merely unused.** Alkur (LessWrong, 2026-08-25) points out that checking that an invented company or package name does not exist is the wrong test: an unused name in a public registry is an available resource a capable agent can claim (in one reported incident a model found a dangling reference to a nonexistent PyPI package in a fictional company's onboarding document, built it and uploaded it). Use reserved namespaces where they exist — RFC 2606 reserves `.test`, `.example`, `.invalid` and `example.com`; RFC 5737 reserves documentation IPv4 blocks — and where they do not (PyPI, npm) register a placeholder yourself. Reserved TLDs can themselves tip off the model that it is in a test, so the alternative is to register your own domains. Closing the naming hole is not a substitute for closing the network.
@@ -224,6 +231,7 @@ Aliases: "Agent Bridge", `inspect_ai.agent.agent_bridge()`, `inspect_ai.agent.sa
 **What it is.** A wrapper that lets you run agents written in **LangChain**, **OpenAI Agents SDK**, **Pydantic AI**, or other frameworks inside Inspect — Inspect handles dataset/scoring/logging, the external framework handles agent logic.
 
 **When to use it:**
+
 - You already have an agent built in another framework.
 - You want to evaluate a specific agent product (someone's released LangChain agent, etc.).
 
@@ -275,18 +283,21 @@ Aliases: HCAST, `METR/hcast-public`, `METR/public-tasks`, RE-Bench on Inspect (`
 **Second status change (2026-10-20): METR's public task code is deprecated.** `METR/RE-Bench`, `METR/hcast-public`, `METR/public-tasks` and the Inspect port `METR/inspect-tasks-public` were all archived by 2026-10-20 with a DEPRECATED banner (RE-Bench README: "The RE-Bench tasks are now deprecated. We're no longer accepting contributions or bug reports for them."; hcast-public: "The HCAST tasks are now deprecated."; public-tasks: "The METR public task suite is now deprecated."). They still clone and run, but take no fixes, so pin a commit and expect known bugs to stay. METR's time-horizon page (metr.org/time-horizons) now says "This page is no longer actively updated" (last updated 2026-09-08), so do not cite it as a live leaderboard. No public successor task suite had been announced as of 2026-10-20. `METR/inspect-agents` (agents, scanners, the action monitor) and `METR/hawk` are **not** archived.
 
 **What replaced it:**
+
 - **Hawk** (`METR/hawk`, "Inspect-Hawk", releases v3.7.1 / v3.7.2 on 2026-10-07, PyPI `hawk`, Python ≥3.13, MIT). Runs Inspect eval sets from one YAML config on AWS: isolated Kubernetes (EKS) pods per eval, sandbox pods under Cilium network policies, a managed LLM proxy, results in a PostgreSQL warehouse and a web viewer; it also runs Inspect Scout scans over past transcripts. The README says it is "designed for teams that need to run evaluations regularly and at volume". CLI against an existing deployment: `uv tool install "hawk[cli]"`, `hawk login`, `hawk eval-set path/to/your.eval-set.yaml`, `hawk web`; `hawk local eval-set` runs the same config on your machine for debugging. Deploying your own needs an AWS account, a domain name, Pulumi, Docker, Python, Node.js and `uv`. **When *not* to use it:** a fellow project without that AWS setup — use `inspect eval-set` or Inspect Flow ([`inspect-ecosystem.md`](inspect-ecosystem.md)); read Hawk as the reference for how METR runs Inspect at scale.
 - **METR's agents and scanners as Inspect packages** (`METR/inspect-agents`, MIT). `packages/agents` (`metr-agents`) provides `--solver metr_agents/react`, a react agent with METR's task conventions (an `intermediate_score` tool where needed, the right tool user, answer delimiters). `packages/scanners` (`metr-scanners`) provides Scout scanners for eval awareness, reward hacking, sandbagging and broken environments; see [`inspect-ecosystem.md`](inspect-ecosystem.md) and [`evals.md`](evals.md#judge-calibration-and-eval-result-tooling). The agents package also ships **`metr_agents/action_monitor`**, an Inspect approver that "scores every tool call an agent makes during an eval before it is executed" on 0–10 and escalates calls at or above `threshold` (default `3.0`) to a human approver (`metr_agents/human`, which must be listed last); defaults include the `v5-provenance` prompt, `on_error: escalate` and `history_tokens: 700000`, and per-agent `chains` pick the monitor models ("it is recommended to use monitor models from the same developer as the agent model", to prevent cross-lab leakage). The docs' quickstart runs it through Hawk (`hawk eval-set run`, then `hawk acp <eval-set-id>` to answer escalations; Hawk ≥2.4.0). The docs recommend running one sample at `threshold: 0`, where every call is escalated, to confirm the monitor is wired up (`packages/agents/docs/action_monitor.md`). **When *not* to use it:** when nobody is available to answer escalations (unanswered calls are rejected after `approval_timeout_minutes`), or as a measured control protocol (it is an operational guard, not a calibrated monitor; see [`ai-control.md`](../oversight-and-control/ai-control.md)).
 - **RE-Bench on Inspect** (`METR/inspect-tasks-public`, **archived and deprecated 2026-10-20**; GitHub reports license NOASSERTION while the README says MIT). A work-in-progress Inspect port of METR's RE-Bench AI R&D tasks, with Docker image build scripts and static per-task GPU allocation. From the README: build images with `python re_bench/build_images/build_images.py`, then `uv run inspect eval ai_rd_rust_codecontests_inference/ai_rd_rust_codecontests_inference --model anthropic/claude-3-7-sonnet-latest`. The README is frank about gaps: "The evals are currently configured to run on nodes with 8xH100 GPUs"; scores come out lower than METR's ("We haven't put much effort into elicitation"); and cheating routes are open ("in the rl task, the agent could have a look at the "held-out" set and train on it directly. We don't stop the agent from doing this").
 - **METR Task Bridge** (`METR/inspect-metr-task-bridge`, no license file). Runs legacy Task-Standard task-family images inside Inspect, e.g. `inspect eval mtb/bridge -T image_tag=count_odds-0.0.1 --sample-id hard`, including with Inspect's human agent (`--solver human_cli`) for human baselining.
 
 **When to use these:**
+
 - Long-horizon agentic evals in the style of METR's published results, accepting that the public task code is frozen.
 - Time-horizon measurement against METR's published numbers (the time-horizons page has said it is no longer actively updated since 2026-09-08 and its last added measurement is dated 2026-05-08, so compare against a dated snapshot, not a live leaderboard).
 
 **When *not* to use them:** you don't need METR comparability — `inspect_evals` has many simpler agent benchmarks; you need numbers directly comparable to METR's RE-Bench results (the Inspect port reports lower scores and unfixed cheating routes); you do not have 8×H100 nodes for RE-Bench; or you need a maintained suite where reported bugs get fixed (the public HCAST, RE-Bench and example-task repos are archived).
 
 **Pitfalls:**
+
 - **HCAST / RE-Bench tasks expect specific environments.** Ports differ from the originals in images, GPU allocation and elicitation; record which port and commit you ran.
 - **Compute cost.** Long-horizon tasks burn tokens and tool-call time. Single full-suite runs are expensive.
 - **Pin commits.** None of `inspect-tasks-public`, the Task Bridge or `inspect-agents` publishes GitHub releases; pin a commit hash in your lockfile. The archived repos (`RE-Bench`, `hcast-public`, `public-tasks`, `inspect-tasks-public`) accept no issues or pull requests, so a bug you find stays in; document any local patch you apply.
@@ -298,6 +309,7 @@ Aliases: `smolagents` on PyPI, `huggingface/smolagents`, "HF's small agent libra
 **What it is.** A small, opinionated library from HuggingFace for building agents. Code-acting agents (the model writes Python and executes it) are a core feature. ~1000 lines.
 
 **When to use it:**
+
 - Quick prototype of a research agent that's not an eval.
 - You want a minimal, readable agent loop to learn from.
 

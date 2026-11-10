@@ -262,6 +262,7 @@ torch.save(torch.stack(activations), "outputs/run_X/acts.pt")
 ```
 
 Save format options:
+
 - **`.pt`** for small (<10GB) tensors — simplest.
 - **`.safetensors`** for shareable artifacts.
 - **`zarr` / `parquet`** for very large (10GB+) datasets you'll stream.
@@ -617,6 +618,7 @@ def run_units(units: list, work_fn, run_dir: Path, max_workers: int = 16) -> Non
 Wire it to the CLI with `run_dir = Path(args.resume) if args.resume else create_run_dir(descriptor=...)`, and on resume reuse the config copied into that run directory rather than today's defaults. (Tested locally with a function that fails on two of twenty units: the first call raises after writing all twenty records, and `--resume` re-runs only the two.)
 
 **Pitfalls:**
+
 - **The file keeps failed attempts.** A unit that failed and later succeeded has two lines; when analysing, keep the successful record per `id` (`load_done` already ignores errors).
 - **Ids must be stable across runs.** Derive them from the data (dataset row id, `f"{model}:{prompt_id}:{sample_idx}"`), never from enumeration order of a shuffled list, or resume silently re-runs or skips the wrong units.
 - **A process killed mid-write can leave a truncated last line**, and `load_done` then raises on resume. Delete that one line and resume; do not make the loader skip unparseable lines silently.

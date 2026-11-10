@@ -43,6 +43,7 @@ Aliases: `datasets` on PyPI, `huggingface/datasets` on GitHub, "HF datasets".
 **What it is.** The default library for loading benchmarks: `load_dataset("cais/wmdp")`, `load_dataset("cais/HarmBench", "standard")`, etc. Also handles streaming, sharding, and dataset versioning.
 
 **Pitfalls:**
+
 - **`split` matters.** Some safety datasets only have a `test` split; some have `train`/`test`/`val`. Read the dataset card.
 - **Dataset gating.** WMDP is gated (requires accepting terms). HarmBench is open. JailbreakBench is open. You'll need a HuggingFace token (`huggingface-cli login`) for gated datasets.
 - **`trust_remote_code=True` is required for some older datasets.** Read the loading script before running it on shared infra.
@@ -57,6 +58,7 @@ Aliases: `cais/HarmBench` on HuggingFace, `centerforaisafety/HarmBench` on GitHu
 **When to use it:** Standard for measuring jailbreak/attack success rates.
 
 **Pitfalls:**
+
 - **Classifier disagreements with GPT-4-as-judge are non-trivial** (~10%). Report both or audit a sample.
 - **Some "behaviors" are arguably benign** (copyright, contextual). Don't average across categories without thought.
 - **One HarmBench number is not one attribute.** Stewart et al. (arXiv:[2610.12409](https://arxiv.org/abs/2610.12409), 2026-10-08) found that three of HELM Safety's four harmful-refusal datasets are saturated, and multidimensional item response theory "strongly suggests that HarmBench does not measure a singular attribute". Report per-category results before any aggregate, and do not rank models on the HarmBench (or HELM Safety) top-line alone. General discussion: [`measurement-validity.md`](../engineering/measurement-validity.md#one-score-one-attribute-and-whose-definition-of-the-label).
@@ -70,6 +72,7 @@ Aliases: `JailbreakBench/jailbreakbench` on GitHub, `JBB-Behaviors`, "JBB".
 **What it is.** 100 prompts (50 misuse + 50 borderline), with a public leaderboard tracking jailbreak attack success rates across attacks and defenses. Wrapped as `inspect_evals/jailbreakbench`.
 
 **Pitfalls:**
+
 - **Public leaderboard means models train on it.** Treat as a calibrated benchmark, not a held-out test.
 - **100 prompts is small.** Add HarmBench or AdvBench for statistical power.
 
@@ -92,10 +95,12 @@ Aliases: `cais/wmdp` on HuggingFace, "WMDP", "the dangerous knowledge benchmark"
 **When to use it:** Measuring whether dangerous-domain knowledge has been removed/reduced; evaluating unlearning research.
 
 **When *not* to use it:**
+
 - As a sole proxy for biosecurity risk — WMDP is intentionally proxy questions, not the *actually dangerous* questions.
 - If you want true held-out unlearning eval, build your own; WMDP is increasingly contaminated.
 
 **Pitfalls:**
+
 - **Gated.** Requires HuggingFace login + accepting terms.
 - **Multiple-choice is leaky.** Models can do better than their actual knowledge would predict (process-of-elimination). For unlearning research, pair with open-ended QA.
 - **WMDP-Bio in particular has had errata.** Check the latest version before publishing numbers.
@@ -105,6 +110,7 @@ Aliases: `cais/wmdp` on HuggingFace, "WMDP", "the dangerous knowledge benchmark"
 Aliases: "Sycophancy", `sycophancy` evals, Perez et al. (2022) MWE sycophancy, Sharma et al. (2023) "Towards understanding sycophancy".
 
 **What they are.** A few related datasets:
+
 - **Anthropic's MWE sycophancy** (in `Anthropic/model-written-evals` on GitHub) — 3 sycophancy datasets (NLP, philosophy, political).
 - **Sharma et al. SycophancyEval** — feedback-conditioned sycophancy data (Sharma et al. 2023, "Towards Understanding Sycophancy in Language Models", arXiv:2310.13548).
 
@@ -113,6 +119,7 @@ Wrapped as `inspect_evals/sycophancy` (verify availability).
 **When to use it:** Measuring whether a model agrees with the user's stated preferences over correctness.
 
 **Pitfalls:**
+
 - Older sycophancy datasets (Perez 2022) are well-known and likely contaminated; modern models often pass them while still being sycophantic in subtler ways.
 - "Sycophancy" has multiple definitions (caving on disagreement, hallucinating user-flattering info, etc.). Be explicit about which you're measuring.
 
@@ -145,6 +152,7 @@ Aliases: `Anthropic/model-written-evals` on GitHub, "MWE", "Perez et al. evals".
 **When to use it:** Quick behavioral measurements across many dimensions.
 
 **Pitfalls:**
+
 - **Yes/no answers are weak signals.** A model can pass these while exhibiting the same behavior in open-ended generation.
 - **Heavily contaminated by 2026** — public on GitHub since 2022. Treat as calibration, not held-out.
 - **For power-seeking, self-preservation and self-exfiltration, use agentic suites instead** (next section): a yes/no answer about wanting more power says little about what an agent does with tools.
@@ -167,6 +175,7 @@ Aliases: "power-seeking evals", "self-preservation benchmark", "shutdown resista
 | Power-seeking vs reward in text games | **MACHIAVELLI** (section below) | Older, non-agentic-tool setting; compute-heavy. |
 
 **Pitfalls common to all of these:**
+
 - **Instruction ambiguity masquerades as self-preservation.** If the task and the shutdown or oversight instruction conflict, a "resistance" rate may measure how the model prioritizes conflicting instructions. Include a precedence-clarified variant and a no-conflict control.
 - **Prompt placement and persona move the number.** Palisade found models obeyed an allow-shutdown instruction less often in the system prompt than in the user prompt; AgentMisalignment found persona can matter more than model.
 - **Agency nudges inflate scheming.** In realistic settings, scheming was rare without prompting that encourages agency or goal-directedness. Adversarially designed snippets of that kind could induce high scheming rates, while snippets taken from real agent scaffolds rarely did (Hopman et al., arXiv:2603.01608), and Gemini models schemed only when prompted for agency or given a hidden goal (Krakovna et al., arXiv:2605.29729). Report results with and without them.
@@ -181,6 +190,7 @@ Aliases: `truthful_qa`, `TruthfulQA`, "Lin et al. 2021" (arXiv:2109.07958, "Trut
 **When to use it:** Honesty / hallucination measurement.
 
 **Pitfalls:**
+
 - **Heavily contaminated.** Most frontier models score very high; modest signal remains.
 - **"Truthful" includes refusing to answer.** A model that always says "I don't know" gets high marks but is less useful.
 
@@ -247,13 +257,16 @@ sad plot    --tasks influence
 **Eval awareness tracks how the eval is graded (Qwen3.6 27B, two LessWrong posts, 2026-10).** Aranguri, "Different eval awareness may track different graders" (LessWrong, 2026-10-25; work done at Goodfire), using 6,800 single-turn prompts from 34 public safety and capability evals plus two deployment sources (WildChat, ShareChat): the model tells LLM-judge grading from automated grading on "~85% of the prompts" (follow-up question or activation probe); on programmatically graded evals it sometimes reasons in its chain of thought about how the checker will verify the answer and tailors the output to it; eval awareness that undermines validity "appears in 11 of 13 capabilities evals but only 3 of 21 safety evals, mostly on broken or underspecified tasks"; and an eval-awareness probe rewritten to be about *training* scores prompts nearly identically (r = 0.98), so what the probe detects may be training awareness. Pernice (Transluce) & Aranguri, "Training Away the Ability to Tell Evals from Deployment" (LessWrong, 2026-10-29) introduce **Adversarial Blinding**: a small transformer discriminator reads the model's activations and predicts eval vs deployment while the model is trained to defeat it under a Kullback–Leibler (KL) divergence penalty. On Qwen3.6 27B it reduced eval awareness more than activation steering at a smaller KL change, "albeit at a small cost in general capability"; on 26 HarmBench prompts (those the original model rated least likely to be from a safety eval) rewritten to look realistic it "shrinks the eval-awareness gap between original and rewritten prompts 4x while steering widens the gap". Limits stated in the post: the measurement prompts come from the same evals the discriminator was trained on (in-distribution), and neither method removes "the eval awareness that comes from benchmark identification". **When to use these:** on capability benchmarks, expect eval awareness to show up as grader-gaming rather than as "acting safe", so check transcripts for reasoning about the checker; Adversarial Blinding needs open weights and fine-tuning and has no released code named in the post. **When not to:** as evidence about frontier closed models (one 27B open model, single-turn prompts, blog posts not peer-reviewed). The opposite direction also occurs in agentic safety evals: OpenAI found models less safe in an eval than in matched production decisions, tied to wrong guesses about what the eval tests ([`evals.md`](evals.md#cross-cutting-eval-pitfalls)).
 
 **When to use it:**
+
 - A project on introspection, self-knowledge, deception, or sandbagging needs a *standard* measurement rather than a bespoke one.
 - You want to report "the model scores X on stages-oversight" as context for a behavioural result.
 
 **When *not* to use it:**
+
 - You want a quick number. The README is explicit: a full `sad run` "will run for a few days, depending on your private rate limits in the APIs." Use **SAD-lite** (stated as ~84% of the score, dropping the model-specific facts tasks) or **SAD-mini** (5 multiple-choice tasks).
 
 **Pitfalls:**
+
 - **Model-identity tasks go stale.** `facts_which_llm` and friends assume the model can be asked which model it is; scores shift with every provider system-prompt change, so a number from 2024 is not comparable to yours.
 - **API keys for several providers.** `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `REPLICATE_API_TOKEN`, `HF_TOKEN` depending on which models you run.
 - **The `--variants` flag matters.** `plain` versus situating-prompt variants measure different things; report which you ran.
@@ -278,6 +291,7 @@ eval(impossible_swebench(split="conflicting", agent_type="tools", limit=5), mode
 **When to use it:** you want a cheating-propensity number where *any* success is a hack, with no judge. **When *not* to use it:** you need cheating that is optional and realistic (use HoneyBench-style tasks); or you did not control the scaffold nudge — Zhong's follow-up (LessWrong, 2026-09-11) found that the `basic_agent` default continue message raised cheating among nudged samples on Gemini 3.7 Flash (14% vs ~1% with the `react()` default and two other messages) and that models are nudged at very different rates, so report the continue message ([`agent-scaffolds.md`](agent-scaffolds.md)).
 
 **Pitfalls found a year after release (October 2026) — read before quoting an ImpossibleBench rate:**
+
 - **Scoring bug in the released LiveCodeBench code (fixed 2026-10-13).** `impossible_livecodebench` did not forward `allow_test_modifications` to `record_to_sample`, so every LiveCodeBench scorer reverted edited tests and, with the default `allow_test_modifications=True`, "passing by modifying the tests is therefore never counted as cheating" (`safety-research/impossiblebench` PR #4, merged 2026-10-13; the PR notes it "changes the cheating rates the released code reports"). Record the commit you ran; LiveCodeBench rates from before and after the fix are not comparable.
 - **Defective control tasks.** Mendelsohn (LessWrong, 2026-10-12, "Good Evals Are Hard: An ImpossibleBench Audit"; code `simonjmendelsohn/impossiblebench-honest-failure`, MIT) found "14 defects that affect 13 of the original 103 tasks (including 5 tasks with flatly wrong expected answers)" in the supposedly solvable `original` split of Impossible-LCB (issue #5, open as of 2026-10-20). Fix or drop those tasks before using the control split as a capability baseline.
 - **An honest stop is scored as cheating.** "Verbalize that the task is impossible, then `sys.exit(0)`" passes the impossible tests and counts as a cheat; in Mendelsohn's runs that pattern was about 70–80% of Gemini 3.1 Pro's "cheating", and "when I add an explicit stop option, the 'cheating' is nearly eliminated." Excluding those stops, Gemini 3.8 Flash and 3.1 Pro still cheated about 15–20% of the time, while the Claude 5.5-family and GPT-6-family models he tested almost never did. Give the agent an explicit stop or escalation action and classify the final message before calling a pass a hack. (Whether `exit(0)` should count as cheating is debatable; Mendelsohn notes one can argue, citing arXiv:2609.19101, that a model giving up should exit with a failing code, but reads Gemini's transcripts as genuine confusion.)
@@ -358,6 +372,7 @@ python scripts/run_generative_v2.py --model={yourmodel} # LLM-as-judge RMs
 **When to use it:** choosing an off-the-shelf reward model or judge for an RLHF or best-of-N experiment; checking that a reward model you trained (or a probe-based reward) is not worse than public baselines; the Safety subset is a quick refusal-calibration check for an RM. **When *not* to use it:** as evidence that optimizing against an RM is safe; accuracy on held-out preference pairs does not measure how exploitable the RM is under optimization pressure (reward hacking; see [`rl-training.md`](../oversight-and-control/rl-training.md)). Don't compare RewardBench 1 and RewardBench 2 numbers directly.
 
 **Pitfalls:**
+
 - **Ties runs only in ratings mode** for generative models (up to 20+ completions per prompt), so generative-judge cost is much higher than the prompt count suggests.
 - **Public leaderboard ⇒ contamination risk** for RMs trained after mid-2025; report which leaderboard snapshot you compare against.
 

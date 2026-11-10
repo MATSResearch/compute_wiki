@@ -2,24 +2,35 @@
 
 A decision guide to AI safety research tooling for MATS fellows. Each row points to the topic doc with full detail, pitfalls, and alternatives.
 
-**Other navigation entry points:**
+The sections below are the guide itself: pick the heading that matches what
+you are trying to do. These pages are the other ways in.
+
+**Start here**
+
 - **[`for-agents.md`](start-here/for-agents.md)** — compact index for an AI research agent: every page and skill, and when each is worth opening.
 - **[`faq.md`](start-here/faq.md)** — cross-cutting beginner questions (API keys, where to start, costs).
 - **[`glossary.md`](start-here/glossary.md)** — A–Z definitions of acronyms and concepts (CAA, GRPO, OOCR, RLAIF, etc.).
 - **[`project-shapes.md`](start-here/project-shapes.md)** — "what does a paper-shaped project look like in this area?" (mech interp paper, behavioral paper, control eval paper, etc.).
 - **[`mentor-expectations.md`](start-here/mentor-expectations.md)** — what MATS Mentors expect: going from a daily-oversight individual contributor to a researcher a Mentor could leave alone for a month (Nathan Helm-Burger's essay, plus reading).
 - **[`researcher-skills.md`](start-here/researcher-skills.md)** — as agents take over experiment execution, which of your own skills to build (measurement design, verifying agent output, judging evidence, taste, not deskilling) and what to read.
+
+**Method and write-up**
+
 - **[`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md)** — the 6-step methodological playbook for behavioral safety papers.
-- **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
+- **[`research-rigor.md`](engineering/research-rigor.md)** — the rules for keeping your own research honest when an agent does some of the work: the eleven research stages, pre-registration on both sides of a pilot, concerns that block, a verdict for every prediction, claim grounding, disclosure.
 - **[`statistics.md`](engineering/statistics.md)** — which test to run, what to put on the error bar, seeds vs samples, multiple comparisons, power.
 - **[`visualization.md`](engineering/visualization.md)** — which plotting library, sweeps with confidence bands, heatmap colormaps, colour-blind-safe palettes.
-- **[`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md)** — what to compute loss on in an agent trace: the mask-the-environment default, and the 2026 work training on tool/bash output as free supervision.
-- **[`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md)** — Meridian Labs' Inspect tooling beyond the core framework: Scout (transcript analysis), Petri (automated alignment auditing), Flow (eval sets).
 - **[`research-plots.md`](engineering/research-plots.md)** — which figures are worth making: fine-tune monitoring, dataset cartography, lenses (logit/tuned/J/R/J++), patching heatmaps, Pareto frontiers, calibration.
+- **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
+- **[`reviewing-drafts.md`](engineering/reviewing-drafts.md)** — reviewing a paper draft, yours or a colleague's: what human and AI reviewers catch and miss, and how to run and read an AI review.
+
+**Models, tools and agents**
+
 - **[`open-weights-models.md`](models-and-compute/open-weights-models.md)** — which open-weights model to use and why (Kimi K3, GLM-5.3, DeepSeek-V4/V4.1, Qwen3.5–3.8, Gemma 4, Olmo 3, gpt-oss, Llama).
+- **[`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md)** — Meridian Labs' Inspect tooling beyond the core framework: Scout (transcript analysis), Petri (automated alignment auditing), Flow (eval sets).
+- **[`training-on-trajectories.md`](oversight-and-control/training-on-trajectories.md)** — what to compute loss on in an agent trace: the mask-the-environment default, and the 2026 work training on tool/bash output as free supervision.
 - **[`agentic-swe-practices.md`](engineering/agentic-swe-practices.md)** — how to drive a coding agent (Claude Code, Codex, Cursor, Copilot, Aider) so it writes correct, reproducible research code instead of plausible-but-wrong slop.
 - **[`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md)** — systems that automate the research loop (Sakana, Kosmos, AIDE, Curie, ScientistOne): which tier actually works, the measured failure rates, and four integrity checks to run on anything one hands you.
-- **[`research-rigor.md`](engineering/research-rigor.md)** — the rules for keeping your own research honest when an agent does some of the work: the eleven research stages, pre-registration on both sides of a pilot, concerns that block, a verdict for every prediction, claim grounding, disclosure.
 
 ## I want to pick an open-weights model
 

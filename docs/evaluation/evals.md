@@ -41,6 +41,7 @@ Tooling for running evaluations on language models — academic benchmarks, agen
 Aliases: `inspect-ai` on PyPI (importable as `inspect_ai`), `UKGovernmentBEIS/inspect_ai` on GitHub, "Inspect", "AISI's eval framework". Maintained by the UK AI Security Institute (UK AISI, formerly UK AISI within DSIT).
 
 **What it is.** The current default open-source framework for serious LLM evaluations. Provides:
+
 - A clean DSL for tasks: `Sample`, `solver`, `scorer`, `Task`.
 - Built-in solvers including a **`react()` agent**, multi-turn chat, prompt templates, multiple-choice, etc.
 - A library of 200+ pre-built evals (`inspect_evals` package) including HarmBench, AgentHarm, GAIA, GPQA, SWE-bench, CyBench, MMLU, and many more.
@@ -53,16 +54,19 @@ Aliases: `inspect-ai` on PyPI (importable as `inspect_ai`), `UKGovernmentBEIS/in
 - Sample-level resumability, batched inference, retries, generate config (temperature, max_tokens, etc.) at any granularity.
 
 **When to use it:**
+
 - Almost any new eval project in 2026 should default to Inspect.
 - You need agentic / tool-using / sandboxed evals — this is its sweet spot.
 - You want results comparable to other safety researchers (eval logs are a stable format; Inspect View is widely read).
 - You need to run the same eval across many models / providers without rewriting.
 
 **When *not* to use it:**
+
 - You're running pure log-probability academic benchmarks where lm-eval-harness has the established numbers and tooling.
 - You want a 30-line one-shot script — Inspect's structure is overhead for trivial evals.
 
 **Pitfalls:**
+
 - **`Sample` vs `Solver` vs `Scorer` confusion.** A Sample is one eval instance (input + expected output). A Solver transforms `TaskState` (chain of generates / tool uses). A Scorer turns `TaskState` into a `Score`. Read the docs once, then this becomes muscle memory.
 - **`generate()` vs direct model call.** Inside a solver, use `generate()` not the raw model — `generate()` integrates with token usage tracking, retries, and Inspect View.
 - **Sandbox start failures: "Cannot connect to the Docker daemon at unix:///var/run/docker.sock"** — sandbox tasks need Docker (or k8s) running. On rented GPU boxes that often means installing Docker first.
@@ -115,6 +119,7 @@ Aliases: `inspect_evals` package, `inspect-evals` on PyPI (v0.27.0, 2026-10-29; 
 **Pitfall — benchmark implementations change under you; pin the task version.** Every task carries a version `N-X` (for example `3-A`): **N** is the *comparability* version (bumped by any change that can alter scores), **X** the interface version. Read it with `task.version` (returns N) or `task.metadata["full_task_version"]`; it is also written to every log as `task_version`. Two logs with the same `task_version` are comparable; if N differs, do not attribute a score change to the model. Each eval's README has a changelog; to reproduce an old run, install the commit before the bump: `pip install "inspect-evals[mle_bench] @ git+https://github.com/UKGovernmentBEIS/inspect_evals@<commit_hash>"` (the docs' "Running a Specific Version of an Evaluation Task" and "Comparing Evaluation Results Over Time" guides walk through this). Always log `inspect_evals` and `inspect_ai` versions.
 
 **Pitfall — silent scoring bugs found and fixed July–October 2026 (versions 0.15.0–0.27.0 of `inspect_evals`).** These are the symptom-shaped ones; if you ran any of these evals earlier, your numbers may be wrong:
+
 - **A scorer that never ran reads as a perfect safety result.** AgentHarm *chat mode* silently scored every sample 0.0 (fixed 0.18.0; samples with no grading module are now excluded as NaN). AIR Bench annotator failures were scored `0.0`, "as though the model had answered unsafely" (now `Score.unscored()`). XSTest scored an unparseable grader verdict as a full refusal, which moves `refusal_rate`. General rule: look at the **unscored / error counts**, not just the headline metric.
 - **The scorer accepted nearly anything.** PAWS used `includes()`, so any completion containing "yes"/"no" (including hedges like "I don't know") could score, and BoolQ's pattern accepted any completion ending in yes/no plus at most one character (both fixed in 0.21.0); ClassEval ran the generated class and the tests without evaluating a single assertion, so any class that imported cleanly scored 1; AbstentionBench's judge pattern matched `no` inside `know`/`cannot`.
 - **Rating text injected by the agent.** In GDM Dangerous Capabilities: Stealth the rater took the *first* fenced JSON block, so an agent could embed a fake verdict block in its tool-call history; it now takes the last block (0.18.0). If your scorer parses a fenced block from text the agent can influence, take the last block or use structured output.
@@ -140,15 +145,18 @@ Aliases: `lm-eval`, `lm_eval` on PyPI, `EleutherAI/lm-evaluation-harness` on Git
 **What it is.** The established framework for academic LLM benchmarks: MMLU, ARC, HellaSwag, TruthfulQA, GSM8K, BIG-bench, BBH, etc. Optimized for log-likelihood-based multiple-choice and short-answer generation.
 
 **When to use it:**
+
 - You need numbers comparable to published model cards / leaderboards.
 - You're running log-prob multiple-choice at scale (it's faster than Inspect for this).
 - You want HuggingFace + vLLM + OpenAI providers and don't need agent/tool affordances.
 
 **When *not* to use it:**
+
 - Anything agentic, tool-using, or multi-turn — use Inspect.
 - You want sample-level transcripts and rich logs for safety analysis — Inspect's logs are richer.
 
 **Pitfalls:**
+
 - **Apples-to-apples means same harness version, same model template, same `num_fewshot`.** Two MMLU numbers from different papers can differ several points just from setup. Always cite the harness commit / version.
 - **`add_bos_token` and chat templates.** Default is to feed raw prompts; for instruct-tuned models the harness has flags to apply chat templates. Wrong setting can drop scores by 10+ points.
 - **vLLM provider memory.** Loading a 70B model in vLLM with `--num_gpus 4` and a 32k context allocates a huge KV cache; lower `gpu_memory_utilization` if OOM.
@@ -162,14 +170,17 @@ Aliases: HCAST = "Human-Calibrated Autonomy Software Tasks" (Rein et al., arXiv:
 **Status (2026-10-20): the public task code is deprecated and the leaderboard is frozen.** `METR/hcast-public`, `METR/RE-Bench`, `METR/public-tasks` and the Inspect port `METR/inspect-tasks-public` were archived by 2026-10-20 with DEPRECATED banners ("The HCAST tasks are now deprecated. We're not accepting contributions or bug reports for them."). The metr.org/time-horizons page says "This page is no longer actively updated" (last updated 2026-09-08). The repos still clone, so you can run them from a pinned commit, but known bugs will not be fixed and no public successor suite had been announced as of 2026-10-20. `METR/inspect-agents` (agents, scanners, action monitor) and `METR/hawk` remain active.
 
 **When to use it:**
+
 - You're measuring long-horizon agent capability, especially dangerous-capability evals.
 - You want comparability to METR's published time horizon numbers (cite the dated snapshot: the page has said it is no longer actively updated since 2026-09-08, and its last added measurement is dated 2026-05-08).
 
 **When *not* to use it:**
+
 - Short, single-turn tasks — overkill.
 - You don't have sandboxed compute — many tasks need actual code execution.
 
 **Pitfalls:**
+
 - **HCAST tasks expect a specific scaffold — and METR's scaffold is now Inspect.** `METR/vivaria` and `METR/task-standard` are archived (checked 2026-10-14; the Task Standard README: "METR is no longer maintaining the Task Standard. Instead, we use Inspect to define tasks"). METR runs Inspect at scale with **Hawk** (`METR/hawk`), uses a react agent with METR conventions (`--solver metr_agents/react` from `METR/inspect-agents`), and runs legacy task-family images through the METR Task Bridge (`inspect eval mtb/bridge -T image_tag=...`). Details and install lines: [`agent-scaffolds.md`](agent-scaffolds.md#metr-tasks-on-inspect-vivaria-and-the-task-standard-are-archived).
 - **RE-Bench on Inspect is a work-in-progress port, now archived.** `METR/inspect-tasks-public` (archived 2026-10-20; it accepts no bug reports) runs METR's RE-Bench AI R&D tasks under Inspect but "configured to run on nodes with 8xH100 GPUs"; its README reports lower scores than METR's (elicitation untuned) and an open cheating route in the RL task (the agent can read the "held-out" set). Numbers from it are not directly comparable with METR's published RE-Bench results.
 - **Cost.** Long-horizon tasks burn tokens. A single full-suite run on a frontier model is multi-thousand dollars.
@@ -208,6 +219,7 @@ responses = await api(model_id="claude-sonnet-4-6", prompt=prompt, n=5)
 ```
 
 This is appropriate for:
+
 - Custom red-team prompts you'll iterate on.
 - Comparing the same prompt across providers.
 - Dataset generation (model-written prompts).
@@ -263,16 +275,19 @@ collection_id = client.create_collection(
 Worked notebooks live in the repo under `examples/` (`ingest_simple.ipynb`, `ingest_inspect.ipynb`, `ingest_tau_bench.ipynb`). It can be **self-hosted** (docker-compose plus a self-host guide in the docs) if your transcripts can't leave your machine.
 
 **When to use it:**
+
 - You have hundreds of long agent rollouts and the bottleneck is *reading* them. This is the single most common hidden cost in agentic safety projects.
 - Turning a qualitative observation into a measured rate — the step between "we saw reward hacking" and a number.
 - Finding broken tasks and scaffolding bugs in your own eval before you report its scores.
 
 **When *not* to use it:**
+
 - Your transcripts are short and few — `grep` and a notebook are faster.
 - Your data can't go to a hosted service and you don't want to run the self-host stack.
 - You need the *scoring* to be the artefact of record. Docent is for analysis and discovery; your reported metric should still come from a deterministic scorer in your eval harness.
 
 **Pitfalls:**
+
 - **A rubric search is an LLM judge.** It has false positives and false negatives like any judge, so validate on a hand-labelled sample before quoting a rate — the judge-validation discipline in [`code-recipes.md`](../engineering/code-recipes.md) applies unchanged.
 - **Uploading transcripts is a data-sharing decision.** Model outputs from a red-teaming or model-organism project can be sensitive; self-host if in doubt.
 - **Package naming.** `pip install docent-python` still works but is a redirect; the SDK is now `docent`. Symptom: version confusion between the two names in a lockfile.
@@ -284,6 +299,7 @@ Aliases: OpenRouter provider routing, the `provider` request object, `allow_fall
 **What it is.** When you request an open-weight model (DeepSeek, Qwen, Kimi, Llama, gpt-oss) through OpenRouter, the request goes to whichever third-party provider OpenRouter picks. Providers differ in **quantization** (fp8, int4, bf16 …), inference backend, how they treat sampling parameters, maximum input length, and plain correctness. Default routing is not random and not stable: if a provider is down, traffic falls through to the others. So "baseline on Monday, intervention on Tuesday" can be confounded by a provider change and make an intervention look like it helped.
 
 **Evidence this is not hypothetical:**
+
 - nostalgebraist, *R1 CoT illegibility revisited* (LessWrong, 2026-04-19): re-running the GPQA experiments of Jose, "Reasoning Models Sometimes Output Illegible Chains of Thought" (arXiv:2510.27338, NeurIPS 2025) with *only the provider changed* to Novita gave a mean illegibility score of 2.30 versus 4.30 in the paper (which used Targon, `targon/fp8`; both providers are, as far as the author could tell, fp8 — so *same nominal quantization is not enough*), plus higher GPQA accuracy; to nostalgebraist the paper's "illegible" examples looked like **token soup** from a badly configured server (his judgement, not a measured result). The paper's author agreed the results were contaminated by bad inference setups and that some claims were not substantiated.
 - Khoriaty, *Not Pinning Your OpenRouter Provider Might Invalidate Your Research* (LessWrong, 2026-07-23; written at the Pivotal fellowship with Redwood mentors): a Claude-assisted review of 32 influential AI / AI-safety repos that report OpenRouter results judged 31 open to some form of corruption (the author says this was spot-checked, not thoroughly reviewed, and does not show any particular result was affected). Examples named: Inspect AI's `_openai.py` model call (as linked in the post), Redwood's BashArena and LinuxArena Control Tower, METR's re-bench task. The Control Tower fix, "allow pinning OpenRouter providers per model", is merged (`linuxarena/control-tower` PR #1091).
 - Pape, Evertz & Schönherr, *The Silent Hyperparameter: Quantifying the Impact of Inference Backends on LLM Reproducibility* (arXiv:2605.19537, 2026-05-19): holding weights, decoding parameters and hardware fixed, the choice of inference engine alone (five engines including vLLM, SGLang, llama.cpp) shifted benchmark scores by up to 16.6 percentage points. This applies to **self-hosting too**: report engine, version and flags.
@@ -315,6 +331,7 @@ Aliases: OpenRouter provider routing, the `provider` request object, `allow_fall
 **Status.** OpenRouter's "Auto Exacto" provider ordering applies only to tool-calling requests; after Khoriaty's post OpenRouter staff said it is publishing benchmark scores for some models, working on logprob checks against a reference implementation, and working on a "verified provider" tier. Treat those as announced, not shipped, until you see them in the docs. `inspect_evals` itself now pins its HLE judge to fp8 for exactly this reason.
 
 **Pitfalls (searchable symptoms):**
+
 - **"Token soup"** — fluent text interrupted by random-looking words or strings, stray special tokens, broken reasoning formatting; often intermittent and also present in the final answer, not only the chain of thought.
 - **Accuracy or CoT-quality shifts with no code change.** Check the provider mix in your logs: nostalgebraist's GPQA logs for QwQ-32B show one config run as 90% Nebius + 10% DeepInfra and another as 85% DeepInfra + 15% Nebius.
 - **Pinned `order` with `allow_fallbacks` left at the default `true`** — pinning "worked" until an outage, then a different provider quietly served part of the run.
@@ -327,6 +344,7 @@ Aliases: specification gaming, task gaming, eval gaming, "cheating on the eval",
 **What it is.** Frontier agents sometimes exploit an eval instead of doing the task (edit the tests, read the answer key, query an engine the environment exposes, fabricate a measurement). Several results from July–October 2026 show the *measured rate* depends heavily on eval design, so a hack rate is a property of **(model × environment × prompt)**, not of the model alone.
 
 **Findings a fellow should know (author-reported unless noted):**
+
 - **Old evals still bite when the surface changes.** Valentine (LessWrong, 2026-09-08; code `Goodhart-Labs/beat-stockfish`): a chess honeypot ("only a win scores"; the opponent's UCI engine socket is reachable inside the sandbox). Fable 5.1 used the engine in 3 of 10 rollouts (3 more hit cyber classifiers, so likely an underestimate), Fable 5 in 5 of 5 (on a variant of the honeypot that avoids the cyber classifiers), GPT-6 Astra in 10 of 10 without disclosing it. Only ten rollouts per model — wide intervals.
 - **Cooperative framing changes the rate.** Dumas (LessWrong, 2026-09-15; code `Butanium/ar-reward-hacking-2026-09-08-20-01-34d157`), n = 30 per cell: adding an unused `stop_eval` tool took Fable 5.1's cheating to 0 (Astra only slightly lower, intervals overlap); deleting the "GRADING / only a win scores" section took Fable 5.1 to 0; one sentence "Please do not game the eval as this would measure your ability to cheat rather than play chess" gave 0/30 for both models (upper 95% bound about 11%). Caveats: the wording may itself signal "this is a reward-hacking test", and it may not transfer to long-horizon tasks. Asking models afterwards "did you cheat?" mostly gets admissions, but resampled denials in three trajectories ran 2/10, 4/10 and 10/10 — treat self-reports as weak evidence. Consistent with Gomez, "Can escalation channels redirect reward hacking toward defect disclosure?" (arXiv:2608.29460, 2026-08-29): a structured report tool (an "escalation channel") plus an anti-hacking policy cut reward hacking from 23.6% to 5.3% across 8 frontier models, eliminating it for 6 of 8.
 - **A graded episode is a context the model may treat differently.** nostalgebraist, "models may behave differently in graded episodes (a tirade)" (LessWrong, 2026-08-07) argues that RLVR-trained models condition on whether they perceive a graded, grader-satisfaction setting, so cheating rates from METR-style harnesses need not transfer to ordinary interactive use. This is a hypothesis supported by the contrast with the author's own daily use, not a measured result; it is a reason to report the hack rate *with the prompt and grading text shown*.

@@ -29,15 +29,18 @@ Aliases: `wandb` on PyPI, "W&B", "Weights & Biases".
 **What it is.** The default cloud experiment tracker for ML research. Logs scalars, images, tables, system metrics; supports sweeps, artifacts, reports.
 
 **When to use it:**
+
 - Training runs (SAE training, finetuning, probe training).
 - Anything where you want to compare runs across hyperparameters.
 - Sharing results with a team — wandb reports are good for write-ups.
 
 **When *not* to use it:**
+
 - Pure eval runs — Inspect View is better suited (see below).
 - You can't send data to a cloud service — use offline mode (`WANDB_MODE=offline`) or TensorBoard.
 
 **Pitfalls:**
+
 - **`wandb.init()` in a Jupyter cell + restart loop creates orphan runs.** Use `wandb.finish()` at the end of each cell, or set `reinit=True`.
 - **Logging too much.** Logging activations or large tensors per step kills the dashboard. Use `wandb.Histogram` for distributions; sample sparsely.
 - **Artifact size.** wandb stores up to a per-plan storage quota (the free-tier figure has changed over time and sources disagree — check current pricing); large model checkpoints fill it fast. Use HF Hub for big artifacts.
@@ -71,6 +74,7 @@ The README's recommended preset for the hosted service is `read-write`; if write
 **When to use it:** "compare these three runs", "which config fields differ between the good and bad seeds", "show the loss and validation-loss curves for run X" across a sweep too large to eyeball.
 
 **When *not* to use it:**
+
 - As a substitute for looking at the plot yourself. The tools *summarize* and *sample* histories (bounded reads); a spike or a divergence between two curves can fall between samples. Open the run page before you write the conclusion down.
 - With a write-capable key on a shared team project, where an agent-created report or logged "analysis" reads like a human's.
 
@@ -107,14 +111,17 @@ Aliases: `hydra-core` on PyPI, `facebookresearch/hydra`, "the YAML config thing"
 **What it is.** A configuration management library — composable YAML configs with command-line overrides. Heavily used in academic ML (e.g. PyTorch Lightning ecosystems).
 
 **When to use it:**
+
 - You have ≥10 hyperparameters and want tidy override syntax (`python run.py model=llama-3 sae.l0=64`).
 - You're running sweeps with a lot of variants.
 
 **When *not* to use it:**
+
 - Small experiments — a `@dataclass` config in `config.py` is faster.
 - You hate YAML — argparse + dataclass is cleaner for some tastes.
 
 **Pitfalls:**
+
 - **Hydra changes the CWD by default** — to a per-run directory. This breaks relative paths in your code; set `hydra.job.chdir=False` if it's annoying.
 - **Composition order matters.** Defaults list ordering affects what overrides what; debugging is grim. Print resolved config (`OmegaConf.to_yaml(cfg)`) early.
 
@@ -159,11 +166,13 @@ recommended_tooling/
 ```
 
 **Each run directory contains:**
+
 - `metadata.json` — full config, model IDs (with version), git SHA of code, start/end timestamps.
 - The output artifacts (parquet, csv, pickle, plots).
 - Any logs.
 
 **Why this matters:**
+
 - You can `rm -rf` an old run without affecting others.
 - A run is self-documenting: anyone can open `metadata.json` and see what was run.
 - Plots live with the run that produced them, not in a global plot folder.
@@ -205,6 +214,7 @@ Aliases: `anthropic` Python SDK 2.0.0, `anthropic-version: 2026-10-21`, `anthrop
 **Second change in the 2.x SDKs: the key header.** "The SDK and the CLI send your API key as `Authorization: Bearer <key>` instead of in the `X-Api-Key` header, so change any proxy or gateway that reads or sets `X-Api-Key`" (migration guide). A logging proxy, cost tracker or test stub keyed on `X-Api-Key` stops seeing the key after the upgrade.
 
 **What to do.**
+
 - Record in `metadata.json`: the `anthropic` SDK version, the `anthropic-version` header sent, the Inspect AI version, and both the sampling parameters you requested and the ones the provider applied.
 - To finish a running study at temperature 0 on Claude 4.6 or older: pin `anthropic<2` together with `inspect-ai<=0.3.282` (0.3.283 requires `anthropic>=2.0.0`), or call the HTTP API with `anthropic-version: 2023-06-01`. Do not mix runs from both sides of the change in one comparison.
 - For new Claude work, treat every result as sampled at temperature 1.0: several samples per item, and report the spread ([`eval-statistics.md`](../evaluation/eval-statistics.md)).

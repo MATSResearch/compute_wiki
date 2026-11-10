@@ -173,6 +173,7 @@ Automated researchers hill-climb against whatever number you give them; with no 
 they have nothing to climb, and with a bad number they climb it anyway.
 
 What the skill looks like in practice:
+
 - For every metric, write the **guard**: how could this number move without the claim
   being true? (Over-refusal improving a jailbreak score; a probe keyed on a confound.)
 - Build a **generalisation ladder**: the same failure measured on held-out benchmarks,
