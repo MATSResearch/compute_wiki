@@ -447,6 +447,9 @@ Read: Olah & Carter, "Research Debt"
 on How to Write ML Papers" ([LessWrong](https://www.lesswrong.com/posts/eJGptPbbFPZGLpjsp));
 Karnofsky, "Learning By Writing" ([Cold Takes](https://www.cold-takes.com/learning-by-writing/)).
 
+For reviewing a draft, yours or a colleague's, with or without an AI reviewer, see
+[`reviewing-drafts.md`](../engineering/reviewing-drafts.md).
+
 ## Research-craft lessons from MATS fellows and peers (2026)
 
 Practical tips from 2026 retrospectives and practice posts, each condensed to one

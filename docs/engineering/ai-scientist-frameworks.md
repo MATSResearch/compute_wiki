@@ -1138,6 +1138,9 @@ not of Deep Review specifically, agree on the direction:
 
 So: don't iterate a draft to raise an AI reviewer's score, and check each
 finding against the paper and your runs before acting on it.
+The fuller treatment (how to run and read an AI review of a draft, and what
+human review catches and misses) is in
+[`reviewing-drafts.md`](reviewing-drafts.md).
 
 ### OpenResearch (alphaXiv): an experiment tree in git, one worktree per direction
 
