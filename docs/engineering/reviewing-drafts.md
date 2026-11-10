@@ -406,9 +406,13 @@ Each row names the evidence behind it; none has been tested in a randomized tria
 
 ## How do I get a useful AI review of my own draft?
 
-A workflow assembled from researchers' published practice. It complements the
-cross-family review the MATS dashboard's Automated Alignment Research tool
-runs on reports.
+A workflow assembled from researchers' published practice. The MATS
+dashboard's Automated Alignment Research tool does part of it for a report it
+produced: a reviewer from another model family audits the report, **Review as
+a draft** asks what the report claims and whether the evidence supports that
+much, and each finding carries Confirmed / Refuted / Downgraded marks for the
+researcher to set (steps 3, 5, 7, 8 and 10 below). The steps apply to any
+draft, with or without the tool.
 
 1. **Check where the draft may go.** Your own unpublished draft is yours to
    share, but co-authors and lab policy may have a view, and a provider
