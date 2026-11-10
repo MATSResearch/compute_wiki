@@ -100,6 +100,7 @@ added **Harbor ATIF** (Agent Trajectory Interchange Format) as a transcript sour
 an example importer for OpenClaw telemetry.
 
 **Scout 0.6.1 (2026-10-21) and 0.6.2 (2026-10-29): re-run these scans.** Bug fixes that change results, from the release notes and PRs:
+
 - **`messages=["all"]` / `events=["all"]` scanned nothing (fixed 0.6.2, PR #660).** A *list* containing `"all"` "passed validation and then selected nothing. … No warning, no error. A scanner returning a truthy value reports a normal result count, so the run is indistinguishable from a correct one." The bare string `messages="all"` always worked. From 0.6.2 the list form raises `ValueError: Invalid messages filter(s): ['all']. Allowed: ['assistant', 'system', 'tool', 'user']`.
 - **The nonce did not cover every marker (fixed 0.6.1, PR #726).** In 0.6.0 only message headers carried the nonce, so "An agent or a tool output could still forge every other marker in the scanner prompt byte for byte" (tool calls, tool errors, reasoning, the transcript end line). Use ≥0.6.1 when the scanned agent may be adversarial; `check_nonce` now requires ASCII letters and digits.
 - **Timeline scans of transcript databases were nearly empty (fixed 0.6.1):** they "gave the judge nearly empty stored timelines, so earlier results from those scans may be wrong". 0.6.1 also stops installing DuckDB 2.0, "which broke reading transcript databases".
@@ -547,6 +548,7 @@ silently reads a different message list from `step.history`.
 **Breaking again in 0.2.0 (2026-10-21) and 0.3.0 (2026-10-27), and Inspect now forces the
 upgrade.** 0.2.0: "StepPreprocessor replaces excerpts for what a monitor shows a model" (#109).
 0.3.0 changes what control protocols *decide*, with "no compatibility shim":
+
 - **`threshold()` proceeds when none of its monitors reported at a step** (#153): "Before, it
   abstained." Inside `sequential([threshold(m, escalate_at=...), human()])` the person is no longer
   asked at steps the monitor skipped (e.g. `submit()` calls under a `bash()`-only monitor), and
@@ -590,6 +592,7 @@ the agent's and does not charge it to the agent's limits. When `threshold()` rej
 agent is told only that the call was not approved, so it learns nothing about what the monitor saw.
 
 **Pitfalls:**
+
 - **Without `--model-role monitor=...` the monitor becomes the agent's own model**, with only a
   warning — i.e. self-monitoring. Bind the role explicitly and check the log.
 - **The threshold is uncalibrated.** The docs: "`0.8` here is a guess. A threshold is only as good as

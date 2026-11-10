@@ -39,18 +39,21 @@ Aliases: `transformer_lens` on PyPI, `TransformerLensOrg/TransformerLens` on Git
 **What it is.** A library that exposes every attention head, MLP layer, and residual-stream activation of a language model through a named hook system (`model.run_with_cache`, `model.run_with_hooks`). Since TL 3.0 this is done by **`TransformerBridge`**: it keeps the real HuggingFace implementation of the model and wraps it with an *architecture adapter* that registers uniform hook points — instead of re-implementing each architecture as the old `HookedTransformer` did. The README lists 15,000+ models across 140+ architecture families.
 
 **When to use it:**
+
 - You're learning mechanistic interpretability and want consistent naming across architectures (`blocks.5.hook_resid_post` still works as an alias of the canonical `blocks.5.hook_out`).
 - You're doing classic mech interp: induction heads (Olsson et al. 2022, "In-context Learning and Induction Heads", arXiv:2209.11895), IOI-style circuit analysis (Wang et al. 2022, "Interpretability in the Wild: a Circuit for Indirect Object Identification in GPT-2 small", arXiv:2211.00593), attention pattern visualization.
 - You need ablation, patching (resample, and **attribution patching** — the fast linear approximation from Syed, Rager & Conmy 2023, "Attribution Patching Outperforms Automated Circuit Discovery", arXiv:2310.10348), and activation arithmetic with a clean API. TL 4.0 also ships analysis tools under `transformer_lens.tools.analysis`: direct logit attribution, attribution patching (node and edge/EAP scoring), direct path patching, `JacobianLens` (see [Workspace lenses](#workspace-lenses-j-lens-r-lens-j-lens)), backward lens, SVD circuits, sparse probing.
 - You need gradients (attribution patching, backward hooks, Jacobian-lens fitting): load with `TransformerBridge.boot_transformers(...)`, the transformers backend (the vLLM and Inspect backends have no autograd).
 
 **New in TransformerLens 4.1 (2026-09-28) and 4.2 (2026-10-10)** (release notes and `docs/source/content/analysis_tools.md` / `sparse_probing.md`, read 2026-10-14):
+
 - **Built-in logit lens (4.2).** `logit_lens(model, prompt)` or `cache.logit_lens()` reads every entry of the accumulated residual stream through the model's own `ln_final` (statistics recomputed), `W_U`, `b_U` and the adapter's output transform (Gemma-style softcap, Cohere logit scale); its final entry equals the model's logits on a raw bridge. `targets=` gives per-layer rank trajectories (`result.rank_trajectory(" Paris")`), `top_k=` / `vocab=` restrict the output, and `logit_readout` applies the same kernel to any `d_model` vector (a head output, steering direction or SAE decoder column). In compatibility mode `center_unembed` shifts logits by a per-position constant, so the docs say to compare `return_type="log_probs"` or ranks across processing modes, not raw logits. Rejected: encoder-only and encoder-decoder bridges, quantized unembeddings.
 - **Leakage-safe k-sparse probing (4.1; tie-aware `roc_auc` / `average_precision` added in 4.2).** `fit_sparse_probe` and `sweep_sparse_probe` with random-coordinate and label-shuffle controls — see [`probes.md`](probes.md#sparse-probing-in-transformerlens-41-fit_sparse_probe).
 - **Unreduced activation patching (4.2):** per the analysis-tools guide, the metric returns a scalar by default and a `[batch]` tensor under `reduce="mean"` or `"none"`, and per-example values are stored (`cells × batch` floats per metric) so statistics can be computed after the sweep without extra forwards.
 - **Bridge fixes worth knowing if you produced numbers before 4.2:** `rmsnorm_uses_offset` set on the Qwen3.5, Qwen3Next and Nemotron adapters; Cohere/Cohere2 rotated with their own RoPE convention; HunYuan QK-norm applied after RoPE; `get_caching_hooks` keeps the batch dimension when batch > 1 (all from the 4.2.0 release notes). On those architectures it is worth re-running a result that came from a 4.0/4.1 bridge.
 
 **New in TransformerLens 4.3 (2026-10-23)** (release notes and the linked PR descriptions, read 2026-11-04). Silent-correctness fixes first — if your numbers came from TL < 4.3 in one of these settings, re-run them:
+
 - **OLMo 2, OLMo 3, EXAONE-4, FlexOlmo: `ln1`/`ln2` hooks were the post-norms (PR #1890, breaking).** These models "declared their post-attention/post-feedforward norms in the `ln1`/`ln2` slots, so readers of the pre-sublayer norm silently got the post-norm". In 4.3 their hook and cache names change from `blocks.{i}.ln1.*`/`ln2.*` to `blocks.{i}.ln1_post.*`/`ln2_post.*`, those blocks have no `ln1`/`ln2` at all (code that reads them now fails loudly), and the canonical aliases `hook_attn_out`, `hook_mlp_out`, `hook_resid_mid` keep their meaning. `apply_ln=True` at a mid layer on these blocks previously divided by the post-attention norm's scale and now raises. OLMo Hybrid full-attention layers move `blocks.{i}.ln2.*` to `blocks.{i}.ln1_post.*`.
 - **Gemma 3n `hook_attn_out` / `hook_mlp_out` change values** (same PR): they pointed at the raw sublayer outputs, not what the layer adds to the residual; they now resolve to the post-norm outputs, as on Gemma 2/3. Its norm hooks are renamed to `ln1`, `ln1_post`, `ln2`, `ln2_post`.
 - **`JacobianLens.ablation_hooks` with several tokens removed the lens directions one at a time (PR #1941)**, which zeroes the projections only when the lens vectors are orthogonal. On GPT-2 small with the published `neuronpedia/jacobian-lens` lens, one prompt, ten number tokens at layer 8, "about 73% of the largest projection is still there after the current ablation". 4.3 projects onto the orthogonal complement of the span. Re-run multi-token J-space ablations made with TL < 4.3.
@@ -59,11 +62,13 @@ Aliases: `transformer_lens` on PyPI, `TransformerLensOrg/TransformerLens` on Git
 - **New analysis tools:** subspace interchange interventions, **distributed alignment search (DAS)** with trained controls and neuron bases (PRs #1892–#1894, #1921; read the objective caveat in [Causal abstraction](#causal-abstraction-the-theory-underneath) before reporting a learned-subspace effect), `RelevanceLens.fit`, attribution-patching faithfulness via edge ablation on `TransformerBridge`, group-aware sparse-probe splits, a RoBERTa masked-LM adapter, and float64-preserving bootstrap / sign-flip statistics.
 
 **When *not* to use it:**
+
 - You want exact HuggingFace behaviour with zero abstraction and a deferred-execution syntax → **nnsight**.
 - You're working at vLLM scale and need only residual-stream capture or steering → **vLLM-Lens** (see [`serving-and-activations.md`](serving-and-activations.md)). TL 4.0 has its own `RemoteBridge.boot_vllm` for hooks over vLLM, but it cannot give gradients or attention patterns.
 - You want SAEs or circuit-tracer *and* TransformerLens together on TL 4.x — **SAELens pins `transformer-lens<4`** (since 6.51.2, 2026-09-24) and circuit-tracer's TransformerLens backend raised an `ImportError` on TL 4.0.0 as of 2026-10 (open issue); stay on `transformer-lens<4` for those workflows (details below and in [`saes.md`](saes.md)).
 
 **Pitfalls (with searchable error symptoms):**
+
 - **`ImportError: cannot import name 'HookedTransformer' from 'transformer_lens'`** (also `HookedTransformerConfig`, `HookedEncoder`, `HookedEncoderDecoder`) — TL 4.0 removed the `Hooked*` model classes. Fix: `TransformerBridge.boot_transformers("gpt2")` and, if you need the old numerics, `bridge.enable_compatibility_mode()`. The same error surfaces *inside other libraries* that subclass `HookedTransformer` (older **SAELens** releases, **circuit-tracer**'s TransformerLens backend): pin `pip install "transformer-lens<4"` or upgrade the library. Because the error is an `ImportError`, `hasattr(transformer_lens, "HookedTransformer")` raises instead of returning False.
 - **Numerics changed: the bridge does *not* fold LayerNorm or center weights by default.** `HookedTransformer.from_pretrained` applied `fold_ln`, `center_writing_weights`, `center_unembed` automatically; `TransformerBridge` preserves raw HF weights, so logits and activations match HuggingFace (*not* the old TL). Per the migration guide's table, raw logits differ from old TL output by a per-row constant, and logit lens, direct logit attribution (DLA), KL divergence and cached `hook_resid_*` norms (the gap grows with depth) also differ, unless you call `bridge.enable_compatibility_mode()` after booting; generated text, cross-entropy (CE) loss and argmax/top-k are identical either way. **Method-specific:** DLA wants compatibility mode; `JacobianLens` and backward-lens want *raw* weights — load a separate model for each.
 - **Load-time flags moved.** `fold_ln=`, `center_writing_weights=`, `center_unembed=`, `fold_value_biases=` are no longer arguments of the load call; they are arguments of `enable_compatibility_mode(...)`. `move_to_device` and `first_n_layers` were removed.
@@ -98,17 +103,20 @@ Aliases: `nnsight` on PyPI, `ndif-team/nnsight` on GitHub, "the NDIF library", "
 **Versions (2026-11-04).** Stable on PyPI is **0.8.2** (2026-11-02), a bug-fix release: it frees GPU memory that stopped traces (`tracer.stop()`), failed backward passes and `model.edit()` blocks kept allocated (per the notes, Llama-3.2-1B at 16×512 tokens stopped at block 8 "filled a 48 GB A6000 in about a dozen traces"), fixes vLLM results that came back wrong without raising (see the pitfalls below and [`serving-and-activations.md`](serving-and-activations.md#nnsight-on-vllm-nnsight-serve-cuda-graph-taps)), supports tensor parallelism on transformers 5.21, pins the `vllm` extra to `vllm>=0.27.1,<0.28` and caps `httpx<1` ("The httpx 1.0 previews remove `Timeout` and `AsyncClient`, so every remote call failed with an `AttributeError`"). **0.8.1** (2026-10-20) carried `trust_remote_code` and the attention implementation with every remote request; **0.8.0** (2026-10-16) promoted the rewrite that shipped as 0.8.0rc1 (2026-09-09) to a normal release, so unpinned installs now get it. 0.8 is a ground-up rewrite of the execution engine (greenlets instead of threads, `TransformersModel`, vLLM CUDA-graph taps, native tensor parallelism; the 0.8.0 notes add `import nnsight` dropping from 7.6 s to 1.6 s, support for the transformers 5.19 tensor/expert-parallel rework, and vLLM engines defaulting to prefix caching off). The previous line is **0.7.0** (2026-05-05: lazy hooks, 10–50% faster traces, `nnsight-serve`); pin `pip install "nnsight<0.8"` for code written against it. The 0.8.0rc1 notes said *remote execution against NDIF stays on 0.7 until NDIF is upgraded*; the 0.8.0–0.8.2 notes do not repeat that caveat and add remote-job features, but whether NDIF's servers accept 0.8 clients was not confirmed here — check `nnsight.net/status` or the NDIF forum before switching remote code. Python 3.10–3.14.
 
 **When to use it:**
+
 - Your model is on HuggingFace and you want exact HF behavior with no architecture rewrite.
 - You want to intervene on a 70B+ model without owning the GPUs (use NDIF remote backend).
 - You like the explicit tracing API: `with model.trace("Hello"): h = model.model.layers[5].output[0].save()`.
 - You want a single API across architectures (HF, vLLM via plugin, custom) — in 0.8, vLLM runs *inside* the trace, so the same intervention code works on a served model (see [`serving-and-activations.md`](serving-and-activations.md)).
 
 **When *not* to use it:**
+
 - You want the consistent named-hook namespace TransformerLens provides — nnsight gives you raw module paths (`model.model.layers[5].mlp.down_proj.output`), which differ between architectures.
 - You want SAE-specific helpers — use SAELens (works alongside nnsight).
 - You need maximum throughput on local GPUs — use vLLM-Lens.
 
 **Pitfalls:**
+
 - **"Module path not found"** — every architecture has different paths. `print(model)` to see the tree, or use `nnterp` (a standardized-interface wrapper, ICLR 2025) to abstract the differences.
 - **`.save()` on the wrong tensor.** Inside a trace, intermediate values are proxies; you must `.save()` the ones you want to read after the trace exits. Forgetting to save = `AttributeError` or empty value.
 - **Remote NDIF latency.** Each remote forward pass has network round-trip cost. Batch your interventions; don't do per-token loops to a remote model.
@@ -178,6 +186,7 @@ hidden = tr["model.layers.15"].output[0]
 `module.register_forward_hook(fn)` and `module.register_forward_pre_hook(fn)` work on any HuggingFace model. For a one-shot experiment, this is fine — and worth knowing because **every** library above is built on top of this primitive.
 
 **Pitfalls:**
+
 - **Hooks persist until removed.** Save the handle (`h = module.register_forward_hook(fn)`) and call `h.remove()`, or you get cumulative state across calls.
 - **In-place modifications to hook inputs/outputs are silently lost** in some PyTorch versions. Return the modified tensor explicitly.
 - **DDP / FSDP wrap modules.** The path you hook may be `model.module.model.layers[5]` once wrapped.
@@ -198,6 +207,7 @@ Aliases: sandwich norms, post-sublayer norms, `post_feedforward_layernorm`, `pos
 **Symptoms to search for:** MLP SAE or transcoder with near-zero L0 on your prompts; FVU above 1; features that never fire on text where their Neuronpedia dashboard shows strong activations; a transcoder or MLP SAE that works through SAELens/TransformerLens but not through your own HF hooks.
 
 **How to check (tips, not requirements):**
+
 - When you attach an MLP SAE or MLP-output reader to a Gemma or OLMo 2/3 model outside TransformerLens, hook *after* the post-feedforward norm (the output of `post_feedforward_layernorm`), unless the SAE's config names a different site. For attention-side SAEs, read the config's hook name rather than guessing: post-norm attention output, raw attention output and pre-projection head outputs are all different tensors.
 - Compute FVU and L0 on both candidate tensors before trusting a feature; the PORTING doc reports they separate by an order of magnitude in one run, and the right one should land near the SAE's declared L0.
 - With **interp-engine**, request the `mlp_out_post` / `attn_out_post` points (aliased to the raw output on architectures without post-sublayer norms, so the request is safe everywhere), or call `tlens_hook_to_point("blocks.7.hook_mlp_out", model)` *with* the model argument, which resolves to `("mlp_out_post", 7)` on Gemma 3; without the model it does pure string translation.
@@ -233,6 +243,7 @@ Two different questions get called "attribution". **Input attribution** asks whi
 | Which *training documents* caused a behaviour | not this — see [`data-attribution.md`](data-attribution.md) | |
 
 **Cross-cutting pitfalls.**
+
 - **Attribution is not causation.** Verify a top-scored token or component by patching or ablating it and measuring the output change; gradient-based scores can be large for components whose removal changes nothing.
 - **State the target.** Scores depend on which scalar you differentiate: the logit of the generated token, a logit difference against a contrast token, or a log-probability. A logit-difference target is usually more interpretable for "why A rather than B".
 - **Model-specific skews exist.** LXT's README marks Qwen 3 as "Attribution skewed toward first token"; first-position (BOS / attention-sink) tokens soak up attribution in many models, so check whether a result survives excluding position 0.
@@ -244,6 +255,7 @@ Aliases: `captum` on PyPI, `meta-pytorch/captum` on GitHub (formerly `pytorch/ca
 **What it is.** A general PyTorch interpretability library — saliency, integrated gradients, DeepLIFT, GradientShap, layer/neuron conductance for any `nn.Module`. It has **LLM attribution** support (`LLMAttribution`, `LayerGradientXActivation`, `LayerGradientShap`, KV-cache-aware perturbation) dating back to ~v0.7 (2023); the more recent additions are `RemoteLLMAttribution` against hosted endpoints, a `VLLMProvider` for large models, and (v0.9.0, Apr 2026) multimodal image-segment attribution. Active, Meta-maintained, ~quarterly releases.
 
 **When to use it:**
+
 - Token-level input attribution / saliency on LLMs (`LLMAttribution` over a prompt to see which tokens drove a generation).
 - Classical attribution methods (integrated gradients, GradientShap) on any PyTorch model — vision, multimodal, tabular.
 - Attribution at vLLM scale via `VLLMProvider`.
@@ -339,11 +351,13 @@ _, counterfactual_outputs = intervenable(base, sources, {"sources->base": pos_i}
 Sweeping `layer_i` × `pos_i` and reading off the probability of the counterfactual token (" Madrid" vs " Rome") is exactly the causal-tracing heatmap in [`research-plots.md`](../engineering/research-plots.md).
 
 **When to use it:**
+
 - Interchange interventions / activation patching where you want the *specification* of the intervention to be a first-class, saveable object rather than a closure buried in a hook.
 - Non-transformer or unusual architectures, where no TransformerLens architecture adapter (`TransformerBridge`) exists.
 - **Distributed Alignment Search (DAS)** and learned interventions — pyvene ships trainable intervention types, which raw hooks make you build yourself. Since TransformerLens 4.3.0 (2026-10-23), DAS, subspace interchange interventions, trained controls and neuron bases also exist inside TransformerLens's `tools/analysis`, which is the more actively released option (pyvene: PyPI 0.1.8 of 2025-05-26, last GitHub push 2026-03-06). Before reporting that a learned subspace beats whole-state patching, read the objective caveat under [Causal abstraction](#causal-abstraction-the-theory-underneath).
 
 **When *not* to use it:**
+
 - Standard mech-interp on a supported model where you want the community's shared vocabulary of hook names — **TransformerLens** is more idiomatic and far more of the published code you'll want to read is written against it.
 - You need remote execution on a model too big for your GPU — that's **nnsight**/NDIF.
 - A one-off "grab the residual stream at layer 12" — plain PyTorch hooks are three lines.
@@ -351,6 +365,7 @@ Sweeping `layer_i` × `pos_i` and reading off the probability of the counterfact
 **pyreft** (`stanfordnlp/pyreft`) is the sibling library for **ReFT — Representation Finetuning** (arXiv **2404.03592**): instead of updating weights (LoRA), you train an intervention on hidden representations, giving a parameter-efficient finetune whose learned object is a *representation edit*. Relevant to safety work as a model-organism method that produces something intrinsically more interpretable than a LoRA — but note its last repo activity was March 2026, so check maintenance before depending on it.
 
 **Pitfalls:**
+
 - **Component names are pyvene's, not TransformerLens's.** `"mlp_output"` / `"attention_input"` here vs `blocks.4.hook_mlp_out` there. Copying a hook name across libraries gives a key error or, worse, an unmatched component. Symptom: interventions that run and change nothing.
 - **`{"sources->base": pos_i}` is a position mapping.** Base and source must be tokenised to the same length for a positional swap to mean what you think; different-length prompts misalign silently.
 - **Serialised interventions carry a model assumption.** A shared intervention config is only valid for the architecture it was authored against.
@@ -362,6 +377,7 @@ Aliases: "Jacobian lens", "J-lens", "J-space", "global workspace lens", "workspa
 **What they are.** A *lens* reads an intermediate residual-stream activation `h` at layer ℓ as the vocabulary tokens the model is disposed to say later. The **logit lens** applies the unembedding directly. A **workspace lens** first transports `h` through one fixed linear map per layer — the *averaged Jacobian* `J_ℓ = E[∂h_final / ∂h_ℓ]`, averaged over prompts, source positions and later target positions — then applies the final norm and unembedding: `lens_ℓ(h) = unembed(J_ℓ · h)`. The rows of `W_U · J_ℓ` are the per-token **lens vectors**; they can be used to read out, to probe, and to *write* (patch a lens vector in place of an intermediate concept, e.g. swap "spider" for "ant" and the answer to "legs on the animal that spins webs" flips from 8 to 6). The map is *estimated*, not trained as a network: fitting is a batch of backward passes over a few dozen to a thousand short prompts (about `d_model` backward passes per prompt), and inference is a single matrix multiply per layer. The **J-space** is the set of activations expressible as sparse non-negative combinations of lens vectors (typically k ≤ 25).
 
 **Lineage (all 2026).**
+
 - **J-Lens** — Gurnee, Sofroniew, Pearce, Piotrowski, Kauvar, … Lindsey (Anthropic), *Verbalizable Representations Form a Global Workspace in Language Models*, transformer-circuits.pub/2026/workspace, 2026-07-06. Claim: the J-space behaves like a global workspace — contents are reportable, reusable, selective and causally used for multi-step inference (multi-hop intermediate-swap success 54% Haiku 4.5, 70% Sonnet 4.5, 70% Opus 4.5). The same paper introduces the multi-token **Template Lens** and **Oracle Lens** (below). Neel Nanda's public review (LessWrong, 2026-07-06) replicated the core claims on Qwen3.6-27B (poetry and arithmetic did not replicate) and recommends it as a *hypothesis-generation* tool for audits, less so for validating hypotheses.
 - **R-Lens** — camilablank, agam_bhatia, Neel Nanda, *R-lens: Making J-lens More Faithful on Early Layers*, LessWrong, 2026-08-05 (MATS work). Computes the Jacobians with a Layer-wise Relevance Propagation (LRP) backward pass — stop-gradients on RMSNorm denominators and gated-MLP activations — so noise does not compound toward early layers. Forward pass and lens file format unchanged.
 - **J++ Lens** — Kola Ayonrinde (Anthropic Fellows) & Jack Lindsey (Anthropic), *J++ Lens: Jacobian Filtering Enables More Faithful Workspace Lenses*, LessWrong, 2026-10-08, https://www.lesswrong.com/posts/nc9dHfcB22JdMzGbr/paper-j-lens-jacobian-filtering-enables-more-faithful . Code `safety-research/jpp_lens` (Apache-2.0; verified: exists, not archived, pushed 2026-10-08), lenses `koayon/jpp-lenses`. A **drop-in replacement for the J-Lens with no extra inference cost** (one linear map per layer, same shape). Three changes: (1) **Jacobian Filtering** — k-means-cluster each layer's activations into E = 8 clusters, average one "expert" Jacobian per cluster, then combine the experts with *learned signed weights* fit on a small dev set so that experts giving incoherent readouts get zero or negative weight; (2) the **Layer-wise Relevance Propagation (LRP) backward pass** from the R-Lens; (3) **Readout Filtering** — drop non-semantic tokens (no letter or digit; 6,116 tokens for Qwen3.6-27B) from the ranked readout.
@@ -460,6 +476,7 @@ A **circuit** is the subgraph of a model's computation graph (attention heads, M
 **Code: `hannamw/EAP-IG`** (MIT; verified, last push 2026-05-23; install from a clone with `pip install .`, or `pip install .[viz]` for graph drawing, which needs the graphviz C library). Pipeline from the README: `graph = Graph.from_model(model)`, `attribute(model, graph, dataloader, metric, method='EAP-IG-inputs', ig_steps=5)`, `graph.apply_topn(n)`, then `evaluate_graph(model, graph, dataloader, metric)` to measure the circuit with everything outside it corrupted. Graphs can be edge-level (default), node-level or neuron-level.
 
 **Pitfalls:**
+
 - **`ImportError: cannot import name 'HookedTransformer' from 'transformer_lens'`** — EAP-IG's `attribute.py` imports `HookedTransformer` and its `pyproject.toml` declares `transformer-lens>=2.15.0` with no upper bound, so a fresh install resolves TransformerLens 4.x, which removed that class (read from the source, not run). Pin `pip install "transformer-lens<4"`.
 - **Grouped-query attention (GQA) models** (Llama 3, Qwen, Gemma): set `model.cfg.ungroup_grouped_query_attention = True` first (README), at the cost of GQA's memory savings.
 - **Pre-LayerNorm only.** The README notes the residual stream must stay a sum of component outputs; post-LayerNorm architectures break this (Gemma works through a workaround).
@@ -521,6 +538,7 @@ pipe.export("./checkpoint")
 ```
 
 **Pitfalls:**
+
 - **Pinned to TransformerLens 3.8.0** (with transformers 5); the README says to import `circuitkit` before `transformer_lens`. Expect a conflict in an environment that has moved to TransformerLens 4.x for other work — a separate environment is the simple fix.
 - **Vision-language models are rejected** with an error (TransformerLens has no vision tower); ACDC is excluded from the README's standard validation gate.
 

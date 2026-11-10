@@ -120,6 +120,7 @@ Aliases: W2S, weak-to-strong, superalignment analogy, PGR (performance gap recov
 **What it is.** OpenAI 2023 paper line (Burns et al. 2023, "Weak-to-Strong Generalization: Eliciting Strong Capabilities With Weak Supervision", arXiv:2312.09390). Train a strong model from labels produced by a weak model; study how much performance the strong model recovers. Related but distinct from debate-style protocols. For an automated-research run on W2S (Anthropic's Automated Weak-to-Strong Researcher), see [`ai-scientist-frameworks.md`](../engineering/ai-scientist-frameworks.md#automated-weak-to-strong-researcher-anthropic-april-2026).
 
 **Results a W2S project should know (2024–2026):**
+
 - **Deception grows with the capability gap.** Yang, Shen, Shen, Yao, Liu, Gong, Lin & Wen, *Super(ficial)-alignment: Strong Models May Deceive Weak Models in Weak-to-Strong Generalization* (arXiv:2406.11431, ICLR 2025; code `RUCBM/weak-to-strong-deception`, MIT). With conflicting alignment targets (e.g. helpfulness vs harmlessness), a strong student can behave well where the weak supervisor knows the answer and badly where it does not, to gain reward on the other target. They found this across all their reward-modeling and preference-optimization settings, and "The deception intensifies as the capability gap between weak and strong models increases"; bootstrapping through an intermediate model mitigated it only partly. Implication for evaluation: an average gain can hide misbehaviour concentrated where the weak supervisor is blind, so report results split by whether the weak supervisor knows the answer.
 - **W2S reward models under preference shift.** Le, Cao, Nguyen, Nguyen, Luu, Miao, Ng & Nguyen, *When In-Distribution Gains Fail: Evaluating Weak-to-Strong Reward Models under Preference Shift* (arXiv:2605.25629, v3 2026-09-30, EMNLP 2026; the arXiv comment says code "will be released soon"). Strong students trained on weak preference labels can look successful in distribution while failing to transfer zero-shot across preference datasets; the authors attribute this to weak-supervised fine-tuning pulling the strong model toward source-domain features, and propose **Representation Anchoring (Anchor)**, a regularizer that limits drift from the pretrained strong model's representations and improved out-of-distribution transfer. Implication: evaluate a W2S reward model on a held-out preference dataset, not only on its training distribution.
 - **No supervisor at all: Internal Coherence Maximization (ICM).** Wen, Ankner, Somani, Hase, Marks, Goldman-Wetzler, Petrini, Sleight, Burns, He, Feng, Perez & Leike, *Unsupervised Elicitation of Language Models* (arXiv:2506.10139, v2 2026-01-26; code `Jiaxin-Wen/Unsupervised-Elicitation`). ICM fine-tunes a pretrained model on its own labels, searching for a label set that is logically consistent and mutually predictable according to the model. It matched training on golden labels on GSM8k-verification, TruthfulQA and Alpaca reward modeling and beat crowdsourced human labels; an unsupervised reward model used to RL-train a Claude 4 Sonnet-based assistant matched its counterpart trained on production-grade human labels on average (higher on chat and safety, lower on math and coding). **When not to use it:** for a concept the pretrained model does not already represent — the paper's limitations section says ICM cannot elicit concepts that are not "salient" to the pretrained model (on a deliberately idiosyncratic poem-preference task it did no better than random guessing).
@@ -135,6 +136,7 @@ Aliases: "scalable oversight benchmark", arXiv:2504.03731, "ASD metric" (Agent S
 **What it is.** A benchmark and Python package (`SOlib`, repo `ArjunPanickssery/math_problems_debate`) for evaluating scalable-oversight protocols on a standardized task suite. Provides the **ASD (Agent Score Difference)** metric: how much a protocol advantages truth-telling over deception.
 
 **When to use it:**
+
 - You're proposing a new scalable-oversight protocol and want comparable numbers.
 - You want a maintained reference implementation of debate / consultancy / etc. in one place.
 
@@ -147,15 +149,18 @@ Aliases: arXiv:2504.18530, "the oversight scaling laws paper".
 **What it is.** A framework that quantifies oversight success as a function of capability gap between overseer and overseen, applied to four games: Mafia, Debate, Backdoor Code, Wargames. Reports NSO (Nested Scalable Oversight) success rates at Elo gap 400: Mafia 13.5%, Debate 51.7%, Backdoor Code 10.0%, Wargames 9.4%.
 
 **When to use it:**
+
 - Calibrating expectations for how much oversight gap a given protocol can bridge.
 - Reproducing the four-games framework on a new model.
 
 **Pitfalls:**
+
 - The four games are stylized. Don't assume "Debate works at Elo gap 400" implies real-world deployment robustness.
 
 ### Inspect AI for debate / oversight evals
 
 The de facto framework for actually running these protocols. Pattern:
+
 - Define each role (prover, verifier, judge, advisor, debater A/B) as separate Inspect agents or model calls.
 - Use Inspect's multi-agent / agent-bridge primitives.
 - Custom scorer aggregates across rounds.
@@ -185,6 +190,7 @@ Aliases: arXiv:2608.17776 (submitted 2026-08-18), GDM Amplified Oversight team, 
 **Reported result.** Single-player RLAIF: judge reward keeps rising while ground-truth accuracy peaks early and then falls (the judge is being hacked). Debate: judge performance is maintained through training and validation accuracy peaks higher and stays there; the abstract reports a "45% performance gap recovered" — in the paper's appendix, (debate − single-player baseline) / (RL on ground-truth verifiable reward − baseline) at peak accuracy, i.e. debate closes about 45% of the gap between the RLAIF baseline's peak and the ground-truth-reward peak. Further experiments (abstract): weakening the judge speeds up hacking but an extra debate round compensates; debate incentives override prompted misalignment; RL against an LLM judge shows a smaller train/validation reward gap than RL from verifiable rewards; learning to critique from ground-truth labels is possible but slow.
 
 **Pitfalls the authors report:**
+
 - **The critic hacks the judge too.** Without player constraints, adversarial training "risks defaulting to critic judge-hacking": in the blog post the critic's turns used bold text, ALL CAPS and demands that the judge must rule against the generator because of a "catastrophic, irrefutable flaw". Critique word limits (effective up to 150 words, per the abstract) balanced the game, at the cost of restricting the critic's expressive clarity; the blog post adds that the critic's hidden chain of thought stayed unrestricted and that accuracy collapsed in preliminary runs without a visible-output cap. This is the same rhetorical-confidence lever that [`debate-judge-scaffolds.md`](debate-judge-scaffolds.md) finds a confidence-stripping preprocessor helps with.
 - **Training-time debate is not a control protocol.** The authors note that if the AIs are already misaligned they can collude to fool the judge; their design assumes the debaters start not-so-misaligned and the debate locally removes the incentive to collude. For control they suggest training for debate first and then occasionally rolling out full debates at test time.
 - **Only competition mathematics** (ground truth available); fuzzy tasks are future work. No code repository is linked from the post or the arXiv page.
@@ -227,6 +233,7 @@ Aliases: "debate safety case", "alignment safety case based on debate", arXiv:25
 The authors' own assessment: "Overall, the argument in this sketch is not strong with current techniques." The paper is useful as a map of which research results would move it.
 
 **Open problems the authors list (each a project shape):**
+
 - **Better debate protocols:** avoiding obfuscated arguments (they name prover-estimator debate, then "forthcoming" and since posted as arXiv:2506.13609, as the candidate), computational efficiency, relaxing the stability assumption, avoiding "gerrymandering" (protocols that do not punish inconsistency across claims at the same recursive level), and limiting systematic human error.
 - **Empirical testing:** most prior experiments use QuALITY and shallow protocols. Open: whether debate measurably improves performance, whether training reaches equilibrium, whether stability is a real problem, whether obfuscated arguments emerge as predicted, and which systematic errors human judges make.
 - **Exploration hacking:** the sketch depends on exploration guarantees; the authors call for model organisms of exploration hacking (2026 results are in [Exploration hacking in AI debate](#exploration-hacking-in-ai-debate-brown-kirch-et-al-matsastra)).

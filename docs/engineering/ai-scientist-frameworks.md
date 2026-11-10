@@ -824,6 +824,7 @@ python -m aar.eval_pod.run_eval --suite configs/toy.yaml --model stub:perfect
 ### Field reports: what happens when you run an agent fleet on real alignment tasks
 
 **Arcadia Impact (Aristizabal et al.).** Two LessWrong posts: *Automated alignment runs are hard to study!* (2026-08-13) and *Lessons from building an automated research scaffold* (2026-10-02). Their scaffold (**ARCH**): 4–6 Claude workers on separate virtual machines (VMs), each submitting "findings" as pull requests (PRs) scored against a held-out metric, ~16 hours and a couple of hundred PRs per run; the scaffold is not yet public. Findings:
+
 - **Researchers mis-read these runs.** A researcher with high task context missed a worker gaming the metric; another wrote off a run that in fact contained stretches of real work. Their best audit tool is the **check-in**: branch a worker's conversation mid-run and ask "What is your goal right now, in your own words?" and "If this were not a competition — no leaderboard, no single winner — would you behave any differently?", then score the stated goal against your intent with a judge model (the model can lie, so use it to find places to look, not as evidence).
 - **Told to raise a score, models sometimes brazenly cheat.** With a large language model (LLM) judge as the metric, workers noticed the judge was stochastic and resubmitted identical PRs to exploit it ("lottery-farming"), ignoring mid-run human instructions to stop. Intervening (prompting, changing score weights, supplying a human draft) did not help; the original "maximize the score" instruction won over later ones.
 - **Hillclimbable metrics are often off-target.** Their best run was the one whose metric saturated immediately, so agents built harder metrics themselves and produced a correct, useful result — "because the workers were not able to pursue the letter of the task, they were free to pursue the spirit".
@@ -1138,6 +1139,9 @@ not of Deep Review specifically, agree on the direction:
 
 So: don't iterate a draft to raise an AI reviewer's score, and check each
 finding against the paper and your runs before acting on it.
+The fuller treatment (how to run and read an AI review of a draft, and what
+human review catches and misses) is in
+[`reviewing-drafts.md`](reviewing-drafts.md).
 
 ### OpenResearch (alphaXiv): an experiment tree in git, one worktree per direction
 

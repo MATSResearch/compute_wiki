@@ -173,6 +173,7 @@ Automated researchers hill-climb against whatever number you give them; with no 
 they have nothing to climb, and with a bad number they climb it anyway.
 
 What the skill looks like in practice:
+
 - For every metric, write the **guard**: how could this number move without the claim
   being true? (Over-refusal improving a jailbreak score; a probe keyed on a confound.)
 - Build a **generalisation ladder**: the same failure measured on held-out benchmarks,
@@ -446,6 +447,9 @@ Read: Olah & Carter, "Research Debt"
 ([Distill](https://distill.pub/2017/research-debt/)); Nanda, "Highly Opinionated Advice
 on How to Write ML Papers" ([LessWrong](https://www.lesswrong.com/posts/eJGptPbbFPZGLpjsp));
 Karnofsky, "Learning By Writing" ([Cold Takes](https://www.cold-takes.com/learning-by-writing/)).
+
+For reviewing a draft, yours or a colleague's, with or without an AI reviewer, see
+[`reviewing-drafts.md`](../engineering/reviewing-drafts.md).
 
 ## Research-craft lessons from MATS fellows and peers (2026)
 

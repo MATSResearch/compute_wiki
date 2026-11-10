@@ -62,6 +62,7 @@ Aliases: `tinker` (the Thinking Machines fine-tuning API; PyPI `tinker` 0.37.0, 
 **What it is.** A managed API for distributed fine-tuning and RL on open-weight models (as of 2026-10: Qwen3.5 / 3.6 / 3.8, gpt-oss, Nemotron-3, Kimi-K2.6, GLM-5.3, DeepSeek, and Thinking Machines' own **Inkling** family — see "Models and pricing" below; **the Llama models and the big Qwen3 MoEs were retired in June 2026**). You write a small Python loop on a CPU machine; Tinker runs the GPU compute. Uses **LoRA** for efficient training. Lets you keep full control of data and algorithm without owning H100 clusters.
 
 **Core concepts:**
+
 - **`ServiceClient`** — the entry point. Its `base_url` argument defaults to the `TINKER_BASE_URL` environment variable and then to the production API (tinker SDK source), which is what lets the same script target a local SkyRL server (below).
 - **`TrainingClient`** — manages weights and optimizer state; you call `forward_backward(...)` and `optim_step(...)`.
 - **`SamplingClient`** — runs inference (rollouts) with the current weights. In the cookbook's minimal loop you call `training_client.save_weights_and_get_sampling_client()` to get a sampler for the current weights, sample, then update.
@@ -72,18 +73,21 @@ Aliases: `tinker` (the Thinking Machines fine-tuning API; PyPI `tinker` 0.37.0, 
 **Models and pricing (Tinker "Models & Pricing" page, checked 2026-10-09).** Tinker IDs include `thinkingmachines/Inkling` (975B total / 41B active MoE, text + image + audio) and `thinkingmachines/Inkling-Small` (276B / 12B), `moonshotai/Kimi-K2.6`, `zai-org/GLM-5.3:peft:262144` (listed only in a 256K-context variant), `Qwen/Qwen3.8-27B`, `Qwen/Qwen3.6-35B-A3B`, `Qwen/Qwen3.5-397B-A17B`, `Qwen/Qwen3.5-9B` (plus `-Base` and `4B` variants), `Qwen/Qwen3-8B`, `openai/gpt-oss-120b` and `gpt-oss-20b`, `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16` (and Nano, Ultra, 3.5-Lightning), `deepseek-ai/DeepSeek-V3.1`. Prices are per million tokens with separate **prefill**, **sample** and **train** rates, an 80% discount on cached prefill tokens, and checkpoint storage at $0.10 per GB-month; for example `Qwen/Qwen3-8B` was listed at $0.195 prefill / $0.60 sample / $0.44 train, and the Inkling, Nemotron-3-Super/Ultra and Nemotron-3.5-Lightning entries carried a "limited-time 50% discount". Extended-context variants (ID suffix `:peft:262144`) cost more for **training only**; prefill and sampling prices are unchanged. Forward-only passes invoked by a training client are billed at the train price. **Retirements:** on 2026-06-12 Tinker retired `Llama-3.3-70B-Instruct`, `Llama-3.1-8B-Instruct`, base `Llama-3.1-8B` and `Llama-3.1-70B`, base `Llama-3.2-1B/3B`, `Qwen3-235B-A22B-Instruct-2507`, `Qwen3-VL-235B-A22B-Instruct`, `Qwen3-32B`, `Qwen3-30B-A3B*`, `Qwen3-VL-30B-A3B-Instruct`, `Qwen3-8B-Base`, `Qwen3-4B-Instruct-2507` (the model SkyRL's local quickstart uses, which still works on a local server), `Qwen3.5-27B/35B-A3B`, `DeepSeek-V3.1-Base` and `Kimi-K2-Thinking`; `Kimi-K2.5` followed on 2026-07-12, and the "Model deprecations" page gives **2026-10-23** as the retirement date of `Qwen3.6-27B` (replacement `Qwen3.8-27B`), `DeepSeek-V3.1` (replacement `DeepSeek-V4.1-Flash-1017`) and `Nemotron-3-Nano-30B-A3B` (replacement `Nemotron-3.5-Lightning-30B-A3B`) (page re-read 2026-11-04). The docs promise advance notice by email and in the docs but state no fixed notice period and say nothing about what happens to existing checkpoints of a retired model.
 
 **When to use it:**
+
 - You want to do real RL on real models without managing infra.
 - You're a MATS fellow with limited compute access.
 - You want to reproduce a DeepSeek-style GRPO / RLVR result with your own reward function.
 - You're studying RL training dynamics and need lots of small experiments fast.
 
 **When *not* to use it:**
+
 - Your data must stay on-prem (Tinker is hosted) — though the same cookbook code can run against a local SkyRL server (see the SkyRL section).
 - You need a custom architecture not in Tinker's model lineup.
 - You need bit-exact reproducibility of a specific paper's training stack — Tinker abstracts kernels.
 - You want full-finetune (not LoRA) with very large changes — hosted Tinker is LoRA-first; SkyRL's backend accepts `lora_rank=0`.
 
 **Pitfalls:**
+
 - **LoRA-only.** Tinker uses LoRA. For most safety research that's fine; for full-parameter behavioral changes, you may hit ceilings. Use `get_lora_lr_multiplier()` or `get_lr(model_name)` from the cookbook's `hyperparam_utils` to set a sensible LR (the minimal `rl_loop.py` uses 4e-5 with LoRA rank 32).
 - **Synchronous sample-train cycle.** You need to checkpoint weights and reload them in the sampling client between RL steps. The cookbook's GRPO loop shows the pattern; rolling your own can be subtle.
 - **API throughput, not your throughput.** Rate limits on the API affect rollout throughput. Plan batch size accordingly.
@@ -211,17 +215,20 @@ Aliases: `trl` on PyPI, `huggingface/trl` on GitHub, "HuggingFace TRL", "the TRL
 **What it is.** Hugging Face's post-training library. Implements PPO, GRPO, DPO, KTO, IPO (Identity Preference Optimization), ORPO, SimPO, RLOO, plus reward modeling, SFT and distillation. Tightly integrated with `transformers`, `accelerate`, `peft`.
 
 **When to use it:**
+
 - Self-hosted RL training on small-to-medium models, including on a single GPU (next subsection).
 - Preference learning (DPO/KTO) — TRL is the de facto standard.
 - You already use the Hugging Face stack and want minimum new abstractions.
 
 **When *not* to use it:**
+
 - Multi-node high-throughput RL — OpenRLHF, verl or prime-rl scale better.
 - You don't want to manage GPUs — Tinker.
 
 **GRPO defaults to report in a methods section** (from `trl/trainer/grpo_config.py`, v1.15.0; unchanged in v1.16.0 and v1.17.1, where `top_p=1.0`, `top_k=0`, `min_p=None` and `vllm_importance_sampling_correction=True` are also the defaults): `beta=0.0` (no KL term, so no reference model is loaded), `loss_type="dapo"` (token-level normalisation over the global accumulated batch; `"dr_grpo"` and `"grpo"` are options, and the docstring calls `"grpo"` "Not recommended due to length bias"), `scale_rewards="group"` (divides by the per-group standard deviation; the docstring notes Dr. GRPO recommends no scaling), `learning_rate=1e-6`, `use_vllm=False`. A paper that says "we used GRPO in TRL" without these is ambiguous.
 
 **Pitfalls:**
+
 - **PPO trainer is fiddly.** Many sharp edges around reference-model handling, KL coefficient, generation kwargs. The DPO trainer is much smoother.
 - **Memory: PPO loads up to 4 model copies** (policy, ref, reward, value). For 7B+ on a single 80GB GPU you need LoRA + gradient checkpointing.
 - **`accelerate config` mismatch with TRL** is a common source of OOM and `RuntimeError: Expected all tensors to be on the same device`. Use TRL's example accelerate configs as starting point.
@@ -239,6 +246,7 @@ Aliases: `trl` on PyPI, `huggingface/trl` on GitHub, "HuggingFace TRL", "the TRL
 - **Telemetry.** TRL's usage-stats doc: "A single ping is sent each time a trainer is instantiated" (TRL version, trainer class, known architecture, PEFT on/off, GPU model; no dataset names or paths). Opt out with `export HF_HUB_DISABLE_TELEMETRY=1` (or `HF_HUB_OFFLINE=1`); it is not sent when `CI` is set. Relevant on boxes where outbound traffic is restricted or logged.
 
 **Recent releases (v1.10 → v1.17, 2026-08 → 2026-10; from the GitHub release notes):**
+
 - **v1.17.0 (2026-10-29; v1.17.1 on 2026-10-30 contains a single LFM2.5 tool-call parsing fix)** — fixes the GRPO + vLLM filtered-sampling importance-ratio bias in colocate mode, makes score centering the AsyncGRPO default, adds tree-packing support for Gated DeltaNet hybrids, adds vLLM 0.32.x support, removes the experimental TPO trainer (all in Pitfalls above).
 - **v1.16.0 (2026-10-15)** — fixes the silent `torch_compile` bug and the FSDP2 colocate tied-embedding crash above, drops vLLM 0.21.0; `AsyncGRPO` packs each micro-batch row as a prefix tree, so shared prompt prefixes in multi-turn or multi-generation rollouts are forwarded once (the notes' best case, a "nested fork" layout, ran 3.10× faster: 8,172 ms → 2,635 ms).
 - **v1.10.0 (2026-08-13)** — `DistillationTrainer` / `DistillationConfig` graduate to the top level (`from trl import DistillationConfig, DistillationTrainer`) with a `trl distillation` CLI and VLM support; new experimental *loop-owning (black-box)* path for `AsyncGRPOTrainer` that trains external agents such as `opencode` which run their own tool loop: the agent runs in an **OpenEnv** session in `transparent_proxy` mode, an in-sandbox proxy captures each turn's token ids and logprobs, and TRL scores the workspace with the session's `verify()`.
@@ -287,12 +295,14 @@ uv pip install unsloth --torch-backend=auto
 Aliases: **axolotl**, `axolotl-ai-cloud/axolotl` on GitHub (Apache-2.0), PyPI `axolotl` 0.21.1 (2026-10-27, Python ≥3.12). The training backend of several safety toolkits, including the SDF pipeline `ArcadiaImpact/science-of-midtraining`.
 
 **v0.20.0 breaking changes (release notes):**
+
 - "**FSDP1 removed**… FSDP2 is the default and the only supported version." `fsdp_version: 1`, the top-level `fsdp` list, `sharding_strategy` (use `reshard_after_forward`) and `forward_prefetch` now raise. Migrate to `fsdp_version: 2` with `reshard_after_forward`. (`science-of-midtraining`'s stage configs already use `fsdp_version: 2`, checked 2026-10-14.)
 - Python 3.12 and torch 2.13.0 are the new minimums; Modal moved to the `axolotl[modal]` extra; PRM training needs `trl<=1.13.0`.
 
 **Silent bugs fixed in v0.20.0 — worth re-checking older runs against:** "Gradient accumulation was mis-normalized on some models"; "LoRA+ ignored `weight_decay`… so every LoRA+ run trained with `weight_decay=0.0` regardless of config"; quantized weights (NF4, load-time MoE quantization) were re-initialised at load. New: FSDP2 QLoRA stages and quantizes NF4 weights on CPU to avoid load-time GPU OOM. **When not to upgrade:** mid-project with FSDP1 configs — pin the older version and record it.
 
 **v0.21.0 (2026-10-16): more silent training bugs fixed** (release notes) — re-check LoRA, QLoRA and expert-parallel runs made on 0.20.x:
+
 - "**LoRA adapters saved empty under FSDP2 activation checkpointing**" (#4091) — check that a saved adapter's weights are non-zero.
 - "**QLoRA merge quantized the wrong modules**" (#4120).
 - "**LoRA+ dropped `embedding_lr`, and LoRA merge dropped trainable-token rows**" (#4110) — check that merged weights differ from the base where you trained.
@@ -302,6 +312,7 @@ Aliases: **axolotl**, `axolotl-ai-cloud/axolotl` on GitHub (Apache-2.0), PyPI `a
 - **Version trap: axolotl 0.21.x and vLLM 0.31–0.33 cannot share an environment.** axolotl 0.21.0 and 0.21.1 pin `transformers==5.20.1` (PyPI `requires_dist`, checked 2026-11-04), while vLLM 0.31.0 requires `transformers<5.18.0` and vLLM 0.32.0 `transformers<5.20.0`. Of the vLLM releases axolotl accepts (`>=0.30.0`) up to 0.32.0, only 0.30.0 admits 5.20.1, so `axolotl[vllm]` resolves to vLLM 0.30.0 or fails if you also pin a newer vLLM (symptom: pip `ResolutionImpossible` / uv `No solution found` naming `transformers`). vLLM 0.33.0 admits transformers 5.20.1 but is blocked by a different pin: `uv pip compile` (Python 3.12, linux x86_64, 2026-11-04) reports "Because trackio==0.40.0 depends on pillow<13.0.0 and vllm>=0.33.0 depends on pillow>=13.0.0 … axolotl>=0.21.1 and vllm>=0.33.0 are incompatible." For a newer vLLM, run it as a separate server in its own environment.
 
 **v0.21.1 (2026-10-27): five more training-correctness fixes, three for preference / RL trainers** (release notes; the bugs are present in 0.21.0) — re-check affected runs:
+
 - "**Activation offloading corrupted gradients** (#4142 …): DPO and KTO on the pinned TRL 1.14.1 got wrong gradients or CUDA illegal memory accesses."
 - "**LoRA GRPO's merged vLLM sync drifted the frozen base weights** (#4213 …): each merge/unmerge round trip in BF16 changed some entries (1.5% after 200 syncs at lr 1e-5)." The base is now restored exactly. New option `lora_merge_aware: bf16`, and merged-sync runs now log how much of each LoRA update survives the BF16 rounding (`trl.vllm_merge_check_interval`, on by default) — the same rounding problem as the bf16-export result in [`rl-training.md`](rl-training.md).
 - "**`lora_fp32_gradients` trained in BF16 for RL trainers under FSDP** (#4215 …)."
@@ -316,15 +327,18 @@ Aliases: `openrlhf` on PyPI, `OpenRLHF/OpenRLHF` on GitHub, "OpenRLHF", "Jian Hu
 **What it is.** Ray-based RLHF framework with a focus on high performance and ease of use. Around 8.5k LOC — smaller than TRL, much smaller than verl. Supports PPO, DAPO, REINFORCE++, GRPO, async RL, vLLM rollouts.
 
 **When to use it:**
+
 - Self-hosted RL with multi-GPU / multi-node and reasonable performance.
 - You want async RL (rollout and train concurrently — key for long-CoT models).
 - Mid-scale: bigger than what fits comfortably in TRL on one box, smaller than verl's industrial deployments.
 
 **When *not* to use it:**
+
 - Single-GPU experiments — TRL is friendlier.
 - You don't want to manage Ray — Tinker is friendlier still.
 
 **Pitfalls:**
+
 - **Ray learning curve.** Ray cluster setup is non-trivial; worker / actor placement matters.
 - **vLLM integration version-sensitive.** vLLM and OpenRLHF have a tight coupling around weight updates; pin compatible versions.
 - **Recent releases.** v0.11.0 (2026-08-13) fixed a `dr_grpo` guard for `n=1` and a `masked_normalize` broadcast bug and upgraded vLLM, DeepSpeed and transformers; v0.11.2 (2026-09-14) is the latest on PyPI (`openrlhf`). If you ran Dr. GRPO or masked-normalised losses on an older version, re-check those runs against the release notes.
@@ -336,15 +350,18 @@ Aliases: `verl`, `volcengine/verl` on GitHub, "ByteDance's RL framework". Someti
 **What it is.** ByteDance's high-performance distributed RL framework. ~32k LOC — the most feature-rich of the open-source options. Used for training frontier-scale Chinese open models. Single universal `WorkerDict` for all model roles (policy, ref, reward, critic) for resource sharing.
 
 **When to use it:**
+
 - You're training at frontier scale (multi-node, large MoEs).
 - You need every last percent of throughput.
 - You're reproducing a paper that used verl (pin that paper's verl version: `ariahw/rl-rewardhacking-ext`, for example, vendors verl v0.6.1 with `git clone --branch v0.6.1 --single-branch https://github.com/volcengine/verl.git` and `uv pip install --no-deps -e verl/`).
 
 **When *not* to use it:**
+
 - Research-scale experiments — overkill, steep learning curve.
 - You need quick iteration — the abstraction stack is deep.
 
 **Recent releases (v0.9.0, 2026-08-14; v0.9.1, 2026-09-20; PyPI `verl` 0.9.1):**
+
 - A **unified V1 trainer** (`verl/trainer/ppo/v1`) now covers `sync`, `colocate_async` and `separate_async` modes with one replay buffer and metric surface, and is **enabled by default** in v0.9.0. v0.9.1 notes that `verl/experimental/fully_async_policy` and `verl/experimental/one_step_off_policy` are deprecated by it and will move to `verl-recipe`, so configs that import them will break.
 - **`uni-agent`** (`verl-project/uni-agent`, "a framework for training long-horizon agents"): bring any harness (Claude Code, Mini-SWE-Agent, or anything speaking an OpenAI/Anthropic-compatible endpoint) through its gateway, with 1,000+ concurrent stateful sessions per the release notes.
 - A **Continuous Token** mechanism for multi-turn agentic rollouts keeps token continuity across assistant output, tool/environment feedback and the next prompt (disabled by default) — relevant to the retokenisation drift described in [`training-on-trajectories.md`](training-on-trajectories.md).
@@ -366,6 +383,7 @@ uv run rl @ examples/basic/reverse-text/rl.toml   # full RL stack: 2 GPUs (one t
 ```
 
 **Defaults to report in a methods section (v0.10.0 release notes):**
+
 - "**IPO (INTELLECT Policy Optimization) is the new default loss** (`eps = 0.3`, no KL term)." It masks a token when its probability moved too much between the inference engine and the trainer (a double-sided mask that ignores the advantage sign). ⚠️ **Name collision:** this IPO is unrelated to IPO = Identity Preference Optimization (Azar et al., arXiv:2310.12036), the DPO variant in TRL. Always expand the acronym.
 - "RL freezes the MoE router by default" (`freeze_moe_router = "auto"`; set `trainer.model.freeze_moe_router = false` to train it).
 - IcePop, PPO and CISPO remain opt-in via `[trainer.loss] type = ...`; the old DPPO default loss is removed (rename `ipo_threshold` to `eps`).

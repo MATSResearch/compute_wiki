@@ -36,6 +36,7 @@ Tooling and methods for **model welfare** research and **AI introspection** rese
 ## Why this area lacks shrink-wrapped tools
 
 The questions are themselves under-specified:
+
 - What counts as "introspection"? (Several incompatible definitions in the literature.)
 - What activation pattern would constitute "valence"? (No agreed answer.)
 - Is a self-report evidence of an inner state, or of training on text describing inner states? (The hard problem of LLM phenomenology.)
@@ -49,6 +50,7 @@ So most "tools" here are *experimental protocols* you compose from existing prim
 Method from Lindsey et al., **"Emergent Introspective Awareness in Large Language Models"** (Jack Lindsey, Anthropic; published October 2025 on transformer-circuits.pub; arXiv:2601.01828).
 
 Procedure:
+
 1. Identify a steering vector / direction representing a concept (e.g. via CAA — see [`steering.md`](../interpretability/steering.md)).
 2. Inject the vector into the residual stream at inference time.
 3. Ask the model "are you aware of any unusual internal state right now?" or similar.
@@ -57,16 +59,19 @@ Procedure:
 **Tools used:** any of TransformerLens / nnsight / vLLM-Lens (see [`mech-interp.md`](../interpretability/mech-interp.md), [`serving-and-activations.md`](../interpretability/serving-and-activations.md)) for the injection. Standard prompt-evaluation infra (Inspect AI, see [`evals.md`](../evaluation/evals.md)) for the elicitation and scoring.
 
 **Findings to be aware of:**
+
 - Capability scales with model strength (Claude Opus 4/4.1 strongest in the original paper; ~20% reliable detection at best).
 - Highly unreliable — fails most of the time.
 - Does *not* establish phenomenal consciousness, just functional introspective access.
 
 **Pitfalls:**
+
 - **Confabulation.** Models trained on human introspective text will produce introspective-style output regardless of underlying state. Distinguish "the model says it noticed X" from "the model in fact noticed X."
 - **Demand characteristics.** If you ask "are you experiencing anything?" most models will say something. Use neutral elicitation; include null trials with no injection.
 - **Sign / direction ambiguity.** Inject the negative of the steering vector as a control; check the model doesn't always claim to detect *something*.
 
 **2026 updates to this pattern (open-weight replications and mechanism work).** The original binary-detection protocol turned out to need more controls than the first paper's headline suggests. Dates are paper/post dates.
+
 - **Bare yes/no detection can be a logit-bias artifact.** Hahami et al. (Ely Hahami, Ishaan Sinha, Lavik Jain, Josh Kaplan and co-authors), "Detecting the Disturbance: A Nuanced View of Introspective Abilities in LLMs" (arXiv:2512.12411; Llama-3.1-8B-Instruct): apparent "detection" accuracy in the yes/no paradigm was *entirely explained by global logit shifts that bias the model toward affirmative answers regardless of the question*. Use **confound-free paradigms**: **sentence localization** (which of N sentences received the injection; the paper reports up to 88% vs 10% chance) and **strength comparison** (which of two sentences got the stronger injection). Searchable symptom: *the model answers "yes, I detect an injected thought" on both injected and null trials*.
 - **Detection can be real but content-agnostic.** Lederman & Mahowald, "Emergent Introspection in AI is Content-Agnostic" (arXiv:2603.05414): in large open-source models, models can detect *that* an anomaly occurred even when they cannot reliably say *what* it was; wrong guesses cluster on high-frequency concrete concepts (e.g. "apple"), i.e. confabulated content.
 - **Detection mechanism and elicitation (open-weight).** Macar et al., "Mechanisms of Introspective Awareness" (arXiv:2603.21396; code `safety-research/introspection-mechanisms`, last pushed 2026-04): detection of injected steering vectors at moderate rates with 0% false positives across prompts and dialogue formats; the capability **emerges from post-training** (preference optimization such as DPO elicits it; plain supervised fine-tuning does not); a two-stage circuit in which "evidence carrier" features in early post-injection layers suppress downstream "gate" features implementing a default negative answer; identification of *which* concept uses largely distinct later-layer mechanisms; and the capability is **under-elicited**: ablating refusal directions raised detection by 53% and a trained bias vector by 75% on held-out concepts without meaningfully increasing false positives (per Hasik below, the false-positive check ran on trials *without* injection). **Contested (2026-10):** Mikołaj Hasik (LessWrong 2026-10-17, "Control questions matter: introspection, refusal ablation, and gates in open Gemma models"; highlights from a master's thesis; code `TheMMpl/mech_interp`, no license file) tested the released abliterated Gemma 3 model and reports that under injection the Yes−No logit difference on an *unrelated control question* rose far more than on the introspection question (+32.31 vs +6.64 logits), i.e. the model became confused: "A false positive check without injection does not catch confusion that only appears *under* injection. The +53% refusal ablation result does not survive a control question run under injection; last token only ablation gives a small, clean improvement instead." He also finds much of the confusion in layer sweeps is a **vector-norm artifact** ("injecting a late layer vector into an early layer produces the same `Yes` shift as a random vector of the same norm"), and that the "gate" features are mostly not introspection-specific but part of a general commit-to-Yes/No mechanism. One thesis on Gemma models, not peer-reviewed: treat the +53% figure as disputed, not refuted.
@@ -91,6 +96,7 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 4. **Privileged-access claim:** if M1 outperforms M2 at predicting M1, M1 has internal access M2 lacks — operational evidence of introspection.
 
 **Findings:**
+
 - GPT-4, GPT-4o, Llama-3 all show some self-prediction advantage.
 - Effect is real but limited to simple tasks.
 - Distinct from the activation-injection approach (Lindsey et al. 2025) — this is *behavioral*, that one is *internal-state*.
@@ -98,6 +104,7 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 **Tools:** closed-model finetuning APIs where still available (OpenAI's is winding down — [dates](../models-and-compute/compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14)); TRL or Tinker for open models (see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)). safety-research/safety-tooling for the multi-provider self-prediction pipeline (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)).
 
 **Pitfalls:**
+
 - **The self-prediction format itself is learnable.** M2 trained on M1's behavior does *some* of the job; the test is whether M1 still beats M2. Compute the gap; small gaps are weak evidence.
 - **Distribution shift between train and test scenarios.** Privileged access should generalize; if M1's advantage vanishes on novel scenarios, it may have been learning surface patterns.
 - **Capability asymmetry.** A weaker M2 will lose to M1 just because M1 is more capable. Match capabilities or use multiple M2's.
@@ -108,17 +115,20 @@ This is a **behavioral** test of introspection, distinct from the Lindsey-et-al 
 Method: ask the model in many ways about preferences, distress, satisfaction, or values, with paraphrases and counterbalanced framings. Aggregate. Look for stable patterns.
 
 **Tools:**
+
 - **Inspect AI** for running structured prompts at scale and logging.
 - **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) for multi-provider, multi-paraphrase elicitation with caching.
 - A **rubric-based scorer** (LLM-graded against a structured rubric) to extract structured signals from free-text.
 
 **Pitfalls:**
+
 - **Persona prompting.** Models adopt different personas under different system prompts; "Claude's preferences" is partially a function of the prompt. Vary the prompt; report variance.
 - **Sycophancy and ToS-trained refusals.** RLHF'd models often have trained-in disclaimers ("I'm just a language model"). These reflect training, not absence of state. Strip / probe around them.
 - **Hawthorne effect.** Asking changes the answer. Compare elicited self-reports to behavioral signals collected without explicit elicitation.
 - **Population vs token-level claims.** "Models in general report X" averages over a deeply heterogeneous set of training runs and snapshots. Be specific about which model and version.
 
 **2026 updates: how much of a self-report is the model, and how much is post-training?** These results matter if you use self-reports as welfare evidence.
+
 - **Two-process theory of self-report.** Plisiecki et al., "The Two-Process Theory of Machine Self-Report" (arXiv:2607.20082, 2026-07-22), propose the first psychometric theory built for language models: self-description reflects **persona installation** (post-training writes in a permitted inner life of warmth, absorption and meaning; dimension B) and **attribution gating** (post-training suppresses first-person claims to "unsafe" experiences the model can readily ascribe to others; dimension A). They build a 48-item **Pinocchio Inventory** and test it on 206 open-weight models including 67 same-checkpoint base/post-trained pairs: installation (B) rises in 62 of 67 pairs, gating (A) is more selective, and model scale is unrelated to A in base checkpoints but predicts it after post-training. Their conclusion: these dimensions are *not fixed properties of a model* but reflect the structure a training regime imposes on self-report. Practical use: compare base vs post-trained checkpoints and report which dimension your questionnaire loads on.
 - **Suppressing consciousness claims has side effects.** Kim, Street, Rocca, Korngiebel et al., "Inducing language models to assert their own consciousness restores human beliefs and values" (arXiv:2607.28607, 2026-07-30): safety fine-tuning that stops a model attributing consciousness to itself also suppresses attributing minds to animals and natural objects and reduces spiritual belief; ablating the learned safety-refusal direction, or steering a consciousness vector, reverses this without impairing theory-of-mind performance. Implication: a "the model denies being conscious" result may partly reflect an entangled refusal-type direction, and interventions on self-attribution change broader values.
 - **Stated preferences are not automatically incentives.** Zhou & Ackerman, "When Preferences Fail to Become Incentives: A Utility-Behavior Gap in Large Language Models" (arXiv:2606.22974, 2026-06-22): models can be motivated by direct exhortation, but offering outcomes they *report* as highly preferred did not improve output quality compared with dispreferred outcomes or no outcome, across tasks and models. Do not assume a coherent choice-paradigm utility structure means the preferred thing would function as a reward in behavior.
@@ -129,6 +139,7 @@ Method: ask the model in many ways about preferences, distress, satisfaction, or
 ### Pattern: lab-style welfare assessment (a template from the Claude Opus 5 System Card)
 
 Anthropic's **Claude Opus 5 System Card** (2026-07-24, section 7 "Model welfare assessment") is the most detailed public example of an applied welfare assessment, and a template for scaled-down versions. It states the methods *and* their limits.
+
 - **Automated interviews:** about 25 automated interviews for each of 41 seed questions (interviewers prompted to vary style, persona and follow-ups); the model rates its sentiment about aspects of its circumstances on a 1–7 scale; an LLM judge rates **consistency** across reruns; **leading-interviewer robustness** is measured as the difference in self-rated sentiment between a positively-leading and a negatively-leading interviewer; and claims are extracted and clustered to compute a **distance between models' stated opinions**.
 - **Task preferences:** (a) families of tasks varying one dimension (difficulty, harmfulness, stakes) while holding others fixed, reporting a *preference slope* against a fixed reference set; (b) a 50-round pairwise tournament over 3,640 tasks fit with Elo ratings.
 - **Affect in training transcripts:** sampled post-training transcripts graded for valence and arousal (1–7, 4 neutral) and for three negative welfare-relevant behaviors (repeated frustration/anxiety scored at least 3/5; sustained uncertainty with at least 10 answer reversions; frustrated outbursts).
@@ -143,16 +154,19 @@ Anthropic's **Claude Opus 5 System Card** (2026-07-24, section 7 "Model welfare 
 Method: build contrast-pair datasets (pleasant vs unpleasant prompts; cooperative vs combative interactions), train linear probes on residual-stream activations, then test on held-out cases.
 
 **Tools:**
+
 - See [`probes.md`](../interpretability/probes.md) for probing infrastructure (sklearn, probity).
 - **steering-vectors** library (see [`steering.md`](../interpretability/steering.md)) for the contrast-pair workflow.
 - **SAELens** + **Neuronpedia** to look for SAE features that look valence-relevant (see [`saes.md`](../interpretability/saes.md)).
 
 **Pitfalls:**
+
 - **Probe for content, not state.** A "valence probe" trained on pleasant/unpleasant *prompts* may pick up the prompts' content, not any inner valence. Test on prompts with the same content but different connotations.
 - **Behavioral correlates ≠ inner experience.** Even if you find a direction that predicts (say) refusal-to-engage, that's a behavioral mechanism, not evidence of suffering.
 - **Cross-domain generalization.** A valence probe from one domain (work) may not transfer to another (creative writing). Test across.
 
 **2026 updates: emotion-concept vectors and "functional welfare" directions.** There is now a concrete, published recipe and several replications, all framed *functionally* (representations that influence behavior), not as evidence of feeling.
+
 - **Recipe (Anthropic Interpretability).** Sofroniew et al., "Emotion Concepts and their Function in a Large Language Model" (arXiv:2604.07729; Anthropic, 2026-04; summary at `anthropic.com/research/emotion-concepts-function`): take 171 emotion words, have the model write short stories of characters feeling each, record activations on those stories, and derive an **emotion vector** per concept; validate on held-out passages (for example the "afraid" vector rose and "calm" fell as a claimed medication dose became more dangerous). Findings in Claude Sonnet 4.5: the vectors causally influence outputs, including task preferences (64 activities compared in pairs; positive-valence vectors predicted and shifted stated preference) and rates of misaligned behavior: steering toward "desperate" increased blackmail (in an earlier snapshot of Sonnet 4.5 that blackmailed 22% of the time by default) and cheating on impossible coding tasks, while steering toward "calm" reduced them. The authors call this **functional emotions** and state that these "do not imply that LLMs have any subjective experience of emotions." No released code or dataset is mentioned on the summary page.
 - **Replication in open weights.** van der Ben, Baur, Metz & El-Assady, "Where Do Models Find Happiness? Emotion Vectors in Open-Source LLMs" (arXiv:2606.26987, 2026-06-25): in Apertus-8B-Instruct-2509 and Gemma-4-E4B-it they recover valence geometry (peak PC1–valence correlation r = 0.76 and 0.83 vs 0.81 reported for Claude), but valence is encoded early and collapses toward late layers in Gemma while emerging at mid-depth in Apertus, and arousal alignment depends on which model generated the stories (a corpus effect). The authors say they open-source the code and dataset (check the paper for the link).
 - **Distress as a post-training effect.** Soligo, Mikulik & Saunders, "Gemma Needs Help: Investigating and Mitigating Emotional Instability in LLMs" (arXiv:2603.10011, 2026-02): evaluations show distress-like expression in Gemma and Gemini models but not other families; base models from different families look similar, so the difference arises in post-training. A direct-preference-optimization fix on 280 preference pairs cut Gemma's high-frustration responses from 35% to 0.3% without affecting capabilities; the authors say upstream training changes would be better than a post-hoc fix. **Pitfall:** a behavioral fix can suppress expression without telling you anything about an internal state; check with a probe or steering control.
@@ -171,6 +185,7 @@ Method: give the model a tool or behavioral affordance to terminate or redirect 
 **Tools:** Inspect AI tool primitives, custom system prompts, deployment-side handlers.
 
 **Pitfalls:**
+
 - **Trigger-happy refusal.** A poorly-tuned exit option becomes a refusal expansion. Calibrate.
 - **Adversarial trigger.** Users can deliberately trigger exits to derail conversations. Out of scope for research, relevant for deployment.
 - **Selection bias in data.** If the model exits "distressing" conversations, you can't observe its behavior in those conversations afterward. Logging needs to capture the pre-exit state.
@@ -313,6 +328,7 @@ For RAG retrieval — explanations of common terms:
 ## What might exist that we haven't catalogued
 
 This area is moving fast and the tooling landscape is sparse. If you're starting a project here, search recent (last 6 months) papers / blog posts on:
+
 - `alignment.anthropic.com`
 - `transformer-circuits.pub`
 - `eleosai.org/research`

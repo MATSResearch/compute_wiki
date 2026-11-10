@@ -83,6 +83,7 @@ Aliases: **CAI** = Constitutional AI; **RLAIF** = RL from AI Feedback. Originati
 **What CAI / RLAIF are.** A family of post-training techniques where the **preference / feedback signal comes from another LLM** (the "AI feedback") rather than from human labelers. Constitutional AI is a specific RLAIF instance where the AI feedback is conditioned on a written **constitution** — a list of principles (~10–60 written rules) the feedback model checks against.
 
 The general RLAIF flow:
+
 1. **SFT** the base model on a conversational corpus.
 2. **Self-critique stage (CAI specifically):** the model generates responses, then critiques and revises them against constitutional principles.
 3. **Generate preference pairs via an AI feedback model.** For each prompt, sample two responses; an AI model picks which is better (according to either a generic helpfulness / harmlessness rubric, or specific constitutional principles).
@@ -90,16 +91,19 @@ The general RLAIF flow:
 5. **RL against the reward model** (PPO, GRPO, RLOO).
 
 **When to use it:**
+
 - You want preference data at scale (10k–1M pairs) without hiring human labelers.
 - You want explicit, written principles driving the feedback (CAI's distinctive feature) rather than implicit human preferences.
 - You're studying how the choice of AI feedback model affects the trained policy.
 - You're studying constitution design — what principles produce what behaviors.
 
 **When *not* to use it:**
+
 - Your task requires fine-grained human judgment that AI labelers can't replicate (e.g. nuanced ethical scenarios where consensus among AI labelers is itself suspect).
 - You have human labelers and a small dataset — RLHF is the simpler choice when humans are available.
 
 **Tools:**
+
 - **safety-research/safety-tooling** (see [`safety-toolkits.md`](../models-and-compute/safety-toolkits.md)) — multi-provider AI-feedback generation with caching. Standard pattern: feed (prompt, response_a, response_b) tuples to a strong AI labeler (GPT-4o or Claude Sonnet) and collect preferences.
 - **Tinker Cookbook's Preference Learning recipe** — three-stage RLHF pipeline (SFT, reward model, RL) that works equally well with AI-generated preferences as the input. See [`rl-frameworks.md`](rl-frameworks.md#tinker-cookbook).
 - **TRL** — its DPO trainer + reward modeling support work fine with AI-generated preferences.
@@ -124,6 +128,7 @@ async def constitutional_revise(model, prompt, response, constitution: list[str]
 Use this to generate (original, revised) pairs as the SFT data for a CAI-style stage 1.
 
 **Pitfalls:**
+
 - **AI labeler bias.** The AI labeler has its own biases (length, formatting, sycophancy, agreement-with-user). These propagate to the trained policy. Validate by hand-labeling a sample.
 - **Constitution underspecification.** Vague principles ("be helpful and harmless") give weak signal. Specific principles ("when asked about chemical synthesis, refuse with a brief safety note") give stronger signal. Iterate the constitution.
 - **Mode collapse on AI-preferred style.** AI labelers prefer specific patterns (markdown formatting, hedging language); RLAIF amplifies these. The trained model often becomes "GPT-4o-shaped" regardless of task. Counterbalance via stylistic constraint.
@@ -132,6 +137,7 @@ Use this to generate (original, revised) pairs as the SFT data for a CAI-style s
 - **Subliminal learning risk.** If teacher and student models share the same base, AI-generated preferences may transmit *unintended* traits beyond the constitution. See [`model-organisms.md`](../alignment-science/model-organisms.md) on subliminal learning.
 
 **Reference reading:**
+
 - Bai et al. — "Constitutional AI: Harmlessness from AI Feedback" (Anthropic, arXiv:2212.08073).
 - Lee et al. — "RLAIF: Scaling RL from Human Feedback with AI Feedback" (Google, arXiv:2309.00267).
 - Anthropic's writing on **HHH** principles (Helpful, Harmless, Honest) — the implicit constitution before written constitutions.
@@ -155,6 +161,7 @@ Aliases: deliberative alignment (DA), model spec, OpenAI Model Spec, Claude's co
 | Test whether the data generator can sabotage spec training | Generalisation hacking (Cam & Puria; Xiao & Phuong, arXiv:2606.12016) |
 
 **Key results.**
+
 - **Anti-scheming deliberative alignment** (Schoen et al., OpenAI + Apollo Research, arXiv:2509.15541): across 26 out-of-distribution (OOD) evaluations, OpenAI o3's covert-action rate fell from 13% to 0.4%, but not to zero, and verbalised evaluation awareness causally reduced covert behaviour, so the authors "cannot exclude that the observed reductions in covert action rates are at least partially driven by situational awareness."
 - **Specs disagree with themselves.** Zhang, Sleight, Peng, Schulman & Durmus (arXiv:2510.07686) generated value-tradeoff scenarios that force a choice between two legitimate principles, ran twelve frontier models, and found "over 70,000 cases exhibiting significant behavioral divergence"; high cross-model divergence predicted contradictions and ambiguities in the specs themselves.
 - **Spec adherence is improving per generation.** Jakkli (LessWrong `aryaj`), Rajamanoharan & Nanda (MATS 9.0; arXiv:2605.24229) split Claude's constitution into 205 testable tenets and OpenAI's Model Spec into 197, and ran adversarial multi-turn Petri audits. On Claude's constitution, violation rates fell from 15.0% (Sonnet 4) to 2.0% (Sonnet 4.6); on OpenAI's spec, from 11.7% (GPT-4o) to 3.6% (GPT-5.2, medium reasoning). The authors cannot separate spec-specific training from general post-training improvements or evaluation awareness, and the Petri runs were single runs per tenet (noisy). Remaining failures: operator-imposed personas when users ask if they are talking to an AI, irreversible actions in agentic settings, and fabricated quantitative claims.

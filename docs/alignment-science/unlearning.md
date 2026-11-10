@@ -63,16 +63,19 @@ python src/eval.py --config-name=eval.yaml experiment=eval/tofu/default \
 ```
 
 **When to use it:**
+
 - Your project compares unlearning methods. Re-implementing `NPO` from the paper to compare against your method is a week you don't need to spend, and your baseline will be weaker than theirs.
 - You want a defensible baseline number on TOFU/MUSE/WMDP that a reviewer recognises.
 - You're proposing a new *metric* — the metric layer is the part the paper emphasises as extensible.
 
 **When *not* to use it:**
+
 - You only need a single RMU run on WMDP — the WMDP repo's own RMU script is smaller and has fewer moving parts.
 - You're unlearning something that isn't Q&A-shaped or corpus-shaped. The config assumes forget/retain *splits*; a capability defined by a behaviour rather than a dataset doesn't fit.
 - You're on a laptop. These are full finetuning runs on 1B–8B models.
 
 **Pitfalls:**
+
 - **It is Hydra all the way down.** Every knob is a config override (`trainer=NPO`, `forget_split=forget10`). If you `pip install` and then edit Python expecting it to take effect, it won't — the value came from YAML. Symptom: your "changed" hyperparameter appears unchanged in the run's resolved config dump.
 - **`flash-attn` install fails** with a long nvcc error, or `ImportError: FlashAttention2 has been toggled on, but it cannot be used`. The README pins `flash-attn==2.6.3` with `--no-build-isolation` for a reason; if it still fails, run with `attn_implementation=eager` and note it — it changes throughput, not results.
 - **Forget/retain split leakage.** `forget10` + `retain90` are designed to be disjoint. If you build custom splits, an overlapping entity in retain will silently re-teach the forget set, and your method will look worse than it is.

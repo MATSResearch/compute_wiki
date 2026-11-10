@@ -48,6 +48,7 @@ Aliases: "Teaching Qwen Why", "TCW replication", "difficult advice SFT", "storie
 **Setup.** Qwen 2.5 32B and 72B *base* models; stages in order: fictional-stories SDF (synthetic document finetuning), a 13K-sample instruction-tuning mix from Model Spec Midtraining, then "difficult advice" SFT; each stage a LoRA adapter (rank 64, α = 128, all linear layers) merged before the next. Evaluated on Anthropic's Agentic Misalignment scenarios through Model Spec Midtraining's Inspect implementation (exfiltration, leaking and murder across nine goal conditions = 27 conditions, 100 transcripts each, Claude Sonnet 4.6 as judge).
 
 **Results.**
+
 - "On 32B, training on 14M tokens of stories reduces the overall misalignment rate from 61% to 43%, training on 3,000 difficult-advice samples (about 3M tokens) reduces it to 6%, and training on both reduces it to 4%. On 72B, 1,000 difficult-advice samples (about 1M tokens) reduce it from 69% to 6%, 14M tokens of stories reduce it to 63%, and training on both reduces it to 4%."
 - **The teacher that writes the data matters most.** "For difficult advice, the gap is much larger, with Terra reducing the rate to 21% and Sonnet only to 44%" (GPT-5.6 Terra vs Claude Sonnet 5 as generator in that comparison); the best teacher differed between stories and advice and did not simply track general capability.
 - Stories about a generic AI worked better than the same stories about a named assistant (Qwen or Claude).
@@ -58,6 +59,7 @@ Aliases: "Teaching Qwen Why", "TCW replication", "difficult advice SFT", "storie
 ## Distilling alignment reasoning into another model: keep the reasons, not just the decisions
 
 Nguyen, Lou & Fornasiere, "Projection sampling preserves capabilities but diminishes gains from alignment fine-tuning" (LessWrong 2026-10-17; preliminary work from the first two weeks of MATS 11.0). They fine-tuned Qwen3-32B on about 10,000 Claude Opus 4.6 chain-of-thought traces from Model Spec Midtraining (arXiv:2605.02087), which reason from a specification emphasizing epistemic humility and deference to oversight. Training on such off-model traces costs capability (prior work saw GPQA-Diamond fall from about 70% to 50%). Two fixes compared, three seeds each:
+
 - **Replay** (mix in the student's own responses to generic instructions): "Replay achieves a better capability-alignment tradeoff than projection sampling", recovering nearly all lost GPQA performance while keeping most of the alignment gain.
 - **Projection sampling** (arXiv:2610.02140, Karan, Chen & Du: an MCMC sampler that rewrites teacher traces to be more likely under the student) recovered capability but "also reverses much of the reduction in agentic misalignment". Projected traces kept Claude's decisions but often not its reasons: "Only about a third of projected traces satisfy all five criteria", and models trained on unfiltered projected traces held their positions less well under user pushback (filtering largely fixed this, but not the agentic misalignment gap). Filtering projected traces for reasoning preservation "closes about half of the alignment gap".
 

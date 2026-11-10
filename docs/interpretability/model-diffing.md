@@ -115,16 +115,19 @@ uv run streamlit run dashboard.py     # http://localhost:8501
 ```
 
 **When to use it:**
+
 - You have a base/finetuned pair and want more than one method's opinion without writing four pipelines.
 - You want the crosscoder or SAE-difference path but don't want to own the training loop.
 - You want a UI to browse candidate latents with a collaborator, which is much of the actual work in a diffing project.
 
 **When *not* to use it:**
+
 - Your two models don't share an architecture or tokenizer. Cross-architecture diffing is a research problem in its own right (arXiv **2602.11729**, "Cross-Architecture Model Diffing with Crosscoders"), not a config flag.
 - You only need the KL baseline — the 20 lines above are faster than learning the config tree.
 - You're on API-only models. Every method here needs weights and activations; see [`serving-and-activations.md`](serving-and-activations.md) for what's possible without them (very little).
 
 **Pitfalls:**
+
 - **Preprocessing is a separate, expensive stage.** `pipeline.mode=preprocessing` collects and caches paired activations; skipping straight to `mode=diffing` fails or silently reuses a stale cache from a different model pair. Symptom: results that don't change when you change `organism=`.
 - **Hydra config, same as OpenUnlearning.** Overrides come from YAML, not from editing Python.
 - **Disk.** Paired activation caches for two models over a decent corpus are tens to hundreds of GB. Check [`compute.md`](../models-and-compute/compute.md) storage notes before starting on a rented box with a 50GB volume. As of 2026-09-01 the crosscoder method has an **opt-in streaming path** (`diffing.method.streaming.enabled=true`; PR #84) that collects paired activations on the fly instead of caching them (the PR cites a few hundred GB of cache for a 200M-token run), keeping paired buffers aligned in the models' dtype; its author reports the cached and streamed dictionaries match (decoder-norm-difference quantile correlation 0.993 on a small test). Default behaviour is unchanged.

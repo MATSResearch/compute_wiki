@@ -42,11 +42,13 @@ Aliases: `safetytooling` (the import name; **not published on PyPI** — `pypi.o
 - **Bounded caches:** `FileBasedCacheManager` has a memory limit (2025-12) and least-recently-used (LRU) eviction instead of smallest-first (2026-02).
 
 Key modules:
+
 - `safetytooling.apis.inference.api` — `InferenceAPI` class.
 - `safetytooling.data_models.messages` — prompt/response classes.
 - `safetytooling.utils.experiment_utils` — `ExperimentConfigBase` you can subclass.
 
 **When to use it:**
+
 - You're writing a safety research script that calls multiple providers (the typical case for cross-provider behavioral evals).
 - You want caching so reruns are free.
 - You're building a dataset of model outputs and want to swap providers without rewriting.
@@ -54,11 +56,13 @@ Key modules:
 - You want a sensible `ExperimentConfigBase` rather than rolling your own argparse/Hydra.
 
 **When *not* to use it:**
+
 - You're running a structured eval — use **Inspect AI** instead (it has its own multi-provider support and produces standard logs).
 - You only need one provider — direct SDK is simpler.
 - You need an OSS-license-compatible commercial deployment — read the license first.
 
 **Pitfalls:**
+
 - **Cache key includes the model ID.** Renaming `claude-sonnet-4-5` → `claude-sonnet-4-6` doesn't invalidate the cache — it just misses. If you want to re-run, clear the cache or change the cache_dir.
 - **Cache key does *not* always include sampling parameters.** Verify by reading the source if your experiment changes temperature / top_p — re-running with new params may unexpectedly hit cache.
 - **Async-only.** `InferenceAPI` is an async API. Wrap with `asyncio.run(...)` or use inside an async function. No sync convenience wrapper.
@@ -93,10 +97,12 @@ Although Inspect AI is primarily an eval framework (see [`evals.md`](../evaluati
 - It has caching, retries, rate limiting.
 
 **When to use Inspect-as-toolkit instead of safety-tooling:**
+
 - You'll later wrap the work in an eval anyway.
 - You want eval logs (Inspect View) for your work-in-progress.
 
 **When to use safety-tooling instead:**
+
 - Faster iteration loop without Task/Solver/Scorer structure.
 - Want async-first ergonomics.
 - Need the human-labeling framework, cost tracking, ElevenLabs TTS, or other extras specific to safety-tooling.
@@ -122,6 +128,7 @@ Aliases: **Bloom** ("Bloom: an open source tool for automated behavioral evaluat
 **What they are.** **Bloom** takes a *seed* — a description of a target behavior (sycophancy, self-preservation, delusion-sycophancy, political bias, …), optional example transcripts, and variation dimensions — and generates a suite of test scenarios, runs multi-turn conversations with the target model, and scores them with a judge. Unlike a fixed benchmark, its suites change with the seed, so **cite the full seed configuration** for reproducibility. **Petri** is the auditor/target framework underneath: an auditor model plays the user and simulates tools, a target model is evaluated, a judge scores transcripts. Both run on **Inspect AI**.
 
 **Where they live now (verified 2026-10-09).**
+
 - `safety-research/bloom` is **frozen**: its README says the project "is now developed and maintained by Meridian Labs" and "will not receive updates" (notice committed 2026-05-07; last push the same day). The maintained successor is **Petri Bloom** — an implementation of Bloom on the Petri auditor/target framework — `pip install petri-bloom` (version 0.2.6, Python ≥ 3.12; GitHub release 2026-07-15).
 - `safety-research/petri` now redirects to `meridianlabs-ai/inspect_petri`. **Petri 3.x** (`inspect-petri` 3.1.1, 2026-10-01, Python ≥ 3.12) keeps most command-line interface (CLI) commands from Petri 2.0 but **has incompatible Python APIs**; Petri 2.0 remains installable from the `petri-v2` branch (`pip install git+https://github.com/meridianlabs-ai/inspect_petri@petri-v2`). Release notes: 3.1.0 (released 2026-08-12; its changelog heading is dated 2026-07-22) added `audit_scanner()` (a building block for custom Petri scorers) and made the auditor's prefill distinguishable from genuine target output; 3.1.1 (2026-10-01) **drops target tool options so providers cannot run tools server-side**, rejects seed tool definitions with unknown or misspelled keys, and tolerates CRLF in seed front matter.
 
@@ -139,15 +146,18 @@ inspect view
 ```
 
 **When to use it:**
+
 - You want a *propensity* evaluation for a behavior no existing benchmark covers, and a researcher-written seed is a better fit than a fixed dataset.
 - You want auditor-driven multi-turn probing with tool simulation and rollback (Petri).
 
 **When *not* to use it:**
+
 - You need a fixed, citable benchmark with a stable test set — use an Inspect task from `inspect_evals` ([`evals.md`](../evaluation/evals.md)). Bloom and Petri findings are *candidates*: judge-model scores depend on the auditor, judge and seed, so confirm a behavior with a held-out prompt set.
 - You are starting new work on `safety-research/bloom` — it is frozen; start from Petri Bloom.
 - You are auditing tool-using behavior on a version older than Petri 3.1.1 — before it, target tool options were passed through and providers could run tools server-side; upgrade first.
 
 **Pitfalls:**
+
 - **Version drift between the Petri API and your scripts.** Scripts written for Petri 2.x fail on 3.x with `ImportError` / `AttributeError` on moved Python APIs; pin `inspect-petri` and record the version in `metadata.json`.
 - **Judge and auditor choice dominate results.** Record auditor, judge and target ids (and provider; see the OpenRouter pinning pitfall in [`evals.md`](../evaluation/evals.md#pin-your-inference-provider-openrouter-and-other-routers)) alongside every score.
 - Bloom's README carries a canary string — do not put benchmark outputs into training corpora.

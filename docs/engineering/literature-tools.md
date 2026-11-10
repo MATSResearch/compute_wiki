@@ -211,6 +211,7 @@ curl -s "https://api.semanticscholar.org/graph/v1/paper/arXiv:2504.01848?fields=
 ```
 
 **Searchable errors:**
+
 - `{"message": "Too Many Requests. Please wait and try again or apply for a key for higher rate limits. …", "code": "429"}` — unauthenticated requests are rate-limited (this page's own checks hit it within a few calls). Request a free key and send it in the `x-api-key` header ("case-sensitive", per the API spec).
 - `{"error":"Unrecognized or unsupported fields: [...]"}` — a misspelt field name in `fields=`; the response schema in the spec lists the valid ones.
 

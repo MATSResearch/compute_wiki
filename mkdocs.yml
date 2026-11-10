@@ -80,6 +80,7 @@ nav:
       - engineering/skill-hints.md
       - engineering/statistics.md
       - engineering/measurement-validity.md
+      - engineering/reviewing-drafts.md
       - engineering/visualization.md
       - engineering/research-plots.md
 
@@ -95,6 +96,9 @@ markdown_extensions:
       slugify: !!python/object/apply:pymdownx.slugs.slugify
         kwds:
           case: lower
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search

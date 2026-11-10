@@ -60,15 +60,18 @@ The `Task` you subclass (`kronfluence.task.Task`) has two abstract methods you m
 `compute_measurement` is where the safety framing lives: it returns the quantity *f(θ)* you want explained. For "which documents made it write insecure code", the measurement is the log-probability of the misaligned completion under the query prompt, **not** the training loss.
 
 **When to use it:**
+
 - You finetuned a model yourself, have the training set on disk, and want per-document attribution for a specific surprising output.
 - You want the method used by the reference LLM influence-function paper rather than a bespoke gradient-similarity heuristic.
 
 **When *not* to use it:**
+
 - The model is API-only, or you don't have the training data. Influence functions need both.
 - You want attribution over *pretraining*. At that scale this is a research project of its own, not a library call.
 - Your question is "which concept", not "which document" — use diffing or SAEs.
 
 **Pitfalls:**
+
 - **Factor fitting is the expensive step, and it is per-model-state.** `fit_all_factors` must be re-run after any weight change. Symptom: silently reusing a `factors_name` from a different checkpoint and getting scores that look plausible and mean nothing. Namespace `factors_name` by checkpoint.
 - **`compute_pairwise_scores` is |query| × |train|.** Memory and time grow with both; the `per_device_query_batch_size` in the README (1024) is an MNIST-scale number, not an LLM-scale one.
 - **Influence is a local, first-order approximation** around the current weights. It answers "if this example had been slightly up/down-weighted", not "if this example had never existed". For a behaviour that emerged from a phase transition during training, the approximation can be badly wrong — this is the honest caveat to put in your limitations section.
@@ -87,6 +90,7 @@ Aliases: `traker` on PyPI (**note the name**: `pip install traker`, not `pip ins
 **When *not* to use it:** you have exactly one model and one query — the setup cost isn't worth it. Also note TRAK's headline results come from ensembling over multiple training runs; a single-model TRAK score is a weaker estimate than the paper's numbers imply, so don't cite paper-level accuracy for a single-model application.
 
 **Pitfalls:**
+
 - **Package name mismatch** (`traker` vs the repo name `trak`) — symptom: `ModuleNotFoundError: No module named 'trak'` after installing the wrong PyPI package, or installing an unrelated project.
 - **`[fast]` needs a matching CUDA toolchain.** If the kernel won't build, the plain install works and is just slower.
 
@@ -109,6 +113,7 @@ bergson query --index runs/index --unit_norm
 **When *not* to use it:** API-only models or no access to the training data. MAGIC's efficacy is proportional to *metasmoothness* of the training run, which is low in some settings including early pretraining steps — run `bergson metasmoothness` first. Influence functions are also sensitive to the Hessian-damping hyperparameter in tiny models; tune it.
 
 **Pitfalls:**
+
 - **Inconsistent per-example gradients under batching.** Some models give different per-example gradients when batched (nondeterminism in optimized SDPA, scaled dot-product attention, backends: flash / memory-efficient), so scores shift with padding or batch composition. Run `bergson test_model_configuration --model <name>`; it reports which of `--force_math_sdp`, `--precision fp32 --use_tf32_matmuls --force_math_sdp`, or full `--precision fp32` you need (same flags for `score` and `trackstar`), and also detects BOS/EOS duplication from chat templates.
 - **Stale index.** A gradient store is tied to the checkpoint it was built from; rebuild after any weight change (same rule as kronfluence factors).
 - **K-FAC preconditioning on MoE (Mixture-of-Experts) experts was mis-scaled before v2.5.1 (no error).** An expert's K-FAC covariances summed only the positions routed to it but were divided by the count of *all* positions, so per PR #565 "An expert's preconditioned gradient comes out roughly 1/p times too large compared with the dense modules" (p = the expert's routed fraction; "With top-2 of 64 experts that is about 32×"). The PR states "EK-FAC is unaffected: the eigenvectors don't depend on the scale"; dense models are unchanged. Re-run K-FAC (uncorrected-eigenvalue) attributions on MoE models made with Bergson < 2.5.1 (fix: "Average MoE expert K-FAC covariances over their routed positions", v2.5.1, 2026-10-26). The PR lists as not covered the file-based path (`compute_eigendecomposition`, used by `tkfac`/`shampoo` and approximate unrolling's segment aggregation), which still divides by the all-position count.
@@ -121,6 +126,7 @@ Aliases: BIF, local Bayesian influence function, Hessian-free influence function
 **What it is.** Kreer, Wu, Adam, Furman & Hoogland, "Bayesian Influence Functions for Hessian-Free Data Attribution" (arXiv **2509.26544**, ICLR 2026). Classical influence functions, EK-FAC (Eigenvalue-corrected Kronecker-Factored Approximate Curvature) included, need an inverse Hessian. The BIF instead samples weights near the trained checkpoint with SGLD and uses the (negative) covariance between a training example's loss and a query's loss across those samples as the influence. It comes from singular learning theory (SLT), the same machinery as the local learning coefficient (LLC); see [`slt-devinterp.md`](slt-devinterp.md). It works for any differentiable layer, whereas EK-FAC (and kronfluence) cover only `nn.Linear` / `nn.Conv2d`, so attention and normalization are left out. It gives per-token influence matrices directly.
 
 **What the paper shows, against EK-FAC.**
+
 - *Retraining accuracy (LDS, linear datamodeling score):* on CIFAR-10 / ResNet-9 the BIF beat EK-FAC in the small-retrain-subset regime. In a Pythia-14M WikiText finetuning setting it *underperformed*: LDS 0.110 versus 0.221 for EK-FAC and 0.198 for plain gradient similarity (appendix C.3). The authors attribute this to harder sampling for language models.
 - *Cost:* on the small image models EK-FAC was about 5x faster. In a timing comparison across the Pythia suite (up to Pythia-2.8B, on one 4xA100 node, 2k SGLD draws) the BIF needs no up-front factor fit, and for the largest models it was about two orders of magnitude faster in evaluation time at the same peak GPU memory. EK-FAC's fitted factors for Pythia-2.8B took 41 GiB on disk. That fit only pays off once you score many queries.
 - *Main limitation (authors'):* accuracy depends on posterior-sampling quality, and the SGLD hyperparameters (step size, localization strength γ, inverse temperature β) are not well characterized for language models.

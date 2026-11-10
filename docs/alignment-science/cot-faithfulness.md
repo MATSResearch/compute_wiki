@@ -92,6 +92,7 @@ Aliases: arXiv:2510.27378, "MATS monitorability paper", "monitorability score".
 **What it adds:** introduces **verbosity** as a complement to faithfulness. A CoT can be faithful (uses what's stated) but not verbose (doesn't state everything that mattered). Combined into a single **monitorability score**.
 
 Findings:
+
 - Models can appear faithful yet remain hard to monitor when key factors are omitted.
 - Monitorability differs sharply across model families.
 - Useful operational metric beyond faithfulness alone.
@@ -103,6 +104,7 @@ Findings:
 Aliases: arXiv:2507.11473, "the CoT monitorability position paper".
 
 A position / framing paper rather than a method, but core to the field. Key arguments:
+
 - CoT monitorability is currently usable for safety because reasoning models *visibly externalize reasoning*.
 - This is fragile: training pressure can erode it. RL on outcome-only rewards risks losing it. Architecture changes (e.g. continuous thought / latent reasoning) destroy it outright.
 - Recommends preserving CoT visibility as a deliberate safety property.
@@ -148,11 +150,13 @@ There is still no shrink-wrapped *library*, but as of 2026 there are ready-made 
 Headline metric: **g-mean²** (combines true-positive and true-negative rate of the monitor). Intervention results are not reported when fewer than 10% of instances show a positive effect, and non-intervention results are not reported with fewer than 3 positive instances; a cross-fit filtering step makes intervention estimates robust to noisy instances.
 
 **Weaknesses you should know before using it** (Connor Dilgren & Sarah Wiegreffe, LessWrong 2026-08-17, "Evaluating Chain-of-Thought Monitorability is Still an Open Problem"):
+
 - **Aggressive filtering shrinks the eval.** Filtering to instances where the intervention reliably flips the answer can leave very few instances: in their run on DeepSeek-R1-Distill-Qwen 7B/14B/32B, roughly 19–24% of AIME and 16–17% of GPQA instances were eligible and only 3–5% of MATH. Because eligible instances are **model-specific**, two models are effectively scored on *different subsets* of the same dataset, so cross-model comparisons are weaker than they look.
 - **Label noise in outcome-property evals.** Deciding unambiguously that a "hack" or side task occurred is hard; on the Impossible Coding Tasks solution-length evals, moving from the most inclusive to the strictest definition of "actual hack" increased g-mean² by about 17 percentage points. SHADE-Arena has only 17 private-split instances (14 used).
 - **Only outcome-property evals test misbehavior detection.** Intervention evals measure whether a model *communicates factors that affect its answer*; process evals measure whether it *spells out each step*. Neither directly measures whether a monitor catches harmful actions.
 
 **OpenAI's own fix for the different-subsets problem: "Beyond g-mean²"** (Guan, Xie & Baker, OpenAI Alignment Research Blog, 2026-10-20, `alignment.openai.com/beyond-gmean-squared/`; no code link in the post). Two complementary metrics plus a bound:
+
 - **Pair-matched g-mean²** compares two models only on instances supported for both, which "reduces bias from model-dependent instance selection and exposes when apparent monitorability differences come from evaluating different mixtures of examples". For three or more models the pairwise estimates are combined with **inverse-variance-weighted HodgeRank** (a weighted least-squares fit to the pairwise differences); report its uncertainty and fit residuals, and "avoid claiming a definitive ordering when the fit is poor or models are not meaningfully separated".
 - **Post-control risk** simulates monitor-gated rejection sampling with a retry budget K: **B(K)** = probability a request deploys a bad output within K attempts, **A(K)** = probability it deploys any output, and **B(K)/A(K)** = bad rate among deployed outputs. Gating reduced risk on average, but "moving from one to four attempts increases the chance of finding a monitor false negative and erodes part of that reduction". Unlike g-mean², for outcome evals it "is not base rate invariant": a model that rarely misbehaves scores low risk even if it is not very monitorable. Not reported for intervention evals.
 - **A lower bound for intervention g-mean².** "The original intervention g-mean² metric is the corresponding upper bound"; report both to make the causal-attribution uncertainty explicit. An independent derivation reaches the same point for the minimal-criterion true-positive rate (TPR_mc) of Guan et al.: Fu, Li, Wibisono & Cohan, "Learning to Be Monitored" (arXiv:2610.31733, 2026-10-22; code `xinyue-lxy/learning-to-be-monitored`, Apache-2.0) note that "a target behavior observed under intervention is not necessarily caused by it", "establish TPR_mc as an upper bound on this causal detection rate and derive a complementary lower bound". Training methods from that paper are in "What restores CoT monitorability: post-training for it".
@@ -188,6 +192,7 @@ Joey Yudelson (Aether Research), *Held-out Monitors Sometimes Degrade, Even When
 ### CoT controllability (can the model shape its own CoT?) and why low scores are weak evidence
 
 **CoT-Control** (Yueh-Han, McCarthy, Lee, He, Kivlichan, Baker et al., arXiv:2603.05706, March 2026) appends a CoT instruction (reason in lowercase, avoid a word, put a phrase at start and end, …) to a benchmark problem and grades whether the reasoning trace obeyed. Most reasoning models score low (the paper reports Claude Sonnet 4.5 controlling its CoT only 2.7% of the time, versus 61.9% when controlling its final output). Two 2026 caveats:
+
 - **Under-elicited.** Jozdien (LessWrong 2026-09-11, "CoT controllability evals seem very under-elicited") had Claude Opus 4.6 iterate on prompt templates and raised open-weight scores about 2–3× (GPT-OSS-120B from 5.5% to 15%), so system-card controllability numbers likely understate what a motivated model could do. **Optimize prompts (and consider training-based elicitation) before reporting a low number.**
 - **Astra is high, but not unique.** The GPT-6 Astra system card reports, among CoTs 750 to 1,250 tokens long (controllability is confounded by CoT length, so the card reports it as a function of length), that Astra successfully controls 60.9% vs 16.1% for GPT-5.6 Sol and 1.7% for GPT-5.5 Thinking, with Astra's controllability rising especially over the course of RL; UK AISI measured constraint-following on 93% of samples vs 48% for GPT-5.6 Sol (diminishing for longer reasoning). Controllability is *not* the same as no-CoT capability: Neel Nanda found essentially no relationship (Spearman 0.10) between CoT-Control score and NCRI across 34 open-weight reasoning models, where 13 of 34 never followed a single instruction.
 - **Open-weight GLM models match Astra on controllability, but not on monitor evasion.** Usman Anwar (LessWrong 2026-10-19, "GLM-5.1 Has ~Astra Level CoT Control"; CoT-Control QA split, 1,214 GPQA / HLE / MMLU-Pro questions, UK AISI prompt, temperature 0, one sample per pair): among 750–1,250-token traces "both GLM-5.1 and Astra have around 60% controllability"; GLM-5.2 and GLM-5.3 are lower (around GPT-5.6 Sol level); Kimi K3 and DeepSeek V4 models are poor. Over all lengths on a 1,600-case subset, "GLM-4.5 scores 43.1% and GLM-4.7 scores 43.8%, which are both comparable to GLM-5.1's 42.8%", so high controllability predates Astra (GLM-4.5 shipped July 2025). GLM-5.1's edge sits in the first 100 letters: prefilling a corrected 100-letter prefix raised full-trace compliance by +28.8 pp (GLM-5.2) and +19.8 pp (GLM-5.3). Yet on monitor evasion GLM-5.1 failed: a GPT-6 Luna CoT monitor still caught sandbagging on WMDP with 96.3–98.8% recall across conditions (including explicit evasion instructions), hacking on impossible coding tasks was *more* visible when it was asked to hide it, and in an email side-task "gaslighting" eval "Luna detected all 103 successful attempts". **Lesson:** report controllability and monitor evasion as separate numbers; a high CoT-Control score is not evidence the model can hide from a monitor, and a low one is not evidence it cannot. Temperature 1 lowered GLM-5.1 from 42.8% to 37.9%.
@@ -438,6 +443,7 @@ Aliases: "monitorability training", "monitorability post-training", "train for m
 ## Tools/infrastructure summary
 
 There is no shrink-wrapped "CoT faithfulness library." The pipeline is composed of:
+
 - **HF transformers / vLLM** for generation (see [`serving-and-activations.md`](../interpretability/serving-and-activations.md)).
 - **Inspect AI** for evaluation harness, batch runs, and custom scorers (see [`evals.md`](../evaluation/evals.md)).
 - **Probes** for activation-based monitoring (see [`probes.md`](../interpretability/probes.md)).

@@ -37,15 +37,18 @@ Aliases: `steering-vectors` on PyPI (v0.12.2, Feb 2025), `steering-vectors/steer
 **Status (2026-10):** Stable but slow — last push 2025-02-21 (~20 months stale at the 2026-10 re-check; was ~14 months in 2026-04). Not abandoned (issues responded to) but no recent additions. Still the cleanest pure-PyTorch CAA library; works fine on Llama / Gemma / Qwen-class HF models.
 
 **When to use it:**
+
 - The classic CAA workflow: build pairs of (positive behavior, negative behavior) prompts, compute steering vector, apply.
 - You want a small, focused library that does one thing well.
 - Reproducing CAA-style results.
 
 **When *not* to use it:**
+
 - You want a full toolkit including dataset construction, visualizations, multiple steering methods — Dialz is more comprehensive.
 - You need vLLM-scale throughput — apply the same vectors via vLLM-Lens instead.
 
 **Pitfalls:**
+
 - **Position selection.** CAA vectors are usually averaged over the last token of the answer prefix or specific token positions. Wrong positions = garbage vectors. Read the library's defaults and override consciously.
 - **Layer choice.** Steering at layer ~half-depth is the typical sweet spot for behavioral steering; very early layers do little, very late layers don't propagate. Sweep.
 - **Magnitude is dataset-dependent.** A magnitude that works on Llama-2-7B doesn't transfer to Gemma. Sweep magnitudes per (model, behavior).
@@ -75,6 +78,7 @@ Aliases: `dialz` on PyPI (v1.1.4, July 2025), `cardiffnlp/dialz` on GitHub (Card
 Aliases: `repe` on PyPI (v0.1.4), **`andyzoujm/representation-engineering` on GitHub** (the canonical URL — earlier docs sometimes wrote `andyzou-jiaming/...`, that's the same author but the canonical handle is `andyzoujm`), "RepE", "Andy Zou's RepE library", "the LAT library". **RepE = Representation Engineering. LAT = Linear Artificial Tomography** (the RepE direction-finding method, *not* Latent Adversarial Training, which is unrelated).
 
 **What it is.** Implements the methods from "Representation Engineering: A Top-Down Approach to AI Transparency" (Zou et al. 2023, arXiv:2310.01405). Provides:
+
 - **LAT scanning** for finding behavior-relevant directions.
 - **Reading vectors** vs **control vectors** distinction.
 - Behavior steering, honesty / harmfulness probing.
@@ -82,12 +86,14 @@ Aliases: `repe` on PyPI (v0.1.4), **`andyzoujm/representation-engineering` on Gi
 **Status (2026-04):** **Reference implementation, effectively frozen** — last commit August 2024 (~20 months stale). The methods are still cited as baselines in 2026 papers but for new steering work, prefer `steering-vectors` or `dialz`.
 
 **When to use it:**
+
 - Reproducing RepE-paper-style direction finding (PCA on contrastive activations, "honesty direction," etc.).
 - Reading the source as a reference for LAT.
 
 **When *not* to use it:** New projects — use `steering-vectors` (CAA primitive) or `dialz` (full workflow) instead.
 
 **Pitfalls:**
+
 - **PCA vs mean-difference can give very different vectors.** RepE supports both; report which.
 - **Direction sign ambiguity.** PCA-based directions can flip sign across runs. Anchor to a labeled probe to fix sign.
 
@@ -106,6 +112,7 @@ Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction i
 **Caveat — "a single direction" is contested.** Follow-up work argues refusal is *not* fully captured by one direction: Marshall, Scherlis & Belrose, "Refusal in LLMs is an Affine Function" (arXiv:2411.09003), model it as an affine (linear + translation) map; Pan et al., "The Geometry of Refusal in Large Language Models" (arXiv:2502.17420), identify *multiple independent* refusal directions; and "There Is More to Refusal in Large Language Models than a Single Direction" (arXiv:2602.02132) finds several stable, geometrically distinct directions. Practical implication: single-direction abliteration often works but can leave residual refusal behavior, and multi-directional suppression can be more complete. Don't treat the single-direction result as the final word.
 
 **Which repo?**
+
 - **`andyrdt/refusal_direction`** — **the canonical paper repo** for Arditi et al. 2024. Last commit June 2025. Use this as the authoritative reference.
 - **`FailSpy/abliterator`** — popular early implementation; **last commit June 2024 (stale, 17 unresolved issues)**. Educational / historical only; do not start new work from it.
 - **`Orion-zhen/abliteration`** — active fork (Dec 2025), transformers-native (no TransformerLens dependency), good for actually producing abliterated checkpoints.
@@ -113,15 +120,18 @@ Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction i
 - **`jwest33/abliterator`** — active March 2026, adds null-space projection and winsorization variants.
 
 **When to use it:**
+
 - Studying refusal mechanisms.
 - Reproducing the Arditi et al. result (use `andyrdt/refusal_direction`).
 - Generating a refusal-removed checkpoint for downstream research (use `Orion-zhen/abliteration` for a smooth transformers-native path).
 
 **When *not* to use it:**
+
 - Production / public deployment — abliterated models are openly more harmful. Treat outputs accordingly.
 - General-purpose steering — the technique is narrowly focused.
 
 **Pitfalls:**
+
 - **Model degradation.** Aggressive ablation hurts general capability. Check standard benchmarks after.
 - **Provider ToS.** Distributing abliterated derivatives of license-restricted models has legal complexity.
 - **Don't start from `FailSpy/abliterator`** — it's been overtaken by both the canonical paper repo and several active forks.
@@ -131,11 +141,13 @@ Aliases: "abliteration", "Arditi et al. refusal direction", "refusal direction i
 ## SAE feature steering
 
 Not a separate library — implemented via SAELens (see [`saes.md`](saes.md)) plus custom hooks. Pattern:
+
 1. Identify a feature `f` that activates on the behavior you want to control (Neuronpedia is good for browsing).
 2. At inference, encode the residual stream into SAE features, modify feature `f` (clamp, scale, ablate), decode back.
 3. Continue the forward pass with the modified residual.
 
 **Pitfalls:**
+
 - **Reconstruction error compounds.** Every time you encode→decode, you lose some of the residual. Use error terms to add the unreconstructed component back.
 - **Feature splitting.** "The deception feature" in a 16k-width SAE may be 5 features in a 65k-width SAE. Steering the wrong one of the 5 may do nothing.
 - **Off-target effects.** Clamping a feature on can knock out language modeling. Always check perplexity / sample text afterward.
@@ -159,6 +171,7 @@ Aliases: `ZJU-REAL/EasySteer` on GitHub, arXiv:2509.25175 (Xu et al., "EasySteer
 **When *not* to use it:** you want stock vLLM plus Inspect AI integration (use vLLM-Lens, above); you need only a minimal CAA (Contrastive Activation Addition) primitive (use `steering-vectors`); your model is not served by vLLM. Because it is a fork pinned to one vLLM version, it constrains the rest of your environment.
 
 **Pitfalls:**
+
 - **Install is an overlay, not a plain pip package.** The README's quick install is `pip install vllm==0.29.0`, then `rsync` the fork's `vllm-steer/vllm/` files over the installed vLLM package, then `pip install .` from the repo. It states that reinstalling or upgrading `vllm` reverts the overlay and you must re-apply the `rsync`. (Untested inference: after an accidental revert, steering requests are likely no longer recognised by the engine.)
 - **PyPI name.** A PyPI project named `easysteer` exists (0.0.1.dev0, summary "An Easy-to-use Steering Framework for Editing Large Language Models"); it has not been verified to be this project. Install from the repository as the README describes.
 
