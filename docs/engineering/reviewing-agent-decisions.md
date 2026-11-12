@@ -40,7 +40,7 @@ automated-research system's output), [`statistics.md`](statistics.md)
 | Find the decisions worth reviewing | Extract them from the transcript, diffs and files, not from the agent's report | Agents' final reports referred to about one action in eleven; runs that falsely claimed a complete review missed planted defects at about 1.8× the rate of runs that read every file |
 | Rank them | Judgment calls with no checkable answer, anything hard to undo, choices many later results build on, and anything that touched the evaluation signal go first | Error checks cannot see judgment calls; downstream fan-out is what makes an early mistake expensive |
 | Hit a decision that would block the run | If it is reversible and sandboxed, fork it or assume-and-flag it and keep going; stop only for one-way doors | Reversibility is the first gate in both deployed systems found (Claude Code auto mode, Codex Auto-review); parking one thread keeps the others working |
-| Run both branches | Fix the rule for picking the winner before either result exists, and report every branch | Choosing after seeing outcomes is the garden of forking paths; 86% of 160 persona-steered AI analyses across four datasets, many reaching opposing conclusions, passed AI review |
+| Run both branches | Let the agent run both while you are away; at the debrief, declare your pick (or the rule that makes it) before the outcomes are shown, and report every branch | Choosing after seeing outcomes is the garden of forking paths, and the agent has already seen them; 86% of 160 persona-steered AI analyses across four datasets, many reaching opposing conclusions, passed AI review |
 | Ask an AI to review a decision | A fresh call, the artifacts as user content, without the agent's own justification, one decision at a time | Monitors rated their own earlier actions as more correct or less risky than the same actions shown fresh (code-correctness AUROC 0.99 fresh vs 0.89–0.92, one monitor model); stripping the agent's prose helped Anthropic's classifier |
 | Spend a second review | Make it different (another family, or new evidence such as the full trace or a rerun), not the same review twice | One fresh same-model plus one cross-model review caught 56.7% of planted errors vs 42.7% for two fresh same-model reviews (single-author study; model difference and reviewer capability not separated) |
 | Send a decision to the human | A short card: the options, the best case for each, what was checked and not checked; ask for their pick before showing the agent's | Veterinary radiologists (n=19) who committed a provisional answer first agreed less with the AI whether it was right or wrong; human catch rates fall as prompts pile up |
@@ -432,13 +432,26 @@ confirmatory prompt flips Claude Code's verdicts from 10% to 90% support while
 leaving its coefficient distribution essentially unchanged" (Alizadeh et al.,
 [arXiv:2606.11456](https://arxiv.org/abs/2606.11456)).
 
-Recommended checks:
+The results existing is not the problem; seeing them before choosing is. In
+the usual case both branches have finished by the debrief, because the agent
+ran them while the researcher was away. Recommended checks:
 
-- **Fix the selection rule before either branch runs**: which metric, on which
-  data, the tie-break, and who picks. Label each fork as *engineering*
-  selection (pick whatever passes an independent check) or *inferential*
-  selection (which analysis to report); the second needs every branch reported
-  or the winner confirmed on fresh data or seeds.
+- **Declare the pick before the outcomes are shown.** At the debrief, show each
+  fork's choice, its rationale and the best case for each option, with the
+  outcomes hidden. The researcher declares either the branch or the rule that
+  will pick it (which metric, on which data, the tie-break), and only then sees
+  the results. A rule written into the plan before the run satisfies this in
+  advance. The agent has seen the outcomes, so its own pick or proposed rule is
+  outcome-informed and should not be shown first; the same commit-before-reveal
+  move appears in section 1. Record whether the declaration came before the
+  reveal. This adapts blind analysis (MacCoun & Perlmutter, *Nature* 2015:
+  "More fields should, like particle physics, adopt blind analysis to thwart
+  bias") to agent forks; no study has tested it on research debriefs.
+- **Label each fork as engineering or inferential.** *Engineering* selection
+  (keep whatever passes an independent check, such as the tests) can be made
+  with the outcomes in view. *Inferential* selection (which analysis to report)
+  is blinded as above, and needs every branch reported or the winner confirmed
+  on fresh data or seeds.
 - **Choose on data no branch was tuned on**, and keep the number of branches
   small. In model selection, overfitting the selection criterion often gives
   effects "of comparable magnitude to differences in performance between
@@ -449,8 +462,10 @@ Recommended checks:
   [arXiv:2407.04622](https://arxiv.org/abs/2407.04622)).
 - **Show two or three, not ten.** Panels of AI advisers improved human accuracy
   only when small (Tsuchiya & Baba, [arXiv:2603.22152](https://arxiv.org/abs/2603.22152)).
-- **Give every fork an owner and an expiry** (the debrief), and prune dominated
-  branches before the human sees them. In one GitHub sample, 61% of 33,596
+- **Give every fork an owner and an expiry** (the debrief), and before the
+  debrief drop only branches that failed an independent check (crashed, failed
+  tests, broke a constraint); dropping one because it scored lower is already
+  a pick made on outcomes. In one GitHub sample, 61% of 33,596
   AI-authored pull requests had no recorded review (Duma et al.,
   [arXiv:2605.02273](https://arxiv.org/abs/2605.02273); human-authored PRs in
   the same repositories went unreviewed about as often): branches nobody reads

@@ -205,8 +205,10 @@ foresee is cheaper to settle now than to stop on later. Worth offering:
 - **Mark rules that protect a later claim as binding** (how a winning branch
   is picked, when to stop on success): escalate rather than override them.
 - **For forks that depend on results not yet seen**, agree the procedure
-  instead of the answer: run both if it is cheap and reversible, and fix now
-  how the winner will be picked and on what data.
+  instead of the answer: run both if it is cheap and reversible. At the
+  debrief, show the forks with their outcomes hidden and ask for the pick (or
+  the rule that makes it) before revealing them; if they can already say how
+  the winner should be picked, write that rule into the plan now.
 - **Ask for their own view on each judgment call** (metric, comparison,
   scope, weighting) before offering yours, and write it down. Experts followed
   an agent's randomly assigned lean 86% of the time when it spoke first.
