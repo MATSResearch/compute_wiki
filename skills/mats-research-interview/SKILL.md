@@ -205,8 +205,10 @@ foresee is cheaper to settle now than to stop on later. Worth offering:
 - **Mark rules that protect a later claim as binding** (how a winning branch
   is picked, when to stop on success): escalate rather than override them.
 - **For forks that depend on results not yet seen**, agree the procedure
-  instead of the answer: run both if it is cheap and reversible. At the
-  debrief, show the forks with their outcomes hidden and ask for the pick (or
+  instead of the answer: run both if it is cheap and reversible. A fork an
+  objective check settles (tests pass on one branch only; same outputs, one
+  path cheaper) needs no one, only a line in the debrief. For the rest, show
+  the forks at the debrief with their outcomes hidden and ask for the pick (or
   the rule that makes it) before revealing them; if they can already say how
   the winner should be picked, write that rule into the plan now.
 - **Ask for their own view on each judgment call** (metric, comparison,
