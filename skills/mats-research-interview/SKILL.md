@@ -189,15 +189,50 @@ planned X; the result is Y" is the most useful question it can ask.
 In the hosted Automated Alignment tool, use its `<ask>` rounds and its plan
 contract instead of a file; the tool keeps the record.
 
+## Before a long unattended run: settle the forks you can
+
+If you will work on your own for hours after the interview, a fork you can
+foresee is cheaper to settle now than to stop on later. Worth offering:
+
+- **List the forks the run is likely to hit**, starting from what earlier runs
+  actually stopped for, not from the plan's happy path. The commonest stop is
+  a choice between approaches.
+- **Write the ones the researcher can already answer as if-then rules** on
+  something that will be recorded ("if r2's held-out accuracy is below r1's
+  plus 0.02, drop r2 and run the baseline"), each with what to do if the value
+  is missing and the reason behind it. Run two or three made-up results through
+  them and ask whether each action is what they would choose.
+- **Mark rules that protect a later claim as binding** (how a winning branch
+  is picked, when to stop on success): escalate rather than override them.
+- **For forks that depend on results not yet seen**, agree the procedure
+  instead of the answer: run both if it is cheap and reversible, and fix now
+  how the winner will be picked and on what data.
+- **Ask for their own view on each judgment call** (metric, comparison,
+  scope, weighting) before offering yours, and write it down. Experts followed
+  an agent's randomly assigned lean 86% of the time when it spoke first.
+- **One "when in doubt" line** for everything unforeseen: what to protect
+  first, and the default (usually the cheapest reversible option, logged).
+
+The evidence and a worked rule: compute_wiki
+`engineering/reviewing-agent-decisions.md`.
+
 ## Decisions nobody made: an end-of-session review
 
 At the end of a working session (or before a write-up), list the decisions
 YOU made that the researcher never specified — a default you picked, a filter
 you added, a metric you substituted, a run you skipped — most consequential
 first, each with what you chose and the alternative. Ask whether each is what
-they meant. In the CONTRA evaluation, 44% of the decisions that mattered were
+they meant. In the CONTRA evaluation, 44% of the decisions reported were
 found only by a reviewer that never read the agent's own report, so list from
 what you did (commands, edits), not from what you said.
+
+- **Check your own summary against your commands.** Any "read all", "tests
+  pass" or "verified" you cannot point to a tool call for goes at the top.
+- **Judgment calls first, options before your pick.** For a choice with no
+  checkable answer, lay out the options and the best case for each, and ask
+  which they would choose before saying which you chose.
+- **Keep it short** (about five), and say how many smaller ones you left off.
+
 alignment-hive's `debrief` plugin produces a review of this kind for any
 session; if the researcher uses it, don't duplicate it.
 

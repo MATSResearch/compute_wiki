@@ -23,6 +23,7 @@ you are trying to do. These pages are the other ways in.
 - **[`research-plots.md`](engineering/research-plots.md)** — which figures are worth making: fine-tune monitoring, dataset cartography, lenses (logit/tuned/J/R/J++), patching heatmaps, Pareto frontiers, calibration.
 - **[`code-recipes.md`](engineering/code-recipes.md)** — copy-paste code recipes, judge-prompt template, anti-patterns.
 - **[`reviewing-drafts.md`](engineering/reviewing-drafts.md)** — reviewing a paper draft, yours or a colleague's: what human and AI reviewers catch and miss, and how to run and read an AI review.
+- **[`reviewing-agent-decisions.md`](engineering/reviewing-agent-decisions.md)** — overseeing the choices inside long agent work: which decisions to pull out for review, settling forks as if-then rules before a run, running both branches and picking later, and when a same-level AI reviewer, a stronger one or you should look.
 
 **Models, tools and agents**
 
@@ -317,6 +318,7 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Should I let an "AI scientist" run my experiment / write my paper? | Tiers, measured failure rates, what actually works | [`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md) |
 | Check an agent's research output before I trust it | The four CoE Audit integrity checks | [`ai-scientist-frameworks.md`](engineering/ai-scientist-frameworks.md#verifiability-chain-of-evidence) |
 | Review a paper draft, or get an AI review of mine | Restate the claims, map each to its evidence, tag findings by severity; fresh-context AI reviewer from another model family, findings not scores, check each finding before editing | [`reviewing-drafts.md`](engineering/reviewing-drafts.md) |
+| Decide which of an agent's decisions I should look at, and keep a long run from stopping on each one | Surface from the transcript not the report; if-then rules at planning; run both with the pick rule fixed first; fresh-context reviewer without the agent's justification; my own pick before the agent's on judgment calls | [`reviewing-agent-decisions.md`](engineering/reviewing-agent-decisions.md) |
 | Pre-register a hypothesis / keep an agent honest about its own results | Research rigor rules: the eleven stages, pre-registration around a pilot, concerns that block, verdicts for every prediction | [`research-rigor.md`](engineering/research-rigor.md) |
 | Scan agent transcripts for refusals, evaluation awareness or broken environments (incl. Claude Code transcripts) | Inspect Scout | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Automatically audit a model for concerning behaviour over multi-turn conversations | Inspect Petri | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
