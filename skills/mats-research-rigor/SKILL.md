@@ -40,6 +40,10 @@ actually needs.
   can resolve. A dead end is not one of these: record it, change direction
   deliberately (invert an assumption, take another route, try to break your
   best result), and keep going. See "A dead end is not a stopping point".
+  A foreseeable fork is not one either: apply the plan's if-then rule, or run
+  both (an objective check settles it, or the researcher picks before seeing
+  the outcomes) or carry one with the assumption written
+  down, if the choice is reversible and sandboxed. Only a one-way door waits.
 - When comparing to a paper, share one axis with it — an anchor run of one of
   their conditions on your configuration, or your idea with one factor swapped
   to their value — rather than reading their absolute number as your baseline.

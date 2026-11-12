@@ -463,6 +463,20 @@ on one task plain independent resampling beat every variant. They are
 reasonable moves, not proven ones. The dashboard logs every firing and whether
 work was recorded after it, so evidence over long horizons will accumulate.
 
+**A foreseeable fork need not be a stop.** Before the run, write the forks you
+can already answer as if-then rules on values the run will record, with an
+action for a missing value; mark the ones that protect a later claim (how a
+winning branch is picked) as binding. During the run, a reversible, sandboxed
+choice between comparable options can be run both ways. If an objective check
+the agent could not shape (tests, identical outputs with one path cheaper)
+leaves one answer or a clearly better one, that settles it; otherwise you
+declare the pick (or the rule that makes it) at the debrief before the outcomes
+are shown. Or the choice is carried on one option
+with the assumption written down and every output tagged with it. Only a
+one-way door (external effects, deletion, spending, a claim about results)
+needs the run to wait, and then only that thread. Evidence, a worked rule and
+the safeguards: [`reviewing-agent-decisions.md`](reviewing-agent-decisions.md).
+
 ## Comparability: one shared axis per paper
 
 A post-training result — RL, DPO, SFT, fine-tuning on an open-weight model — is
