@@ -2,7 +2,7 @@
 
 `train_lora` runs a TRL `SFTTrainer` + a PEFT `LoraConfig` on a small model
 (e.g. `Qwen/Qwen2.5-0.5B-Instruct`) and saves a LoRA adapter. It runs on **any
-CUDA box** — a local GPU, `nathan-lambda`, or inside a Modal function (see
+CUDA box** — a local GPU, or inside a Modal function (see
 `example_*/train_modal.py`). The Emergent Misalignment follow-up
 (arXiv:2506.11613) shows EM works with a **rank-1 LoRA on a 0.5B model**, so the
 defaults here are deliberately tiny. Serve the trained adapter for evaluation

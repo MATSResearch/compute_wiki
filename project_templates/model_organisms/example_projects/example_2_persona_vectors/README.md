@@ -3,7 +3,7 @@
 > **Status: stub.** This directory documents a planned example, not a runnable
 > project. Start from `example_1_emergent_misalignment` for a complete, working
 > example. This one needs a GPU (local model + activations), so it lives on
-> `nathan-lambda`, not the laptop.
+> a GPU box, not the laptop.
 
 Where example 1 builds a *behavioral* organism (judged by an LLM) and detects it
 *behaviorally*, this example builds an organism via **activation steering** and
