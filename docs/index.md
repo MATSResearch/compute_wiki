@@ -387,6 +387,7 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Situation | Start with | Topic doc |
 |---|---|---|
 | Measure whether a model has dangerous bio, cyber or self-replication capabilities | VCT, LAB-Bench, CVE-Bench, CyberGym, BountyBench, RepliBench; check elicitation first | [`dangerous-capability-evals.md`](evaluation/dangerous-capability-evals.md) |
+| Benchmark a DNA, protein or RNA sequence model rather than a chat model | Divide items by gene family, organism or clade; add a k-mer and a homology baseline and a random-weight twin; select the layer and pooling inside the training folds | [`biological-sequence-model-evals.md`](evaluation/biological-sequence-model-evals.md) |
 | Show a model *can't* do something, or detect sandbagging | Fine-tuning elicitation on password-locked / circuit-broken organisms; noise injection | [`evals.md`](evaluation/evals.md#sandbagging-and-capability-elicitation-is-a-low-score-real) |
 | Shape a model's values with pretraining or midtraining documents rather than demonstrations | Alignment pretraining, synthetic document finetuning on a constitution | [`alignment-pretraining.md`](alignment-science/alignment-pretraining.md) |
 | Study how structure forms during training, or interpret through loss-landscape geometry | `devinterp` (LLC, susceptibilities, Bayesian influence functions) | [`slt-devinterp.md`](interpretability/slt-devinterp.md) |

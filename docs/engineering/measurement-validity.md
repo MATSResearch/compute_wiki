@@ -471,6 +471,20 @@ find that on three failure-attribution benchmarks (which step or agent caused a
 failure), "simple predictors match or beat GPT-4.1"; judges fine-tuned on one
 system's labels lost 31–99 points when the cue was moved, zero-shot judges at most 9.
 
+The same holds for a model pre-trained on biological sequence, where the trivial
+baseline is a composition or homology feature rather than length. Sanabria et al.
+2024 ([doi:10.1038/s42256-024-00872-0](https://doi.org/10.1038/s42256-024-00872-0))
+report a tuned bag-of-k-mers control reaching Matthews correlation 72% on a
+transcription-factor binding task against 61% for a genome language model; Yang et
+al. 2025 ([doi:10.1038/s41467-025-57726-5](https://doi.org/10.1038/s41467-025-57726-5))
+report BLASTp sequence search within four points of an ESM-based enzyme classifier
+and ahead of it on enzymes with several functions, 93.7 against 69.4%. Zhang, Bai &
+Imoto 2023 ([doi:10.1093/bioinformatics/btad617](https://doi.org/10.1093/bioinformatics/btad617))
+report a DNABERT pre-trained on 3 gigabases of *random* sequence scoring 0.8965 against
+0.8991 median AUROC for the real model across 690 datasets, so the untrained twin belongs
+in the same table. More
+in [`../evaluation/biological-sequence-model-evals.md`](../evaluation/biological-sequence-model-evals.md#step-4-fit-a-baseline-that-uses-no-model).
+
 **Recommended check.** Report the trivial baselines (length, position, source)
 next to any detector, and re-score within strata of the obvious confound: an
 AUROC that holds within length quintiles is the honest number, and one that
@@ -632,7 +646,7 @@ are the place to put this.
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
+Last verified: 2026-11-15. (Additions 2026-11-15: a paragraph under Trivial baselines first on composition and homology baselines for biological sequence models, with three cases checked against the source text: Sanabria et al. 2024 k-mer control 72% vs 61% (journal page), Yang et al. 2025 BLASTp 93.7% vs 69.4% (journal page), Zhang, Bai & Imoto 2023 random-corpus DNABERT 0.8965 vs 0.8991 median AUROC (journal main text). One correction made before publishing: this result was first attributed to Vishniakov et al., which is a different random-initialisation study.) Last verified: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
 section, four grader cases, the single-attribute and external-validity sections, two
 trivial-baseline cases and the HELM saturation note, each checked against its arXiv
 abstract page: 2610.25964, 2610.24872, 2610.26595, 2610.13303, 2610.16911, 2610.12409,

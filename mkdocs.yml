@@ -51,6 +51,7 @@ nav:
       - evaluation/datasets-benchmarks.md
       - evaluation/red-teaming.md
       - evaluation/dangerous-capability-evals.md
+      - evaluation/biological-sequence-model-evals.md
   - Alignment science:
       - alignment-science/behavioral-safety-playbook.md
       - alignment-science/model-organisms.md
