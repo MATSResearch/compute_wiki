@@ -24,6 +24,7 @@ A coding agent is a Large Language Model (LLM) wrapped in a loop that can read f
 | Guarantee something happens *every* time (e.g. run formatter after edits) | Use a **hook**, not a line in `CLAUDE.md` (instruction files are advisory; hooks are deterministic). For a hook that *guards* something, set `onFailure: "block"` so a crash or timeout blocks the action instead of letting it through (Claude Code 2.1.295+) |
 | Run with fewer permission prompts without `--dangerously-skip-permissions` | **Auto mode** (classifier-reviewed actions; the default starting mode in Claude Code 2.1.283+ per the docs; the changelog puts "every plan and provider" at 2.1.284) plus explicit **deny rules** for anything that must never happen — and a container for untrusted or adversarial work. In `claude -p` / Agent SDK scripts, pass `--permission-mode` explicitly: since 2.1.302 a headless run with none set can start in `default` mode. See "Permission modes" below |
 | Run a long agent loop where each experiment costs hours | Schedule a **mid-run strategy check** (one instruction can beat the agent's own continuation), and have it **save long command output to a file once** and search it. See "Expensive loops" below |
+| See the HTML reports an agent writes on a remote server | Serve the report directory there and reach it through an **SSH port-forward**, so each report is a `localhost` URL on your laptop instead of an `scp`. See "Viewing an agent's HTML reports over SSH" |
 | Run a training job or eval that takes hours | Start it yourself in `tmux` / `slurm` / `nohup` and have the agent poll the log. Claude Code stops background Bash commands at a time limit (default 30 min, max 2 h) |
 | Avoid shipping plausible-but-wrong code | **Small diffs, read every line**, fresh-context adversarial review |
 | Avoid a fake-green test suite | Write the failing test *yourself* first; never let the agent author both the code and its only oracle |
@@ -297,6 +298,68 @@ From ["Tips on leveraging AI for empirical research"](https://www.lesswrong.com/
 - **Hold experiment code to five properties:** determinism (same args, same output), resumability (a failed run resumes without redoing finished work), visibility (what is running, what failed, why), persistence (outputs saved and reusable) and lineage (every artifact says how it was made). See [`code-recipes.md`](code-recipes.md#resumable-append-as-you-go-results) for a resumable-results pattern.
 - **Isolate parallel agents** in separate git worktrees so their edits cannot collide.
 
+## Viewing an agent's HTML reports over SSH (no scp, no manual copy)
+
+When a coding agent (**Claude Code**, Codex CLI, any agent in a terminal) runs on a remote server over **SSH** (Secure Shell) and writes an HTML report or plot page there, the file is on the server and your browser is on your laptop. Copying each report down with `scp` or `rsync` gets old fast. Serve the report directory on the server and reach it through an **SSH port-forward** (`LocalForward`, `ssh -L`), so every report is a URL on your laptop.
+
+| I want to… | Do this |
+|---|---|
+| Click a link in the terminal and see the report | Steps 1 to 3 below: `LocalForward` + `python3 -m http.server` + a line in `CLAUDE.md` |
+| Have the report open in my browser by itself | Add step 4 (`inotifywait` piped to `open` / `xdg-open`) |
+| Set up nothing | Run the agent in the integrated terminal of **VS Code Remote-SSH** (or Cursor) and preview the file there |
+
+### Step 1: forward a port every time you connect
+
+On the laptop, in `~/.ssh/config`:
+
+```
+Host myserver
+    LocalForward 8765 localhost:8765
+```
+
+One-off equivalent: `ssh -L 8765:localhost:8765 myserver`. Symptom of two sessions forwarding the same port: `bind [127.0.0.1]:8765: Address already in use` and `channel_setup_fwd_listener_tcpip: cannot listen to port: 8765` on the second one; the first session's forward still works.
+
+### Step 2: serve the report directory on the server
+
+In `tmux` on the server, once:
+
+```bash
+python3 -m http.server 8765 --bind 127.0.0.1 -d ~/project/outputs
+```
+
+`--bind 127.0.0.1` keeps the server off the network: only the SSH tunnel (and other users logged in to the same machine) can reach it. Without `--bind`, `http.server` listens on every interface and anyone who can reach the machine can read the directory. On a shared box, serve only the reports directory, never your home directory or anything holding `.env` files or keys. `OSError: [Errno 98] Address already in use` means another user has the port; pick another number in both steps.
+
+### Step 3: have the agent print the URL
+
+In the project's `CLAUDE.md` (or `AGENTS.md`) on the server:
+
+```
+HTML reports go under outputs/. After writing one, print its URL as
+http://localhost:8765/<path relative to outputs/>.
+```
+
+Most terminals make the printed URL clickable (cmd-click or ctrl-click). A report that loads images or data by relative path works too, because the whole directory is served.
+
+### Step 4 (optional): open each new report automatically
+
+Run on the laptop (macOS; on Linux replace `open` with `xdg-open`). Needs `inotify-tools` (`inotifywait`) on the server:
+
+```bash
+ssh myserver 'cd ~/project/outputs && inotifywait -m -r -q -e close_write -e moved_to --format "%w%f" . | grep --line-buffered "\.html$"' \
+  | while read -r f; do open "http://localhost:8765/${f#./}"; done
+```
+
+The server reports each `.html` file as it is written and the laptop opens it. `moved_to` is there because some tools write a temporary file and rename it. An agent that edits one report several times opens several tabs.
+
+### VS Code Remote-SSH and Cursor
+
+In the **Remote-SSH** extension, run the agent in the integrated terminal. VS Code forwards ports it sees a process listening on, so step 1 is unnecessary, and Microsoft's **Live Preview** extension (`ms-vscode.live-server`) previews an HTML file from the remote workspace in an editor tab or an external browser.
+
+### What not to do
+
+- **Don't open a reverse tunnel (`ssh -R`) so the server can run `open` on your laptop.** That gives a shared server, and every agent on it, a shell on your machine. In the setup above the laptop only ever pulls.
+- **Don't serve a report directory on a public interface or through a public tunnel** (ngrok, `cloudflared`) for convenience: reports often contain transcripts, dataset rows or unpublished results.
+
 ## What the evidence actually says (calibrate against the hype)
 
 The honest summary of 2025–2026 empirical work: **AI raises code volume and velocity while shifting cost downstream to review, verification, and security — and the perceived speedup is systematically overstated.** Cite these precisely; each has caveats.
@@ -347,4 +410,4 @@ Treat it like running untrusted code, because effectively you are. Indirect prom
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04: Claude Code 2.1.306 → 2.1.318 changes (sandbox fixes in 2.1.309/2.1.314, Monitor-tool hooks, `blockWritesOutsideWorkingDirectories`, idle-compaction scope and fixes, stale instruction files, partial Grep/Glob results, HTTP MCP double sends, headless exit codes and sign-in expiry, subagent effort, `ultrareview --trust-workspace`, `sed -i` and `/rewind`, SDK hook `onFailure`) read verbatim from `anthropics/claude-code` `CHANGELOG.md` with release dates from `gh api` releases; Claude Agent SDK (Python) 0.2.170 and 0.2.177 entries from its `CHANGELOG.md`; hookify's matcher and field extraction read from `plugins/hookify/hooks/hooks.json`, `hooks/pretooluse.py` and `core/rule_engine.py` in `anthropics/claude-plugins-official` (not executed); `gh` v2.102.0 and skill-scanner 2.3.1/2.3.2 release notes and PyPI `requires_dist` via `gh api`; the litellm 1.107.0 incident from BerriAI/litellm issue #47826; Codex and Gemini CLI release dates and the Gemini CLI README and its commit history via `gh api`; arXiv:2610.31715, 2610.38521, 2610.31710, 2611.02527, 2610.34298, 2610.37734, 2610.37901, 2611.04299, 2611.02207, 2610.31895, 2610.28934, 2610.29869, 2610.35942 and 2610.42001 checked against their abstracts (numbers quoted from the abstracts, paper bodies not read); the Occhipinti/Jotautaitė and Martinez LessWrong posts read in full markdown; the OpenAI Astra report read on alignment.openai.com.) (Additions 2026-10-20: Claude Code 2.1.299 → 2.1.305 changes (headless permission-mode default, idle compaction, MCP rule matching, transcript contents, fork subagents, sandbox fixes and `sandbox.allowNestedUserNamespaces`, OpenTelemetry cache fields) read from `anthropics/claude-code` `CHANGELOG.md` with release dates from `gh api` releases; Codex release date via `gh api`; skill-scanner 2.3.0 release notes and PyPI; "Expensive loops" from the arXiv:2608.19072 v2 PDF and arXiv:2609.30541 PDF (quotes checked in the text) and frmsaul's and Nissa Seru's LessWrong posts via GraphQL markdown. Not used: a "61% … 3.6%" figure in the frmsaul post, which is attributed to PostTrainBench and does not appear in arXiv:2608.19072.) (Additions 2026-10-14: "Agent memory, handoffs and time" (Fulcrum, Tao Lin, Ofengenden, EpistemicMemory, Sector, Tan posts read via LessWrong GraphQL markdown; repos via `gh api`), "Third-party skills and plugins: installing safely" (`gh skill` help text from `gh` 2.101.0; `cisco-ai-defense/skill-scanner` README, release 2.2.2 and PyPI; READMEs of `meridianlabs-ai/inspect-skills`, `Orchestra-Research/AI-Research-SKILLs`, `K-Dense-AI/scientific-agent-skills`, hookify in `anthropics/claude-plugins-official`; `discernment-nudge` SKILL.md and commit history), Tan's review practices, Leal's paired-scorer check, W&B MCP and arxiv-mcp-server pointers. Not verified: hookify behaviour beyond its README — the rule example was not executed.) (Additions 2026-10: Claude Code feature and default changes from `anthropics/claude-code` `CHANGELOG.md` (2.1.211 → 2.1.296, 2026-07-15 → 2026-10-09; items cited by version) and the permission-modes docs page; Anthropic blog *Auto mode is now the default in Claude Code* (2026-08-07); Remedios et al. arXiv:2609.19587; METR update of 2026-02-24 read directly; Wentworth (2026-08-11) and Horacio (2026-10-02) posts read directly; all verified via arXiv/GitHub/vendor pages. Not verified: Codex's Guardian behavior beyond the arXiv abstract's description, Cursor / Copilot / Devin changes since June, and the vendor-reported auto-mode study numbers (97% approval, 13.6% vs 89%), which are Anthropic's own — checked against the 2026-08-07 post, not independently reproduced.) Earlier pass (2026-06): Tool landscape is fast-moving — Gemini CLI consumer sunset (2026-06-18 → Antigravity CLI) and Windsurf-under-Cognition are confirmed; re-verify specific features before relying on them. Core practices (plan-first, runnable verification loop, lean context, read-the-diff review, verify dependencies) are stable. Empirical figures (METR −19%, USENIX 19.7% package hallucination, GitGuardian 28.65M secrets) cited from primary sources.
+Last verified: 2026-11-16. (Additions 2026-11-16: "Viewing an agent's HTML reports over SSH". Executed on macOS: `python3 -m http.server 8765 --bind 127.0.0.1 -d <dir>` serving a nested file, and the `while read` URL loop on sample paths. Read, not executed: `inotifywait` flags and `%w%f` from the `inotify-tools` man page; the two OpenSSH forward-failure messages from `channels.c` in `openssh/openssh-portable`; the Live Preview extension id from `microsoft/vscode-livepreview` `package.json`. Not verified: the full step 4 pipeline end to end on a Linux server, and VS Code's automatic port forwarding.) (Additions 2026-11-04 and earlier follow.) (Additions 2026-11-04: Claude Code 2.1.306 → 2.1.318 changes (sandbox fixes in 2.1.309/2.1.314, Monitor-tool hooks, `blockWritesOutsideWorkingDirectories`, idle-compaction scope and fixes, stale instruction files, partial Grep/Glob results, HTTP MCP double sends, headless exit codes and sign-in expiry, subagent effort, `ultrareview --trust-workspace`, `sed -i` and `/rewind`, SDK hook `onFailure`) read verbatim from `anthropics/claude-code` `CHANGELOG.md` with release dates from `gh api` releases; Claude Agent SDK (Python) 0.2.170 and 0.2.177 entries from its `CHANGELOG.md`; hookify's matcher and field extraction read from `plugins/hookify/hooks/hooks.json`, `hooks/pretooluse.py` and `core/rule_engine.py` in `anthropics/claude-plugins-official` (not executed); `gh` v2.102.0 and skill-scanner 2.3.1/2.3.2 release notes and PyPI `requires_dist` via `gh api`; the litellm 1.107.0 incident from BerriAI/litellm issue #47826; Codex and Gemini CLI release dates and the Gemini CLI README and its commit history via `gh api`; arXiv:2610.31715, 2610.38521, 2610.31710, 2611.02527, 2610.34298, 2610.37734, 2610.37901, 2611.04299, 2611.02207, 2610.31895, 2610.28934, 2610.29869, 2610.35942 and 2610.42001 checked against their abstracts (numbers quoted from the abstracts, paper bodies not read); the Occhipinti/Jotautaitė and Martinez LessWrong posts read in full markdown; the OpenAI Astra report read on alignment.openai.com.) (Additions 2026-10-20: Claude Code 2.1.299 → 2.1.305 changes (headless permission-mode default, idle compaction, MCP rule matching, transcript contents, fork subagents, sandbox fixes and `sandbox.allowNestedUserNamespaces`, OpenTelemetry cache fields) read from `anthropics/claude-code` `CHANGELOG.md` with release dates from `gh api` releases; Codex release date via `gh api`; skill-scanner 2.3.0 release notes and PyPI; "Expensive loops" from the arXiv:2608.19072 v2 PDF and arXiv:2609.30541 PDF (quotes checked in the text) and frmsaul's and Nissa Seru's LessWrong posts via GraphQL markdown. Not used: a "61% … 3.6%" figure in the frmsaul post, which is attributed to PostTrainBench and does not appear in arXiv:2608.19072.) (Additions 2026-10-14: "Agent memory, handoffs and time" (Fulcrum, Tao Lin, Ofengenden, EpistemicMemory, Sector, Tan posts read via LessWrong GraphQL markdown; repos via `gh api`), "Third-party skills and plugins: installing safely" (`gh skill` help text from `gh` 2.101.0; `cisco-ai-defense/skill-scanner` README, release 2.2.2 and PyPI; READMEs of `meridianlabs-ai/inspect-skills`, `Orchestra-Research/AI-Research-SKILLs`, `K-Dense-AI/scientific-agent-skills`, hookify in `anthropics/claude-plugins-official`; `discernment-nudge` SKILL.md and commit history), Tan's review practices, Leal's paired-scorer check, W&B MCP and arxiv-mcp-server pointers. Not verified: hookify behaviour beyond its README — the rule example was not executed.) (Additions 2026-10: Claude Code feature and default changes from `anthropics/claude-code` `CHANGELOG.md` (2.1.211 → 2.1.296, 2026-07-15 → 2026-10-09; items cited by version) and the permission-modes docs page; Anthropic blog *Auto mode is now the default in Claude Code* (2026-08-07); Remedios et al. arXiv:2609.19587; METR update of 2026-02-24 read directly; Wentworth (2026-08-11) and Horacio (2026-10-02) posts read directly; all verified via arXiv/GitHub/vendor pages. Not verified: Codex's Guardian behavior beyond the arXiv abstract's description, Cursor / Copilot / Devin changes since June, and the vendor-reported auto-mode study numbers (97% approval, 13.6% vs 89%), which are Anthropic's own — checked against the 2026-08-07 post, not independently reproduced.) Earlier pass (2026-06): Tool landscape is fast-moving — Gemini CLI consumer sunset (2026-06-18 → Antigravity CLI) and Windsurf-under-Cognition are confirmed; re-verify specific features before relying on them. Core practices (plan-first, runnable verification loop, lean context, read-the-diff review, verify dependencies) are stable. Empirical figures (METR −19%, USENIX 19.7% package hallucination, GitGuardian 28.65M secrets) cited from primary sources.
