@@ -41,6 +41,36 @@ provides local conventions, including a reason to retain ordinary closing
 create more names that can break on renaming. Follow the target project's own
 conventions when they differ.
 
+Two November 2026 preprints bear on what an agent does to a proof when left to
+edit it, one for each direction of error. Both are single preprints.
+
+- **Rebuilding from foundations instead of citing established results.** Li et al.
+  ([arXiv:2611.16527](https://arxiv.org/abs/2611.16527), "AI has its own style
+  in mathematical proving") had Claude Opus 4.6, Claude Fable 5.1 and GPT-6
+  Astra reprove all 465 propositions of Euclid's *Elements* (informal proofs,
+  not Lean): "approximately 40% of AI citations point to foundational elements
+  (definitions, common notions, and postulates), compared with only 13% in
+  human proofs", which the authors call "building from the ground up". The AI
+  proofs cite more in total, not less (citation networks of about 3,575 edges
+  for Opus 4.6, averaged over three runs, and over 4,900 each for Fable 5.1
+  and GPT-6 Astra, against 1,889 for the human proofs); what differs is what
+  they cite. This
+  is the first row of the table below (reproving a standard result from
+  definitions) measured as a habit, so "does the library already have this?"
+  is worth asking of every helper lemma an agent adds
+  ([search guidance](lean-formalization.md#search-before-rebuilding-mathematics)).
+- **Rewriting what was unusual.** Gyevnár and DeDeo
+  ([arXiv:2611.06995](https://arxiv.org/abs/2611.06995)) replayed nine human
+  Lean collaborations with Claude Code (Opus 4.6), Codex (GPT-5.2-Codex) and
+  Gemini CLI (Gemini 3.1 Pro) choosing the next step. All three preferentially
+  edited proof bodies that are surprising under a language model, and "tend to
+  regularize proofs towards an LLM standard". A cleanup pass can therefore
+  flatten a proof whose unusual shape was deliberate (a chosen proof
+  strategy, a performance-motivated term). The last table column, the reason
+  to keep the original, is the guard; say so in the request when a proof
+  should be left alone
+  ([what agents choose to work on](lean-formalization.md#what-does-an-agent-choose-to-work-on-in-a-lean-project-sorry-filling)).
+
 ## From a working draft to an edited proof
 
 | Pattern to inspect | Useful edit | Reason to keep the original |
@@ -155,4 +185,4 @@ well as successes and adjust the skill to demonstrated failure modes.
 
 ---
 
-Last verified: 2026-11-04. (Addition 2026-11-04: ProofPatch from the arXiv:2611.01357 abstract and PDF, which gives no code link; the `pp.all` comparison is a suggested manual equivalent, not taken from the paper.) (Addition 2026-10-20: the `grind` example from the lean4-skills v4.11.4 release notes via `gh api`. The rest of the page, editorial guidance and two cited papers, was not re-checked in this pass.)
+Last verified: 2026-11-23. (Additions 2026-11-23: Li et al. from the arXiv:2611.16527 abstract and PDF (model list); Gyevnár and DeDeo from the arXiv:2611.06995 PDF. lean4-skills is now at v4.12.0 (2026-11-08); its `refactor` and `golf` descriptions were not re-read.) (Addition 2026-11-04: ProofPatch from the arXiv:2611.01357 abstract and PDF, which gives no code link; the `pp.all` comparison is a suggested manual equivalent, not taken from the paper.) (Addition 2026-10-20: the `grind` example from the lean4-skills v4.11.4 release notes via `gh api`. The rest of the page, editorial guidance and two cited papers, was not re-checked in this pass.)

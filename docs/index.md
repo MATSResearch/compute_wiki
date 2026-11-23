@@ -68,7 +68,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Work out which *training documents* caused a behaviour | **kronfluence** (EK-FAC influence functions) or **TRAK**; retrain-without-bucket as the honest baseline | [`data-attribution.md`](interpretability/data-attribution.md) |
 | Read what a model is thinking but not saying (unspoken intermediate variables) | **J++ Lens** (`safety-research/jpp_lens`); R-Lens or J-Lens if no J++ lens exists for your model | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Score a lens or activation-to-text reader fairly, including hallucinated readouts | **WorkspaceBench** (`camilablank/workspace-bench`) | [`mech-interp.md`](interpretability/mech-interp.md) |
-| Upgrade TransformerLens and hit `ImportError: cannot import name 'HookedTransformer'` | **TransformerBridge** (+ `enable_compatibility_mode()`), or pin `transformer-lens<4` for SAELens / circuit-tracer | [`mech-interp.md`](interpretability/mech-interp.md) |
+| Upgrade TransformerLens and hit `ImportError: cannot import name 'HookedTransformer'` | **TransformerBridge** (+ `enable_compatibility_mode()`); pin `transformer-lens<4` only for circuit-tracer's TransformerLens backend (SAELens ≥ 6.55.0 works with TransformerLens 4.x; current TransformerLens is 4.4.0) | [`mech-interp.md`](interpretability/mech-interp.md) |
 | Per-layer Python hooks or attention patterns on a vLLM-served model | **vLLM-Lens** v1.2+ | [`serving-and-activations.md`](interpretability/serving-and-activations.md) |
 | Describe a finetune using only output logits (no activations) | **Diff Mining** | [`model-diffing.md`](interpretability/model-diffing.md) |
 | Attribute behaviour to training data at scale (EK-FAC, TrackStar, MAGIC) | **Bergson** (EleutherAI) | [`data-attribution.md`](interpretability/data-attribution.md) |
@@ -85,7 +85,8 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Pretrained SAEs / transcoders / crosscoders for Gemma 3 | **Gemma Scope 2** via SAELens | [`saes.md`](interpretability/saes.md) |
 | Group attribution-graph features into supernodes automatically | LLM annotation pipeline for **circuit-tracer** graphs (arXiv 2608.02632) | [`saes.md`](interpretability/saes.md) |
 | Check a transcoder or circuit story against raw MLP neurons | Sign-split, TopK-thresholded **MLP-neuron baseline** scored on downstream KL (arXiv:2610.24521) | [`saes.md`](interpretability/saes.md#should-i-use-saes-at-all-the-skeptics-reading-list) |
-| A saved BatchTopK SAE fires far more (or fewer) than *k* features | Upgrade **SAELens ≥ 6.54.9** (saver bug up to 6.54.8) | [`saes.md`](interpretability/saes.md#saelens) |
+| A saved BatchTopK SAE fires far more (or fewer) than *k* features | Upgrade **SAELens ≥ 6.54.9** (saver bug up to 6.54.8); ≥ 6.55.1 also fixes skip-transcoder splicing and Llama Scope loading | [`saes.md`](interpretability/saes.md#saelens) |
+| My most important SAE features are different on every seed, or variance explained looks too good | Check for **massive activations** (first-principal-component dominance), which confound importance rankings and variance explained; compare a second seed | [`saes.md`](interpretability/saes.md#why-are-my-most-important-sae-features-different-on-every-seed-massive-activations) |
 
 ## I want to run an evaluation
 
@@ -96,7 +97,9 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Long-horizon agent / dangerous capability tasks | **Inspect** with METR's agents (`METR/inspect-agents`); METR's public **HCAST** / **RE-Bench** task repos were archived by 2026-10-20 (still runnable from a pinned commit, no fixes) and its time-horizons page is frozen since 2026-09-08 | [`evals.md`](evaluation/evals.md#metr-hcast-and-the-metr-task-suite), [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Evaluate refusals / jailbreak success | **HarmBench** or **JailbreakBench** | [`red-teaming.md`](evaluation/red-teaming.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md) |
 | Report results from an open-weights model served via OpenRouter | **Pin the provider** (`allow_fallbacks: false`) and log the serving provider | [`evals.md`](evaluation/evals.md) |
-| Compare to or reproduce an older `inspect_evals` number | Check the task's **`task_version`**; several scorers were fixed in 2026 | [`evals.md`](evaluation/evals.md) |
+| Compare to or reproduce an older `inspect_evals` number | Check the task's **`task_version`**; several scorers were fixed in 2026, and 0.28.0 / 0.29.0 (2026-11) changed how several tasks are scored | [`evals.md`](evaluation/evals.md), [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#my-agentic-misalignment--browsecomp--math--paperbench-score-changed-after-upgrading-inspect_evals) |
+| My model-graded score changed after upgrading Inspect, or I am comparing runs across Inspect versions | **Inspect 0.3.288–0.3.292 re-run table**: the default `model_graded_qa()` / `model_graded_fact()` prompt changed in 0.3.288, so re-grade both arms on one version | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#inspect-ai-0328803292-what-to-re-run-what-breaks-what-to-check-in-old-logs) |
+| Check whether a behavioural result depends on the model being told it is measured | **One-line benchmark ablation**: prepend a line saying behaviour is being measured and compare rates | [`behavioral-safety-playbook.md`](alignment-science/behavioral-safety-playbook.md#does-telling-the-model-it-is-being-tested-change-its-behaviour-the-one-line-benchmark-ablation-2026-11) |
 | Check whether my agent cheats on the eval | **ImpossibleBench** (pin a commit after the 2026-10-13 scoring fix; give the agent an explicit stop action), honeypot tasks, `on_continue=` override | [`evals.md`](evaluation/evals.md), [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md#impossiblebench) |
 | Know whether a coding-agent pass rate is real | **SWE-Bench Pro V2** (and its 51-task Hard split); audit a random sample of passing trials with **TestJack**-style requirement tests | [`datasets-benchmarks.md`](evaluation/datasets-benchmarks.md#coding-agent-benchmarks-swe-bench-pro-v2-and-what-fixed-tests-miss) |
 | Tell whether an agent-eval score changed because of the agent or the scorer | Re-score the unchanged trajectories, then compare repeated paired runs | [`eval-statistics.md`](evaluation/eval-statistics.md#agent-evals-rerun-flips-and-scorer-changes) |
@@ -136,6 +139,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Pretrained deception / sabotage probes for open-weights models | **FAR.AI `caught-in-the-act-probes`** (arXiv 2610.12445) | [`probes.md`](interpretability/probes.md) |
 | Check whether a probe or monitor survives training pressure or obfuscation | Held-out monitor + evasion vs degradation reported separately | [`probes.md`](interpretability/probes.md) |
 | Detect eval-vs-deployment state through an API only | **Spurious probes** (black-box) | [`probes.md`](interpretability/probes.md) |
+| Check that a deception or collusion probe reads the model's decision, not the instruction in its prompt | Add "instructed but refused" negatives, re-score with the instruction removed, and score before the outcome is in context | [`probes.md`](interpretability/probes.md#does-my-deception-probe-read-the-instruction-or-the-decision-collusion-probes-2026-11) |
 | Red-team a probe monitor without training against it | Interactive red-teaming (the model sees earlier verdicts) and probe-evasion prompts, with capability measured on the hidden topic | [`probes.md`](interpretability/probes.md#training-against-probes-and-probe-obfuscation) |
 
 ## I want to call APIs from many providers in one experiment
@@ -152,9 +156,10 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Reliable, with an actual SLA, small team | **RunPod secure cloud** or **Lambda Cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Burst inference for evals (no persistent box) | **Modal** | [`compute.md`](models-and-compute/compute.md) |
-| A closed model I depend on is being retired | Dated OpenAI / Anthropic retirement table | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04) |
+| A closed model I depend on is being retired | Dated OpenAI / Anthropic / Google table, re-read 2026-11-23 (from 2026-12-01 the Gemini 2.5 Pro and Flash ids are re-routed to other models with no error); `shutdown_date` in OpenAI's models list for a check from code | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04) |
 | Which Python version for a new project | **3.12** (vLLM 0.32, inspect-ai, TRL need ≥ 3.11; axolotl and inspect-petri need ≥ 3.12) | [`compute.md`](models-and-compute/compute.md#python-version-floor-for-the-2026-10-stack-312-for-new-projects) |
 | Upgraded vLLM and outputs got shorter, or the environment won't resolve | vLLM 0.32.0 traps (`max_tokens` now clamps, `transformers<5.20`, Python 3.10 dropped) | [`compute.md`](models-and-compute/compute.md#vllm-0320-upgrade-traps-released-2026-10-18) |
+| Upgraded to vLLM 0.34.0 and another process on the GPU runs out of memory, or an activation plugin won't start | 0.34.0 (2026-11-16): `gpu_memory_utilization` defaults to 1.0 (pass `--gpu-memory-utilization` to share a GPU); Model Runner V1 is removed, so `VLLM_USE_V2_MODEL_RUNNER=0` fails at startup | [`compute.md`](models-and-compute/compute.md#after-upgrading-vllm-my-other-process-on-the-same-gpu-gets-cuda-out-of-memory--why), [`serving-and-activations.md`](interpretability/serving-and-activations.md#vllm) |
 | MATS-provided compute | See [MATS handbook](#) (ask torchy) | — |
 
 ## I want to track experiments
@@ -177,7 +182,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 | Run an external agent CLI (Claude Code, Codex CLI, Gemini CLI) as the agent | **Inspect** external-agent support | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md) |
 | Is my agent sandbox really offline, and are my fictional names safe to use? | `network_mode: none` caveats, the agent CLIs' provider-side web search (turn it off in the CLI's settings) + unclaimable names (RFC 2606 / 5737) | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md#how-do-i-check-that-my-sandbox-really-has-no-internet-access) |
 | Run an agent eval that touches the live internet without harming third parties | Allow-list destinations, test DNS as well as HTTP egress, scan transcripts for side effects | [`agent-scaffolds.md`](evaluation/agent-scaffolds.md#running-agent-evals-with-internet-access) |
-| Monitor an agent that runs outside Inspect, beside an LLM proxy | **Inspect Sentinel** sidecar (0.1.4) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10) |
+| Monitor an agent that runs outside Inspect, beside an LLM proxy | **Inspect Sentinel** sidecar (added in 0.1.4; 0.3.2 is current, pre-1.0) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#inspect-sentinel-and-inspect-steward-new-pre-10) |
 | One interactive report for a long multi-agent transcript | **Transect** (UK AISI, on Scout) | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md#what-else-plugs-in) |
 | Audit alignment against the real Claude Code / Codex CLI scaffold | **Petri Dish** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
 | Generate an eval suite around one behaviour | **Petri Bloom** | [`inspect-ecosystem.md`](evaluation/inspect-ecosystem.md) |
@@ -186,7 +191,7 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 
 | Situation | Use | Topic doc |
 |---|---|---|
-| Run RL on an open-weight model (roughly 4B to ~1T-parameter MoEs) without managing GPUs (the default in 2026; check Tinker's live model list — several models were retired in 2026) | **Tinker** (Thinking Machines) | [`rl-training.md`](oversight-and-control/rl-training.md) |
+| Run RL on an open-weight model (roughly 4B up to a 2.8T-parameter MoE, Kimi-K3.1-Pro, on 2026-11-23) without managing GPUs (the default in 2026; check Tinker's live model list — several models were retired in 2026) | **Tinker** (Thinking Machines) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Recipe library: SFT, RLHF, math RL, code RL, tool use, multi-agent, distillation | **Tinker Cookbook** | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Self-hosted preference learning (DPO / KTO / IPO / SimPO) | **TRL** (HuggingFace) | [`rl-training.md`](oversight-and-control/rl-training.md) |
 | Self-hosted high-throughput RL with Ray + vLLM | **OpenRLHF** | [`rl-training.md`](oversight-and-control/rl-training.md) |
@@ -216,10 +221,11 @@ AI Control = designing safeguards that work even if the model is misaligned and 
 | Prompt-injection-driven harm in tool-using agents | **AgentDojo** (in ControlArena) | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Implement a custom control protocol | **ControlArena** primitives over **Inspect AI** | [`ai-control.md`](oversight-and-control/ai-control.md), [`evals.md`](evaluation/evals.md) |
 | Build an activation-based monitor (probe inside a control protocol) | probes ([`probes.md`](interpretability/probes.md)) + **vLLM-Lens** for throughput ([`serving-and-activations.md`](interpretability/serving-and-activations.md)) | [`ai-control.md`](oversight-and-control/ai-control.md) |
-| Control evals on live, multi-service, production-style environments | **Control Tower / LinuxArena** (Redwood + EquiStamp) | [`ai-control.md`](oversight-and-control/ai-control.md) |
+| Control evals on live, multi-service, production-style environments | **Control Tower / LinuxArena** (Redwood + EquiStamp; `control-tower` 6.2.0, 2026-11-21 — scoring and attack-policy behaviour changed between 6.0.2 and 6.2.0, so check before comparing runs); baselines on the **Control Leaderboard** | [`ai-control.md`](oversight-and-control/ai-control.md#control-tower-and-linuxarena-redwood-research-equistamp) |
 | Control eval for GUI computer-use agents, or sabotage of automated AI R&D | **Control OSWorld**; **ResearchArena** | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Score monitors offline on trajectories you already have | ControlArena `evaluate_monitors_post_hoc()` | [`ai-control.md`](oversight-and-control/ai-control.md) |
 | Get a monitor's TPR and FPR from one matched dataset | **MonitoringBench** + **MonitoringBenchHonest** | [`ai-control.md`](oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape) |
+| Know how far a monitor's miss rate depends on how the attacks were generated | Report the **attack policy** (generation method and optimisation level) with every miss rate; include an optimised-prompt arm and a transcript-editing arm | [`ai-control.md`](oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape) |
 | Find concrete attacks a specific monitor misses, from real agent transcripts | **Screwtape** (counterexamples, not a miss rate) | [`ai-control.md`](oversight-and-control/ai-control.md#monitor-benchmarks-and-transcript-red-teaming-monitoringbench-screwtape) |
 | Attacks split across several colluding agents | **MiniLab** (on Control Tower; on request) | [`ai-control.md`](oversight-and-control/ai-control.md#distributed-attacks-across-pull-requests-and-across-agents) |
 | Check whether an untrusted monitor colludes | Honeypots + signal jamming + collusion probes | [`ai-control.md`](oversight-and-control/ai-control.md) |
@@ -395,6 +401,7 @@ How to drive an AI coding agent so it produces correct, reproducible research co
 | Verify what a lab ran, or detect weight exfiltration from an inference server | Open Problems in Technical AI Governance; inference verification | [`technical-governance.md`](alignment-science/technical-governance.md) |
 | Know how an outside reader will weigh my loss-of-control or scheming eval | Construct, content and external validity (Uuk et al.) | [`measurement-validity.md`](engineering/measurement-validity.md#construct-content-and-external-validity-what-an-outside-reader-will-discount), [`technical-governance.md`](alignment-science/technical-governance.md#how-strong-is-the-evidence-for-loss-of-control-uuk-et-al-2026) |
 | Benchmark LLM deception and detection in a multi-player game | **CarrotParsnipBench** | [`multi-agent-safety.md`](oversight-and-control/multi-agent-safety.md#carrotparsnipbench-a-three-player-social-deduction-game-for-deception-and-detection) |
+| Weigh a "formally verified in Lean" announcement that has no prose proof | The four questions for a Lean-only proof claim (statement match, compiles, proves the theorem as stated, kernel exploit), worked through for the 2026-11 Riemann Hypothesis release | [`lean-formalization.md`](engineering/lean-formalization.md#what-to-ask-of-a-lean-only-proof-claim-the-riemann-hypothesis-release-2026-11) |
 | Check that a Lean statement says what the informal claim does | **AnnalsChallenge** statements; numerical and vacuity checks beside an LLM judge | [`lean-formalization.md`](engineering/lean-formalization.md#checking-that-a-formal-statement-says-what-the-informal-one-does) |
 
 ## Common cross-cutting pitfalls

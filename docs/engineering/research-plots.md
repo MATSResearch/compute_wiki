@@ -316,6 +316,12 @@ claim from a broad plateau.
 For sparse-autoencoder (SAE) features or activations projected to 2D, use
 PaCMAP or LocalMAP rather than t-SNE — and read them with the caveats in
 [dimensionality reduction](visualization.md#dimensionality-reduction-pacmap-and-localmap-not-t-sne).
+The same caution covers a PCA (principal component analysis) panel: a ring
+of points in PC1–PC2 can come from nearly orthogonal directions with tiny
+neighbour correlations (Linsefors, LessWrong, 2026-11-17), so plot the
+explained-variance spectrum beside any "circular feature" figure; the worked
+example is under
+[Read these plots honestly](visualization.md#read-these-plots-honestly).
 Per-feature dashboards (top activating examples, logit effects) are best browsed
 on [Neuronpedia](https://www.neuronpedia.org/) rather than rebuilt.
 
@@ -565,7 +571,7 @@ labels rather than indices. Three more that matter specifically at grid scale:
 
 ---
 
-Last verified: 2026-11-04 (addition 2026-11-04: Inspect Viz 0.4.2 version, Python floor and `HtmlPage` from its release notes via `gh api` and PyPI JSON). Earlier: 2026-10-14. Drafted by Claude for Nathan's review; pending MATS
+Last verified: 2026-11-23 (addition 2026-11-23: the PCA ring pointer under "Feature maps", from LessWrong post W9hyNv8EukB4WLniX read raw; Inspect Viz still 0.4.2 on PyPI and the three Hugging Face lens repositories still resolve). (Addition 2026-11-04: Inspect Viz 0.4.2 version, Python floor and `HtmlPage` from its release notes via `gh api` and PyPI JSON). Earlier: 2026-10-14. Drafted by Claude for Nathan's review; pending MATS
 research-staff review. Citations checked against source: dataset cartography
 (Swayamdipta et al., EMNLP 2020, `allenai/cartography`); gradient noise scale
 (McCandlish et al., 2018); tuned lens (Belrose et al., `tuned-lens`, learns a

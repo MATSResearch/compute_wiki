@@ -216,6 +216,31 @@ This is where dimensionality-reduction figures mislead, whatever the algorithm:
 - **A 2D projection is a hypothesis generator, not evidence.** If clusters look
   separated, confirm it in the original space — a linear probe, a clustering
   score, a held-out classification — and report *that* number.
+- **A ring in a PC1–PC2 scatter is not yet a circular feature.** PCA
+  (principal component analysis) is linear, but it still chooses the view.
+  Linda Linsefors (LessWrong, 2026-11-17, "Almost-orthogonal directions can
+  look circular in PCA plots"): "Vectors that are arbitrarily close to
+  orthogonal, but with a small circular correlation, will look circular when
+  projected down to the first two principal component directions." Her
+  example is seven vectors, each (1, 0.001, 0, …, 0, 0.001) cyclically
+  shifted. Reproduced with numpy for this page: no pairwise cosine exceeds
+  0.002 (neighbours in the cycle; all other pairs are 0.000001 or 0), yet in PC1–PC2 the seven points sit on a regular heptagon in
+  cyclic order, and PC1 plus PC2 hold 33.4% of the variance where six equal
+  components would hold 33.3%. So for day-of-week, month or number features
+  that look like a clean ring, print the explained-variance share of the two
+  plotted components next to the next few, and the pairwise cosine matrix in
+  the full space, before calling the geometry circular.
+
+The check for a suspected circular feature in a PCA plot:
+
+```python
+from sklearn.decomposition import PCA
+p = PCA().fit(X)                       # X: one row per feature / class mean
+print(p.explained_variance_ratio_[:6]) # two dominant PCs, or a flat spectrum?
+```
+
+The research-practice version of this rule is
+[A shape in a projection is not a shape in the model](research-rigor.md#a-shape-in-a-projection-is-not-a-shape-in-the-model).
 
 ### Browsing a projection: Embedding Atlas
 
@@ -557,7 +582,7 @@ fig.savefig(run_dir / "plots" / "sweep.png", dpi=200, bbox_inches="tight")  # ra
 
 ---
 
-Last verified: 2026-11-04 (additions 2026-11-04: Inspect Viz 0.4.2, Embedding Atlas 0.26.0, marimo 0.25.2 and tueplots 0.2.6 release notes via `gh api` and versions from PyPI JSON; the `tufte_book` bundle read from `tueplots/bundles.py` at v0.2.6; the marimo dark-theme change quoted from the 0.25.2 release notes). Earlier: 2026-10-14. Drafted by Claude for Nathan's review — the
+Last verified: 2026-11-23 (addition 2026-11-23: the PCA ring caveat, from the raw body of LessWrong post W9hyNv8EukB4WLniX and its widget source for the default matrix; the seven-vector example was recomputed with numpy (cosines, heptagon, explained-variance shares). Versions re-checked on PyPI the same day with no change: inspect-viz 0.4.2, embedding-atlas 0.26.0, marimo 0.25.2, tueplots 0.2.6, SciencePlots 2.2.2, pyobsplot 0.5.4, pacmap 0.9.1, matplotlib 3.11.2.) (Additions 2026-11-04: Inspect Viz 0.4.2, Embedding Atlas 0.26.0, marimo 0.25.2 and tueplots 0.2.6 release notes via `gh api` and versions from PyPI JSON; the `tufte_book` bundle read from `tueplots/bundles.py` at v0.2.6; the marimo dark-theme change quoted from the 0.25.2 release notes). Earlier: 2026-10-14. Drafted by Claude for Nathan's review — the
 recommendations here are a first pass and have not yet been reviewed by the MATS
 research staff. Matplotlib, seaborn, Plotly and Altair APIs verified against
 current releases. PaCMAP (JMLR 2021) and LocalMAP (AAAI 2025,

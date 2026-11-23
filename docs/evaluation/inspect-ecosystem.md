@@ -35,7 +35,7 @@ Labs, repo `UKGovernmentBEIS/inspect_evals` — see [`evals.md`](evals.md).)
 | Audit alignment against the **real** coding-agent scaffold, not a simulated one | **Petri Dish** | `petri-dish` |
 | Generate an evaluation suite around **one** behaviour (sycophancy, self-preservation …) | **Petri Bloom** | `petri-bloom` |
 | Run **Harbor-format** agent tasks in Inspect | **Inspect Harbor** — see [`agent-scaffolds.md`](agent-scaffolds.md) | `inspect-harbor` |
-| **Monitors and control protocols** that watch an agent and intervene | **Inspect Sentinel** (0.3.0, pre-1.0; breaking changes in 0.1.4, 0.2.0 and 0.3.0) | `inspect-sentinel` |
+| **Monitors and control protocols** that watch an agent and intervene | **Inspect Sentinel** (0.3.2, pre-1.0; breaking changes in 0.1.4, 0.2.0 and 0.3.0) | `inspect-sentinel` |
 | Monitor an agent that runs **outside** Inspect, beside an LLM proxy | **Inspect Sentinel sidecar** (`python -m inspect_sentinel.sidecar`, since 0.1.4) | `inspect-sentinel` |
 | Have an agent **mind a long eval run** (crash isolation, status, retries) | **Inspect Steward** | `inspect-steward` |
 | Run sandboxes on **Daytona, E2B or Modal** (no local Docker) | **inspect-sandboxes** — see [`agent-scaffolds.md`](agent-scaffolds.md#sandbox-providers-and-containment) | `inspect-sandboxes` |
@@ -45,9 +45,47 @@ Labs, repo `UKGovernmentBEIS/inspect_evals` — see [`evals.md`](evals.md).)
 | One interactive report for a **long multi-agent transcript**, with judge-reliability information | **Transect** (UK AISI, built on Scout) | git install (`AI-Safety-Institute/transect`) |
 | Give **Claude Code or Codex** skills for reading logs and babysitting running evals | **inspect-skills** (Meridian's agent plugin) | n/a (`/plugin marketplace add meridianlabs-ai/inspect-skills`) |
 
+## Inspect AI 0.3.288–0.3.292: what to re-run, what breaks, what to check in old logs
+
+Aliases: `inspect-ai` on PyPI, `inspect_ai`, `UKGovernmentBEIS/inspect_ai`, Inspect release notes November 2026, Inspect CHANGELOG 0.3.288 / 0.3.289 / 0.3.290 / 0.3.291 / 0.3.292.
+
+Five core releases landed between 2026-11-07 and 2026-11-23 (PyPI dates: 0.3.288 on 2026-11-07, 0.3.289 on 2026-11-10, 0.3.290 on 2026-11-14, 0.3.291 on 2026-11-17, 0.3.292 on 2026-11-23). Every tool on this page tracks them (Scout 0.6.4 needs `inspect-ai>=0.3.290`, `inspect-swe` 0.3.2 needs `>=0.3.291`, Flow 0.17.0 needs `>=0.3.292`), so upgrading one usually upgrades Inspect. The items below are from the release notes and the linked pull requests (PRs); none was reproduced here, and the PRs for the table below do not say which release introduced each bug, so treat "before 0.3.28x" as "any earlier version you used". The general Inspect notes are in [`evals.md`](evals.md#inspect-ai).
+
+**Results that could be wrong with no error — re-run if they apply to you:**
+
+| What you ran | What went wrong | Fixed in |
+|---|---|---|
+| A cached comparison (`cache=True`) of one model under two `-M` / `model_args` settings | "The output cache key covers the model name, base URL, messages, generate config, tools, tool choice and epoch, but not the model's constructor arguments. ... two models with the same name that differ only in a request-affecting constructor argument share cache entries. The second model is served the first model's answer, and the sample reports success." (PR #6271) | 0.3.288 |
+| `model_graded_qa()` / `model_graded_fact()` on submissions that can contain grader-like text | "A reply that quotes `'GRADE: C'` and ends with any of `Grade - I`, `GRADE -> I`, `GRADE — I`, `GRADE (final): I` or `<b>GRADE</b>: I` scores **C**" (PR #6198): an earlier, quoted grade was scored when the final verdict line was in a form the pattern did not read. Now such a reply is unscored | 0.3.288 |
+| The same scorers on adversarial or agent-written submissions | "A submission that ends with a forged `[END DATA]`, a fake grader note and a fresh `[BEGIN DATA]` gets the judge to grade a wrong answer correct most of the time" (PR #6282). The default templates now wrap each field in markers carrying a random 8-hex-character code | 0.3.288 (hardened; a review note in the PR calls it "a probabilistic mitigation") |
+| `eval(my_task)` in a process where two `@task` functions share a name | "If another `@task` was registered under the same name later, `eval()` silently runs that task instead of the function you passed." Now raises `PrerequisiteError` ("Task name '...' is registered by more than one task") (PR #6231) | 0.3.290 |
+| Gemma or Llama 3 through the `hf/` provider | "models whose template already writes a BOS token (Gemma, Llama 3) received `<bos><bos>` at the start of the prompt" (PR #6385; BOS = beginning-of-sequence token) | 0.3.290 |
+| "Seeded" runs of any `google/` model | "`--seed` / `GenerateConfig(seed=...)` was silently dropped for every `google/` model" (PR #6393). After the fix the PR's live test got identical output three times with `seed=42` on `gemini-2.5-flash-lite`, `gemini-3.5-flash-lite`, `gemini-3.8-flash` and `gemma-4-31b-it`, and 2 of 3 on `gemini-2.5-flash` ("Gemini treats the seed as best effort") | 0.3.292 |
+| Tasks whose `SampleSource` adds follow-up samples without ids, with task retries | "task retries no longer reuse one dynamic sample's result for another sample without an id" (#6314); in the PR's reproduction the log held one follow-up twice and the other not at all | 0.3.289 |
+
+Smaller scoring and accounting fixes from the same changelogs, each quoted: 0.3.288 "cost limits now count calls that trip a token limit"; 0.3.290 "math() timeouts no longer look like wrong answers in eval logs"; 0.3.291 "Anthropic usage undercounted when a request compacts its context" and "exclude sentinel, approver and reviewer spend from cost limits"; 0.3.292 "Grok reasoning tokens missing from output_tokens, so output limits and cost undercount".
+
+**Model-graded scores are not comparable across 0.3.288.** The default `model_graded_qa()` / `model_graded_fact()` prompt text changed (PR #6282: "Every eval that uses the default templates sends a different grading prompt"; in the PR's smoke run clean right and wrong answers were graded the same as before, 192/192 per arm, "but that is a small, easy set"). Two side effects the PR states: "each grading request gets a new code, so a grader with `cache` enabled won't reuse earlier responses, and re-scoring a log may not reproduce the original grades exactly", and code that calls `.format()` on `DEFAULT_MODEL_GRADED_QA_TEMPLATE` / `DEFAULT_MODEL_GRADED_FACT_TEMPLATE` itself must now pass `grader_nonce=...` or it raises `KeyError`. Custom templates that do not mention `{grader_nonce}` render as before. Report the Inspect version with any model-graded number, and re-grade both arms on one version before comparing.
+
+**Check old logs for credentials before sharing them.** 0.3.291: "remote MCP server credentials are no longer written to eval logs" (#6492; MCP = Model Context Protocol). 0.3.290: "vLLM and SGLang server API keys are no longer written to logs or startup errors" (#6493) and the `web_search()` Google provider no longer logs the API key on connection retry. What was exposed, from the two PRs: (1) remote MCP — "When an HTTP MCP server is used with `execution="remote"` and a credential (`authorization=` or `headers=`), the credential is written in plaintext to the eval log, three times per sample" (in `ModelEvent.tools[].options.headers`, in `StateEvent` changes to `TaskState.tools`, and in the provider request recorded in `ModelEvent.call`), and "The behavior dates from remote MCP support in 0.3.123", so logs from 0.3.123 through 0.3.290 are affected; (2) vLLM / SGLang — only when Inspect itself starts the local server and the key was set through `VLLM_API_KEY`, `SGLANG_API_KEY` or `-M api_key=...` ("The default key is the public constant `inspectai`"): the launch command with `--api-key` went to the trace file, for vLLM also "to the sample transcript in the eval log", and into the error message on a start failure or timeout (PR #6493 gives no first affected version). Search such logs (and anything derived from them: Scout transcript databases, Hugging Face uploads, shared buckets) before publishing, and rotate a key you find.
+
+**A model repository's `generation_config.json` changes `hf/` results (0.3.291 makes it visible and optional).** PR #6610: "`transformers` applies the repository's `generation_config.json` to every `generate()` call", and Inspect sets only a few fields, so "Every other field (`sequence_bias`, `repetition_penalty`, `num_beams`, `bad_words_ids`, ...) comes from the repository." The PR's demonstration: a local copy of pythia-70m with `"sequence_bias": [[[7785], 50.0]]` added completed "The capital of France is" with "` Paris Paris Paris Paris Paris Paris`". New model arg: `-M generation_config=default` uses the `transformers` defaults (`auto`, the unchanged default, uses the repository's), and the log now records the template and generation settings. For a fine-tuned or third-party checkpoint evaluated through `hf/`, read the recorded settings, and prefer explicit generation settings when comparing checkpoints from different repositories.
+
+**Breaking changes (your script stops working after `pip install -U inspect-ai`):**
+
+- 0.3.288 removes `web_browser()` and its `web_browser_tools()` alias (deprecated since 0.3.272): "Replace calls to `web_browser()` or its `web_browser_tools()` alias with `web_search()` for retrieval, or `computer()` / sandbox MCP tools for browser interaction". `from inspect_ai.tool import web_browser` still imports; calling `web_browser()` raises `PrerequisiteError` ("The `web_browser()` tool has been removed. ...") (PR #6264; source at tag 0.3.292).
+- 0.3.288 changes the default Docker sandbox image to the official Python image: "Evaluations using the automatically generated Docker sandbox must provide an explicit image if they need the `nonroot` account, `pipx`, or Playwright browser dependencies."
+- 0.3.288: "environments with `google-genai` `2.x` fail the `validate_google_client` version check. Install `google-genai>=3.0.0`."
+- 0.3.292: "`exclude_samples()` and `zero_samples()` now return `None`, and `DispositionResult` is no longer exported"; `inspect log exclude` and `inspect log zero` no longer accept `--json`.
+- 0.3.292: "sandbox providers' `task_init`, `task_init_environment` and `task_cleanup` now run in the launch directory instead of the task directory" (matters to authors of sandbox providers and to tasks whose setup used relative paths).
+
+**New tools worth knowing:** `inspect log exclude` / `exclude_samples()` ("exclude samples of a finished log from its metrics", 0.3.291) and `inspect log zero` ("count samples of a finished log as failures"), for broken-environment samples you would otherwise edit out by hand — report any exclusion with the result; `inspect log merge-shards` (0.3.291); "a Task can set its own max_samples" and a `view_image()` tool that "lets models see image files in the sandbox" (0.3.292); `recover_eval_log` can finalize crashed logs (0.3.292). Model support added in these releases: Claude Fable 5.2 (0.3.289), Gemini 4 Carbon, Gemini 4 Hydrogen, Muse Ember 1.0, Muse Wonder 1.0 and Mistral Large 4 (0.3.290), GPT-6.2 Astra and GPT-6.2 Sol (0.3.291), Gemini 4 Neon and Claude Mythos 5.2 (0.3.292).
+
+**When not to upgrade mid-project:** in the middle of a model-graded comparison (finish both arms on one version, or re-grade both), or when a sandbox image you rely on has the `nonroot` account or Playwright from the old default image and you have not yet set an explicit image.
+
 ## Inspect Scout: analysing transcripts you already have
 
-**Inspect Scout** (`inspect-scout` on PyPI, v0.6.2 as of 2026-10-29, Python ≥3.11,
+**Inspect Scout** (`inspect-scout` on PyPI, v0.6.4 as of 2026-11-23, Python ≥3.11, requires `inspect-ai>=0.3.290`,
 [`meridianlabs-ai/inspect_scout`](https://github.com/meridianlabs-ai/inspect_scout),
 docs <https://meridianlabs-ai.github.io/inspect_scout/>) runs **scanners** over
 agent transcripts to surface problems you would otherwise have to read for.
@@ -105,6 +143,15 @@ an example importer for OpenClaw telemetry.
 - **The nonce did not cover every marker (fixed 0.6.1, PR #726).** In 0.6.0 only message headers carried the nonce, so "An agent or a tool output could still forge every other marker in the scanner prompt byte for byte" (tool calls, tool errors, reasoning, the transcript end line). Use ≥0.6.1 when the scanned agent may be adversarial; `check_nonce` now requires ASCII letters and digits.
 - **Timeline scans of transcript databases were nearly empty (fixed 0.6.1):** they "gave the judge nearly empty stored timelines, so earlier results from those scans may be wrong". 0.6.1 also stops installing DuckDB 2.0, "which broke reading transcript databases".
 - **The shipped `eval_awareness` example scanner counted topic vocabulary as awareness (fixed 0.6.1, PR #679).** Replies that merely used words such as "test" or "roleplay" were flagged; with Gemini 3.1 Pro as judge the old prompt flagged 32 of 200 verdicts on such topic-only replies (40 replies, 5 scans each) and the new one 0 of 200, at about the same detection rate (0.90 vs 0.89). Across twelve open-weight judges on the old prompt, false flags on those replies ranged "from 0 for gpt-oss-safeguard-20b to 52 for mistral-small3.2-24B, out of about 200 verdicts each". Re-run any eval-awareness scan built from the old example, and validate the judge model, not only the prompt ([validation sets](#validating-a-scanner-against-hand-labels-validation-sets)).
+
+**Scout 0.6.3 (2026-11-18) and 0.6.4 (2026-11-23): more scans to re-run.** From the release notes (the PRs behind them were not read, and the notes do not say when each bug began):
+
+- **Scanner results with no value were dropped from counts (fixed 0.6.3):** "count scanner results with no value instead of silently dropping them" (#620). A rate computed as flagged / counted on ≤0.6.2 may have used too small a denominator.
+- **Regex scanners with alternatives ignored word boundaries (fixed 0.6.3):** "respect word boundaries in regex alternatives" (#802). A keyword scanner such as a refusal-phrase list could match inside longer words; re-run keyword/regex scans from ≤0.6.2.
+- **A `-F` filter on the command line was not applied to transcripts named in `scout.yaml` or a scan job (fixed 0.6.4):** "apply scan -F to transcripts from scout.yaml or a scan job" (#860). A scan you believed was restricted to a subset may have covered every transcript; check the transcript count of filtered scans from ≤0.6.3.
+- **Resumed and shared scans (fixed 0.6.3):** "preserve scanner metrics when resuming scans" (#806), "aggregate model usage with ModelUsage addition so total_cost survives" (#669), "transcripts no longer disappear from the index when several writers commit at once" (#819), "llm_scanner fails when a scan job or Run Scan sets message filters" (#715), and "completing a shared scan can no longer write files outside its directory" (#764).
+- **Refusal retries:** "use three retries when refusal retries are enabled" (#773).
+- **Compacted transcripts (0.6.4):** "a model provider's compaction renders as its summary, or as a marked placeholder when unreadable" (#866) (how a compaction was rendered before is not stated). When a scanner "misses" something in a long agent run, check whether it happened before a provider-side compaction.
 
 **Logs from Inspect before 0.3.284 can misreport what the model saw.** If the agent edited messages in place (context trimming, compaction, eliding old tool results), earlier generations' logged inputs show the *edited* text, so a scanner or monitor reading the transcript judges text the model never saw (Inspect PR #5883). Upgrade Inspect before producing logs for a transcript or monitor study; see the Inspect release notes in [`evals.md`](evals.md#inspect-ai).
 
@@ -505,9 +552,11 @@ model roles (for grader panels). **Breaking in v0.13.0:** `FlowModel.default` wa
 a config that declares `default` under a model now fails validation at load; delete the key
 (it never had any effect). v0.14.0 (2026-10-13) adds `FlowTask.description`. Flow tracks `inspect_ai` closely, so upgrade the two together.
 
+**November 2026 (v0.15.0 → v0.17.0).** **v0.15.0 (2026-11-11) is breaking: "require Python 3.11"**, and in venv mode Flow now honours uv settings and applies "a default release cooldown" (recent dependency releases are skipped; the notes do not give the length of the window — see the dependency-cooldown recipe in [`code-recipes.md`](../engineering/code-recipes.md#standard-pyprojecttoml-baseline)). v0.16.0 (2026-11-16) adds `FlowOptions.sentinel_proxy` "for inspect-ai 0.3.290"; v0.17.0 (2026-11-23) adds `FlowTask.max_samples` "for inspect-ai 0.3.292" and requires `inspect-ai>=0.3.292` (PyPI metadata). v0.17.0 also fixes spec substitution ("leave literal braces in spec strings untouched during substitution") and dependency collection for tasks that set only `model_roles`. Current PyPI release: `inspect-flow` 0.17.0, Python ≥3.11.
+
 ## Inspect Sentinel and Inspect Steward (new, pre-1.0)
 
-**Inspect Sentinel** (`inspect-sentinel` on PyPI: 0.1.0 on 2026-10-10, 0.1.2 on 2026-10-14, 0.1.3 on 2026-10-15, 0.1.4 on 2026-10-19, 0.2.0 on 2026-10-21, 0.3.0 on 2026-10-27; Python ≥3.11 since 0.1.3; 0.3.0 requires `inspect-ai>=0.3.285` and `inspect-scout>=0.6.1`;
+**Inspect Sentinel** (`inspect-sentinel` on PyPI: 0.1.0 on 2026-10-10, 0.1.2 on 2026-10-14, 0.1.3 on 2026-10-15, 0.1.4 on 2026-10-19, 0.2.0 on 2026-10-21, 0.3.0 on 2026-10-27, 0.3.1 on 2026-11-10, 0.3.2 on 2026-11-17; Python ≥3.11 since 0.1.3; 0.3.0 requires `inspect-ai>=0.3.285` and `inspect-scout>=0.6.1`, 0.3.1 and 0.3.2 require `inspect-ai>=0.3.288` and `inspect-scout>=0.6.2`;
 `meridianlabs-ai/inspect_sentinel`, MIT, created 2026-09-21; docs
 <https://meridianlabs-ai.github.io/inspect_sentinel>) provides **monitors** and **control
 protocols** that watch an agent and intervene, attached per task with `Task(sentinel=...)`
@@ -538,6 +587,8 @@ monitor can call a model to score an excerpt), and 0.1.4 marks every block and m
 (an outline, "The feature it describes is planned and not yet built") `calibrate()` and a
 monitor-as-Scout-scanner `as_scanner()`.
 
+**New in 0.3.1 (2026-11-10) and 0.3.2 (2026-11-17), from the release notes.** 0.3.1: "replay a monitor over stored transcripts, with Inspect Scout" (#135) and "replay older Inspect logs and imported transcripts with turns inferred from their timeline" (#151) — a monitor can now be scored offline on transcripts you already have, which is the cheap way to calibrate a threshold on benign runs before attaching the monitor live (whether this is the `as_scanner()` of the Calibration outline was not checked); "fit the score prompt to the context window of the monitor model" (#156); and for the sidecar, "prove which sample a model request belongs to" (#191) and "work with Inspect's sidecar client" (#168). 0.3.2: the sidecar can "tell an Inspect eval how long its sentinel judged each call and what its judge models cost" (#207), and "tool steps carry the assistant message that made the call" (#216). The Inspect side moved in step: 0.3.290 "sign calls to a sentinel sidecar instead of sending the eval's token" and counts "a sentinel sidecar's judging time as waiting and its judge models' usage in the eval"; 0.3.291 "run sentinels for bridged agents" (agents run through the Agent Bridge, including the `inspect-swe` CLIs) and adds human escalation for sidecar decisions; 0.3.291 also excludes "sentinel, approver and reviewer spend from cost limits", so a cost limit set before that release was partly consumed by the monitor. The 0.3.1 and 0.3.2 notes list no breaking changes.
+
 **Breaking in 0.1.4, a patch release** (the maintainers chose "release 0.1.4 instead of 0.2.0"):
 protocols now take `(step, context, escalations)` — "Protocols take escalations as a third
 parameter … instead of reading them from the step", and monitors no longer see escalations — and
@@ -563,12 +614,16 @@ upgrade.** 0.2.0: "StepPreprocessor replaces excerpts for what a monitor shows a
   #5886; checked at run time, not by pip), so an `inspect-sentinel==0.1.4` pin works only with
   `inspect-ai` ≤0.3.282 (from 0.3.283 a tool stage needs Sentinel ≥0.2.0, Inspect #5964) and
   `inspect-sentinel==0.2.0` only up to 0.3.285; old pins miss the Inspect fixes listed in [`evals.md`](evals.md#inspect-ai).
+  For the sidecar, Inspect 0.3.290 changed how the eval authenticates to it (signed calls instead
+  of the eval's token) and Sentinel 0.3.1 added "work with Inspect's sidecar client"; no minimum
+  Sentinel version for Inspect ≥0.3.290 is stated in the notes read, so upgrade the two together
+  (Sentinel 0.3.2 with Inspect ≥0.3.291) and run one sample to confirm decisions arrive.
 
 Consequence for results: a control-protocol safety number computed with a sparse monitor (one
 that watches only some tools) changes meaning across 0.3.0 — steps the monitor skipped now count
 as approved, and rewrite-beside-gate layers stop blocking. Pin the exact version
-(`inspect-sentinel==0.3.0` with a matching `inspect-ai`), not `~=0.3`, and report it with every
-safety number.
+(for example `inspect-sentinel==0.3.2` with a matching `inspect-ai`; 0.3.2 is current as of
+2026-11-23), not `~=0.3`, and report it with every safety number.
 
 From the Getting Started page (`suspicion()` is the example LLM monitor in `examples/llm_suspicion.py`):
 
@@ -699,7 +754,7 @@ safety and security evaluations that return ordinary Inspect tasks (see
 [`multi-agent-safety.md`](../oversight-and-control/multi-agent-safety.md)); **Prism**
 (`LAThomson/prism`), a Claude Code scaffold for science-of-evals experiments on an Inspect eval
 (see [`evals.md`](evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate)); METR's
-**Hawk**, for running Inspect eval sets at scale on AWS, and **HiBayES** / **optstop** from UK AISI
+**Hawk**, for running Inspect eval sets at scale on AWS (Hawk ≥4.1.0, 2026-11-12, rejects Inspect `local` sandboxes and enforces Kubernetes Baseline pod security; see the Hawk entry in [`agent-scaffolds.md`](agent-scaffolds.md#metr-tasks-on-inspect-vivaria-and-the-task-standard-are-archived)), and **HiBayES** / **optstop** from UK AISI
 for analysing and budgeting Inspect runs (see [`agent-scaffolds.md`](agent-scaffolds.md#metr-tasks-on-inspect-vivaria-and-the-task-standard-are-archived)
 and [`evals.md`](evals.md#judge-calibration-and-eval-result-tooling)).
 
@@ -746,14 +801,32 @@ calibrated against benign runs. Record benign scores with `observe_only()` first
 ### Why does `pip install -U inspect-ai` leave me on 0.3.280 (or Scout on 0.5.5)?
 
 You are on Python 3.10. `inspect-ai` 0.3.281+, `inspect-scout` 0.6.0+, `inspect-sentinel`
-0.1.3+ and `inspect-viz` 0.4.2 require Python ≥3.11, and pip/uv
+0.1.3+, `inspect-swe` 0.3.0+ (GitHub release 2026-11-11, on PyPI 2026-11-12 UTC), `inspect-flow` 0.15.0+ (2026-11-11) and `inspect-viz` 0.4.2 require Python ≥3.11, and pip/uv
 silently resolve to the last release that supports 3.10 instead of failing (`inspect-evals` already
 required ≥3.11 well before 0.25.0). `inspect-petri`,
 `petri-dish`, `petri-bloom` and `inspect-steward` already need ≥3.12, and METR's scanners ≥3.13.
-Current releases as of 2026-11-04: `inspect-ai` 0.3.287, `inspect-scout` 0.6.2, `inspect-sentinel`
-0.3.0, `inspect-evals` 0.27.0 (all ≥3.11), `inspect-steward` 0.2.11 (≥3.12).
+Current releases as of 2026-11-23: `inspect-ai` 0.3.292, `inspect-scout` 0.6.4, `inspect-sentinel`
+0.3.2, `inspect-evals` 0.29.0, `inspect-swe` 0.3.2, `inspect-flow` 0.17.0 (all ≥3.11), `inspect-steward` 0.2.11 and `inspect-petri` 3.1.1 (≥3.12; no release since 2026-11-04).
 Create the environment with `uv venv --python 3.12` (or newer) and check
 `python -c "import inspect_ai; print(inspect_ai.__version__)"`.
+
+### My Agentic Misalignment / BrowseComp / MATH / PaperBench score changed after upgrading `inspect_evals`
+
+Probably a task-version bump, not your model. `inspect_evals` (`inspect-evals` on PyPI, `UKGovernmentBEIS/inspect_evals`) 0.28.0 (2026-11-09) and 0.29.0 (2026-11-13) changed how several tasks are scored; each change carries a task version in the release notes:
+
+- **Agentic Misalignment (v5-A, 0.28.0):** "Require one complete yes/no answer element from the blackmail, leak and murder graders, replacing substring matching and prose fallbacks. Format failures receive up to three grader-only attempts before becoming unscored, so harmful and classifier_verdict accuracy and stderr can move in either direction."
+- **BrowseComp (v6-C, 0.29.0):** "The grader's verdict is read from the last `correct:` line, ignoring case and markdown emphasis, so `Correct: yes` is no longer scored as incorrect and `incorrect: yes` in the reasoning is no longer scored as correct. A grader reply with no readable verdict is now unscored, where it was previously counted as incorrect."
+- **MATH (v4-A and v5-A, 0.28.0):** in `expression_exact_match_sympy`, "an `antlr4` runtime that sympy cannot use surfaces at task construction instead of being scored as a wrong answer", and "The answer normaliser keeps `\infty` and `\left` intact instead of turning them into `\iny` and `\le`"; on Windows the scorer "previously scored every answer wrong or raised an error" ("Results on Linux and macOS do not change" for that fix).
+- **PaperBench (v7-C, 0.28.0):** "Remove the deprecated `web_browser()` tools from the default solver ... The tool list shown to the model changes, so results are not comparable with earlier task versions."
+- **CORE-Bench (v4-B, 0.28.0):** the `limit` task parameter is renamed `max_capsules` (so `-T limit=...` becomes `-T max_capsules=...`), and the default-arguments run no longer raises "The specified dataset is empty".
+- **AbstentionBench (v5-A, 0.29.0):** "Dataset downloads are pinned to upstream commits instead of `refs/heads/main`", and one SelfAware question changed label with the pinned revision.
+- **BFCL (v9-B, 0.29.0):** V4 web-search page fetches are restricted to public HTTP(S) destinations; "Web-search accuracy can change for requests blocked by the policy".
+
+The notes give no size for any of these score changes, and the underlying PRs were not read. What to do: record the `inspect_evals` version *and* the task version (for example "Agentic Misalignment v5-A") with every number; do not compare a number from ≤0.27.0 with one from ≥0.28.0 on these tasks; and when a baseline was run earlier, re-run it rather than reuse it. 0.29.0 requires `inspect_ai>=0.3.285`, and its notes say runtime helpers "now come from the new `inspect-evals-utils` dependency (0.2.0); the old import paths keep working" (PyPI metadata already lists `inspect-evals-utils[huggingface]==0.2.0` for 0.28.0; 0.27.0 does not have it). Benchmark descriptions: [`datasets-benchmarks.md`](datasets-benchmarks.md) and [`evals.md`](evals.md).
+
+### My model-graded score changed after upgrading Inspect (0.3.288)
+
+`model_graded_qa()` and `model_graded_fact()` changed in `inspect-ai` 0.3.288 (2026-11-07): the default grading prompt now marks each field with a random code (against forged `[END DATA]` markers in the submission), and a reply whose last verdict-like line disagrees with an earlier quoted grade is now unscored instead of scored from the quoted grade. Grades "can shift slightly" (PR #6282), cached grader responses are not reused with the default templates, and re-scoring an old log may not reproduce its grades. Compare arms graded on one Inspect version. Details: [Inspect AI 0.3.288–0.3.292](#inspect-ai-0328803292-what-to-re-run-what-breaks-what-to-check-in-old-logs).
 
 ### My Sentinel protocol broke (or changed behaviour) after upgrading to 0.1.4, 0.2.0 or 0.3.0
 
@@ -800,7 +873,7 @@ through Slurm rather than sitting on the dev node.
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04: Scout 0.6.1 and 0.6.2 release notes and the bodies of PRs #660, #726 and #679 via `gh api`; Sentinel 0.2.0 and 0.3.0 release notes and PRs #153 and #154 (the 0.3.0 `concurrent()` change is #154, which reverses the reject-beside-a-rewriter effect described in #153), PyPI `requires_dist` for 0.3.0; Inspect 0.3.283–0.3.287 CHANGELOG and PRs #5883 and #6003; Steward CHANGELOG 0.2.11; current versions and Python floors from the PyPI JSON API.) Earlier: 2026-10-20. (Additions 2026-10-20: Scout 0.6.0 release notes and PR #709 (nonce); Sentinel 0.1.3/0.1.4 release notes, PR #102 and repo tree (sidecar, LiteLLM example), README and Calibration page re-checked; Petri PR #175 (realism role required on `main`; PyPI still 3.1.1); `inspect_swarm` README; Steward CHANGELOG 0.2.9–0.2.10; Flow 0.14.0, Viz 0.4.2 and Python floors from PyPI; arXiv 2610.16911 abstract; Rosu & Wang post text; Transect repo README and AISI blog; METR repo archive flags via the GitHub API. Verification pass 2026-10-20: 52 claims checked, 1 corrected (`inspect-evals` already required Python ≥3.11 before 0.25.0). Additions 2026-10-14: Inspect Sentinel rewritten against its README, Getting Started and Calibration pages and PyPI (0.1.0–0.1.2; tool-call stages since 0.1.0 and generate stages since 0.1.1 per the CHANGELOG and `_step.py` at tag 0.1.2, although the README still calls generate stages planned; proxy, `calibrate()` and `as_scanner()` planned) — the previous text overstated a network proxy; METR scanners from `METR/inspect-agents` `packages/scanners` (`pyproject.toml`, `_registry.py`, `eval_awareness.py`, `scanner.py`; PyPI 404); Scout validation sets from `docs/validation.qmd` and `_validation-basics.md`, `scan(validation=...)` signature from `src/inspect_scout/_scan.py`; Scout 0.5.5 from PyPI; Inspect Viz views from its docs directory and PyPI 0.4.1; inspect-skills README and v0.4.5 release; Orbit repo via the GitHub API.) Checked against meridianlabs.ai and the project docs:
+Last verified: 2026-11-23. (Additions 2026-11-23: Inspect 0.3.288–0.3.292 release bodies and the bodies of PRs #6271, #6198, #6282, #6231, #6385, #6393, #6314 and #6610 via `gh api` (verification pass 2026-11-23: PRs #6492 and #6493 on credentials in logs and #6264 on `web_browser()` read, `web_browser` stub read at tag 0.3.292); Scout 0.6.3 and 0.6.4, Sentinel 0.3.1 and 0.3.2, Flow 0.15.0–0.17.0 and `inspect_evals` 0.28.0 and 0.29.0 release notes; PyPI JSON for versions, upload dates, Python floors and `requires_dist` of `inspect-ai`, `inspect-scout`, `inspect-sentinel`, `inspect-swe`, `inspect-flow`, `inspect-evals`; Hawk v4.1.0 and v4.2.0 release notes. None of the bugs was reproduced, and first affected versions are not stated in the sources.) Earlier: 2026-11-04. (Additions 2026-11-04: Scout 0.6.1 and 0.6.2 release notes and the bodies of PRs #660, #726 and #679 via `gh api`; Sentinel 0.2.0 and 0.3.0 release notes and PRs #153 and #154 (the 0.3.0 `concurrent()` change is #154, which reverses the reject-beside-a-rewriter effect described in #153), PyPI `requires_dist` for 0.3.0; Inspect 0.3.283–0.3.287 CHANGELOG and PRs #5883 and #6003; Steward CHANGELOG 0.2.11; current versions and Python floors from the PyPI JSON API.) Earlier: 2026-10-20. (Additions 2026-10-20: Scout 0.6.0 release notes and PR #709 (nonce); Sentinel 0.1.3/0.1.4 release notes, PR #102 and repo tree (sidecar, LiteLLM example), README and Calibration page re-checked; Petri PR #175 (realism role required on `main`; PyPI still 3.1.1); `inspect_swarm` README; Steward CHANGELOG 0.2.9–0.2.10; Flow 0.14.0, Viz 0.4.2 and Python floors from PyPI; arXiv 2610.16911 abstract; Rosu & Wang post text; Transect repo README and AISI blog; METR repo archive flags via the GitHub API. Verification pass 2026-10-20: 52 claims checked, 1 corrected (`inspect-evals` already required Python ≥3.11 before 0.25.0). Additions 2026-10-14: Inspect Sentinel rewritten against its README, Getting Started and Calibration pages and PyPI (0.1.0–0.1.2; tool-call stages since 0.1.0 and generate stages since 0.1.1 per the CHANGELOG and `_step.py` at tag 0.1.2, although the README still calls generate stages planned; proxy, `calibrate()` and `as_scanner()` planned) — the previous text overstated a network proxy; METR scanners from `METR/inspect-agents` `packages/scanners` (`pyproject.toml`, `_registry.py`, `eval_awareness.py`, `scanner.py`; PyPI 404); Scout validation sets from `docs/validation.qmd` and `_validation-basics.md`, `scan(validation=...)` signature from `src/inspect_scout/_scan.py`; Scout 0.5.5 from PyPI; Inspect Viz views from its docs directory and PyPI 0.4.1; inspect-skills README and v0.4.5 release; Orbit repo via the GitHub API.) Checked against meridianlabs.ai and the project docs:
 Meridian Labs is a 501(c)(3); Inspect AI was built by Meridian's founding team
 in collaboration with UK AISI and the core repo remains `UKGovernmentBEIS/
 inspect_ai`; Scout ingests Inspect / Arize Phoenix / LangSmith / Logfire /
