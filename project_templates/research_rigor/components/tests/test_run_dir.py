@@ -5,16 +5,22 @@ Run:  uv run pytest tests/test_run_dir.py -v
 """
 
 import json
+from pathlib import Path
+
+import pytest
 
 from research_rigor import run_dir
 
 MODELS = [{"id": "claude-opus-4-8", "role": "implementation"}]
 HARNESS = {"tool": "claude-code", "version": "test"}
+ACCEPTANCE = "all five data subsets scored and the guard passed on each"
+SCHEMA = json.loads((Path(__file__).parents[2] / "templates" / "metadata.schema.json").read_text())
 
 
 def _mk(tmp_path) -> "run_dir.RunDir":
     return run_dir.RunDir.create(
-        tmp_path, "run_20260707_120000_probe", models=MODELS, harness=HARNESS,
+        tmp_path, "run_20260707_120000_probe", acceptance=ACCEPTANCE, models=MODELS,
+        harness=HARNESS,
         code_repo=tmp_path,
     )
 
@@ -27,6 +33,27 @@ def test_create_writes_valid_metadata(tmp_path):
     assert meta["models"] == MODELS
     assert set(meta["stage_status"]) == set(run_dir.STAGES)
     assert all(v == "pending" for v in meta["stage_status"].values())
+    assert meta["acceptance"] == ACCEPTANCE
+
+
+@pytest.mark.parametrize("acceptance", ["", "   "])
+def test_a_run_cannot_be_filed_without_saying_what_done_means(tmp_path, acceptance):
+    with pytest.raises(AssertionError, match="acceptance condition"):
+        run_dir.RunDir.create(tmp_path, "run_20260707_120000_probe", acceptance=acceptance,
+                              models=MODELS, harness=HARNESS, code_repo=tmp_path)
+
+
+def test_metadata_schema_accepts_what_the_library_writes(tmp_path):
+    """The schema file and the library name the same stages, statuses and keys."""
+    rd = _mk(tmp_path)
+    rd.link_prereg(point="hypothesis", frozen_at="2026-07-07T12:00:00Z", content_hash="sha256:abc")
+    meta = rd.read_metadata()
+    assert set(SCHEMA["required"]) <= set(meta) <= set(SCHEMA["properties"])
+    assert set(meta["prereg"]) <= set(SCHEMA["properties"]["prereg"]["properties"])
+    assert set(SCHEMA["properties"]["prereg"]["properties"]) == set(run_dir.PREREG_POINTS)
+    status = SCHEMA["properties"]["stage_status"]
+    assert tuple(status["propertyNames"]["enum"]) == run_dir.STAGES
+    assert set(status["additionalProperties"]["enum"]) == set(run_dir.STAGE_STATUS)
 
 
 def test_create_refuses_duplicate_run(tmp_path):
@@ -101,11 +128,13 @@ def test_attention_check_resolution_is_appended_not_edited(tmp_path):
 def test_metadata_write_is_atomic_valid_json(tmp_path):
     rd = _mk(tmp_path)
     rd.set_stage_status("hypothesis", "frozen")
-    rd.link_prereg(frozen_at="2026-07-07T12:00:00Z", content_hash="sha256:abc")
+    rd.link_prereg(point="hypothesis", frozen_at="2026-07-07T12:00:00Z", content_hash="sha256:abc")
+    rd.link_prereg(point="design", frozen_at="2026-07-09T12:00:00Z", content_hash="sha256:def")
     # File is always complete, parseable JSON (atomic rename, no .tmp left behind).
     meta = json.loads(rd.metadata_path.read_text())
     assert meta["stage_status"]["hypothesis"] == "frozen"
-    assert meta["prereg"]["content_hash"] == "sha256:abc"
+    assert meta["prereg"]["hypothesis"]["content_hash"] == "sha256:abc"
+    assert meta["prereg"]["design"]["content_hash"] == "sha256:def"
     assert not (tmp_path / "run_20260707_120000_probe" / "metadata.json.tmp").exists()
 
 

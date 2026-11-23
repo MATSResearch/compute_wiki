@@ -1,7 +1,7 @@
 [project]
 name = "research-rigor"
-version = "0.1.0"
-description = "Deterministic rigor checks for AI-assisted research: pre-registration, diversity-forced planning, result validation, concerns, verdicts, claim grounding, release disclosure."
+version = "0.2.0"
+description = "Deterministic rigor checks for AI-assisted research: two-point pre-registration, diversity-forced planning, result validation, concerns and repair proposals, an evidence ledger, verdicts, comparability, claim grounding, release disclosure."
 readme = "README.md"
 requires-python = ">=3.11"
 # Stdlib only, plus PyYAML for the pre-registration file. That is deliberate:
@@ -23,3 +23,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/research_rigor"]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days

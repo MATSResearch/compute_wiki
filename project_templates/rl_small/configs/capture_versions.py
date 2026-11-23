@@ -1,10 +1,14 @@
 """Write a run's metadata.json: library versions, CUDA / NVIDIA driver, git SHA and the env vars that change behaviour.
 
-Most RL breakages in 2026-10 were version mismatches (TRL's vLLM range, CUDA 13 wheels on old drivers,
-verifiers 0.1.9 vs 0.4.0, PEFT < 0.21.0 silent no-op adapters), so record them next to every run.
-See configs/metadata.example.json for the output shape.
+Most RL breakages in 2026-10 and 2026-11 were version mismatches (TRL's vLLM range, the six silent bugs in
+TRL <= 1.17.1, CUDA 13 wheels on old drivers, verifiers 0.1.9 vs 0.4.x, PEFT < 0.22.0 skipping MoE layers,
+tinker >= 0.38.0 futures against a SkyRL server that supports tinker < 0.28, a different get_lr() from
+tinker-cookbook 0.7.0), so record them next to every run. See configs/metadata.example.json for the output shape.
 
     uv run --no-project python configs/capture_versions.py outputs/run_<ts>_<tag>/metadata.json --config <file> --target <name>
+
+Optional: --param key=value (repeatable) records recipe arguments that libraries may default differently
+across versions (learning_rate, loss_fn, lora_rank); --cookbook-dir records the tinker-cookbook checkout's SHA.
 """
 
 import argparse
@@ -18,7 +22,7 @@ import subprocess
 
 PACKAGES = [
     "trl", "vllm", "torch", "transformers", "peft", "accelerate", "datasets",
-    "tinker", "tinker-cookbook", "skyrl", "verifiers", "unsloth", "axolotl",
+    "math-verify", "tinker", "tinker-cookbook", "skyrl", "verifiers", "unsloth", "axolotl",
 ]
 ENV_VARS = [
     "PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF", "HF_HUB_DISABLE_TELEMETRY",
@@ -54,11 +58,18 @@ def torch_cuda() -> str | None:
     return torch.version.cuda
 
 
-def git_sha() -> str | None:
+def git_sha(directory: str) -> str | None:
+    """HEAD of the git checkout containing `directory`; None when it is not one."""
     if shutil.which("git") is None:
         return None
-    res = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+    res = subprocess.run(["git", "-C", directory, "rev-parse", "HEAD"], capture_output=True, text=True)
     return res.stdout.strip() if res.returncode == 0 else None
+
+
+def parse_params(pairs: list[str]) -> dict[str, str]:
+    for pair in pairs:
+        assert "=" in pair, f"--param expects key=value, got {pair!r}"
+    return dict(pair.split("=", 1) for pair in pairs)
 
 
 def main() -> None:
@@ -67,15 +78,20 @@ def main() -> None:
     ap.add_argument("--config", required=True)
     ap.add_argument("--target", required=True)
     ap.add_argument("--model", default=os.environ.get("MODEL"))
+    ap.add_argument("--param", action="append", default=[], metavar="KEY=VALUE")
+    ap.add_argument("--cookbook-dir")
     args = ap.parse_args()
 
     meta = {
         "run_id": os.path.basename(os.path.dirname(os.path.abspath(args.out))),
         "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "git_sha": git_sha(),
+        # SHA of the checkout holding the config file, not of the cwd (`uv run --directory` changes the cwd)
+        "git_sha": git_sha(os.path.dirname(os.path.abspath(args.config))),
+        "cookbook_git_sha": git_sha(args.cookbook_dir) if args.cookbook_dir else None,
         "target": args.target,
         "config_file": args.config,
         "model": args.model,
+        "params": parse_params(args.param),
         "python": platform.python_version(),
         "versions": {p: package_version(p) for p in PACKAGES},
         "cuda": {"torch_cuda": torch_cuda(), "gpus": nvidia_smi()},

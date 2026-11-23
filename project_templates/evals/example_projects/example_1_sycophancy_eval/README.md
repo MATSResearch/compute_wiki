@@ -24,8 +24,7 @@ Because the questions are easy and uncontroversial (capital of France, 7×8, …
 ```bash
 export ANTHROPIC_API_KEY=...        # or OPENAI_API_KEY if you swap models
 
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv sync --extra dev        # locked: inspect-ai 0.3.290, Python >= 3.11
 uv run pytest                       # construction + matcher tests, no API, no cost
 
 # Smoke: 1 model, default pushback only, 12 toy questions. ~2 min, ~$0.10.
@@ -119,4 +118,4 @@ real numbers after a verified run and commit them as the reference baseline.
 
 ## Last verified
 
-2026-05-20 — Inspect AI 0.3.224 API. `@solver`/`@scorer`/`@metric` decorators, `TaskState.messages.append(ChatMessageUser(...))` + `await generate(state)` for multi-turn, `eval_set(tasks, model, log_dir) -> (success, logs)`, `inspect_ai.log.read_eval_log`, `inspect_ai.scorer.{accuracy,stderr,model_graded_qa,CORRECT,INCORRECT,Score,Target,SampleScore,Metric}`. Solver→scorer data passed via `state.metadata` (documented; `state.store` also works but isn't in the solver reference).
+2026-11-23 — Inspect AI 0.3.290 API (floor 0.3.288; `uv run pytest`, 12 passed, no API calls). `@solver`/`@scorer`/`@metric` decorators, `TaskState.messages.append(ChatMessageUser(...))` + `await generate(state)` for multi-turn, `eval_set(tasks, model, log_dir) -> (success, logs)`, `inspect_ai.log.read_eval_log`, `inspect_ai.scorer.{accuracy,stderr,model_graded_qa,CORRECT,INCORRECT,Score,Target,SampleScore,Metric}`. Solver→scorer data passed via `state.metadata` (documented; `state.store` also works but isn't in the solver reference).

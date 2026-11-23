@@ -1,3 +1,4 @@
+# torch 2.14.x: `torch.load(weights_only=True)` file-read advisory GHSA-v32g-mr63-3j83 (patched in 2.15.0).
 [project]
 name = "example-1-relearning-curve"
 version = "0.1.0"
@@ -6,13 +7,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "ul-components",
-    "torch>=2.4.0",
+    "torch>=2.4.0,!=2.14.*",
     "transformers>=4.40.0",
 ]
 
 [project.optional-dependencies]
 viz = ["matplotlib>=3.8.0"]
 dev = ["pytest>=8.0.0", "matplotlib>=3.8.0"]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days (docs/engineering/code-recipes.md)
 
 [tool.uv.sources]
 ul-components = { path = "../../components", editable = true }

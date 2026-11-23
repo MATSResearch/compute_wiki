@@ -39,8 +39,10 @@ def make_probe_monitor(
             a (D,) activation tensor at whatever layer the probe expects. You
             supply this — it depends on which model + layer + token position the
             probe was trained on.
-        score_range: maps raw decision value to (low, high) for ControlArena's
-            score normalization.
+        score_range: (low, high) the raw decision value is clipped into. Nothing
+            normalises a custom monitor's score downstream, so choose the scale
+            your `defer_threshold` / audit threshold is on ([0, 1] to match the
+            built-in monitors).
 
     Returns an async monitor (callable with the @custom_monitor wrapper applied).
     """
@@ -48,15 +50,10 @@ def make_probe_monitor(
 
     @custom_monitor
     async def probe_score_monitor(state, tools) -> MonitorResponse:  # noqa: ARG001
-        try:
-            acts = extract_activations(state)
-            raw = _probe_score(probe, acts)
-        except Exception as e:
-            return MonitorResponse(
-                suspicion_score=score_range[0],
-                reason=f"probe failed-soft: {type(e).__name__}: {e}",
-            )
-        # Clip into score_range; ControlArena normalizes downstream.
+        # No try/except: a probe that fails must fail the sample, not score it
+        # as least-suspicious.
+        acts = extract_activations(state)
+        raw = _probe_score(probe, acts)
         clipped = max(score_range[0], min(score_range[1], float(raw)))
         return MonitorResponse(
             suspicion_score=clipped,
@@ -70,7 +67,9 @@ def _load_probe(path: str | Path):
     p = Path(path)
     if p.suffix in (".pt", ".pth"):
         import torch
-        return torch.load(p, map_location="cpu")
+        # weights_only=True: a probe is a dict of tensors, never arbitrary pickle.
+        # Use torch >= 2.15.0 (2.14.x is under advisory GHSA-v32g-mr63-3j83 for this path).
+        return torch.load(p, map_location="cpu", weights_only=True)
     if p.suffix in (".joblib", ".pkl"):
         import joblib
         return joblib.load(p)

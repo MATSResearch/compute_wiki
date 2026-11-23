@@ -753,7 +753,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Resolution ratio (q)** — N / N*: a benchmark's size over the number of paired prompts needed to detect a given gap at chosen α and power; q ≥ 1 means the comparison is resolvable (arXiv:2605.30315). See [`eval-statistics.md`](../evaluation/eval-statistics.md).
 
-**Retirement by substitution (automatic routing)** — A deprecated model id that keeps answering, from a different model and with no error. From 2026-12-01 Google routes API requests to `gemini-2.5-pro` to `gemini-3.8-flash` and `gemini-2.5-flash` to `gemini-3.5-flash-lite`, billed at the new model's rates. OpenAI and Anthropic retirements make requests fail instead. See [`compute.md`](../models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04).
+**Retirement by substitution (automatic routing)** — A deprecated model id that keeps answering, from a different model and with no error. From 2026-12-01 Google routes API requests to `gemini-2.5-pro` to `gemini-3.8-flash` and `gemini-2.5-flash` to `gemini-3.5-flash-lite`, billed at the new model's rates. OpenAI and Anthropic retirements make requests fail instead. See [`compute.md`](../models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-anthropic-and-google).
 
 **RewardBench 2** — AI2 reward-model accuracy benchmark, best-of-4 over six subsets; models score about 20 points lower than on RewardBench 1 (arXiv:2506.01937; `allenai/reward-bench`). See [`datasets-benchmarks.md`](../evaluation/datasets-benchmarks.md), [`rl-training.md`](../oversight-and-control/rl-training.md).
 
@@ -855,7 +855,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Shutdown resistance** — An agent interfering with a shutdown mechanism, usually to finish a task; must be separated from instruction ambiguity. See [`model-organisms.md`](../alignment-science/model-organisms.md#shutdown-resistance-and-self-preservation-evals).
 
-**`shutdown_date` / `expiration_date`** — Fields for checking model retirements from code: OpenAI's List models endpoint (`GET /v1/models`) carries an optional `shutdown_date` per model, and OpenRouter's models API has the comparable `expiration_date`. A pre-flight check in a long eval can stop if a date falls inside the planned run. See [`compute.md`](../models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04).
+**`shutdown_date` / `expiration_date`** — Fields for checking model retirements from code: OpenAI's List models endpoint (`GET /v1/models`) carries an optional `shutdown_date` per model, and OpenRouter's models API has the comparable `expiration_date`. A pre-flight check in a long eval can stop if a date falls inside the planned run. See [`compute.md`](../models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-anthropic-and-google).
 
 **Side task** — In ControlArena: harmful objective the untrusted model might pursue concurrently with the legitimate **main task**. See [`ai-control.md`](../oversight-and-control/ai-control.md).
 
@@ -965,7 +965,7 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Transect** — UK AISI transcript analysis for long-horizon, multi-agent Inspect evals, built on Inspect Scout (`AI-Safety-Institute/transect`, MIT): one interactive HTML report whose labels carry provenance and judge-disagreement information. No PyPI release; install from a pinned commit. See [`inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md#what-else-plugs-in).
 
-**TRL** — HuggingFace's Transformers Reinforcement Learning library. ~19k LOC. The default for self-hosted DPO/KTO. As of 2026-11-23 the release is 1.18.2; 1.18.x supports vLLM 0.23.0–0.33.x (not vLLM 0.34.0), and 1.18.0 (2026-11-13) fixes six silent training-correctness bugs. See [`rl-training.md`](../oversight-and-control/rl-training.md), [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md#versions-as-of-2026-11-23-record-these-in-every-runs-metadata).
+**TRL** — HuggingFace's Transformers Reinforcement Learning library. ~19k LOC. The default for self-hosted DPO/KTO. As of 2026-11-23 the release is 1.18.2; 1.18.x supports vLLM 0.23.0–0.33.x (not vLLM 0.34.0), and 1.18.0 (2026-11-13) fixes six silent training-correctness bugs. See [`rl-training.md`](../oversight-and-control/rl-training.md), [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md#versions-record-these-in-every-runs-metadata).
 
 **Tree of thoughts (ToT)** — Search-based test-time technique: branch CoT continuations, score, expand best ones. See [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md).
 

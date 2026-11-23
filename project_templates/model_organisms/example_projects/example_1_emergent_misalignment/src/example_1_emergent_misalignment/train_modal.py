@@ -49,12 +49,14 @@ import modal
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .uv_pip_install(
-        "torch>=2.4.0",
-        "transformers>=4.40.0",
-        "trl>=0.20.0",  # SFTConfig(max_length=, assistant_only_loss=); conversational auto-template
-        "peft>=0.11.0",
+        # Same floors as the [train] extra in pyproject.toml (reasons there). This image is
+        # resolved by Modal at build time, not from uv.lock: pin exact versions for a paper run.
+        "torch>=2.4.0,!=2.14.*",  # 2.14.x: advisory GHSA-v32g-mr63-3j83
+        "transformers>=5.0.0",
+        "trl>=1.18.0",  # assistant_only_loss mask fix; SFTConfig(max_length=, assistant_only_loss=)
+        "peft>=0.22.0",  # MoE LoRA fix
         "datasets>=2.19.0",
-        "accelerate>=0.30.0",
+        "accelerate>=1.10.1",
     )
     .add_local_python_source("mo_components", "example_1_emergent_misalignment")
 )

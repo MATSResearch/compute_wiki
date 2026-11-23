@@ -15,8 +15,13 @@
 # (no prior `lake build`), so the untrusted code is only ever built inside the
 # bwrap sandbox.
 #
-# Adapted for this template, not copied from another project, and not yet run
-# by the wiki maintainers: treat the first run as part of setting it up.
+# Adapted for this template, not copied from another project. The Lean files
+# build on v4.36.0 (checked 2026-11-23 on macOS), but this workflow and the two
+# sandboxed commands have not been run by the wiki maintainers (they are
+# Linux-only): treat the first run as part of setting it up.
+#
+# From v4.37.0 (rc1 at 2026-11-18) both commands take `--json`, which prints one
+# final versioned report; add it then if a later step parses the result.
 
 name: lean-verify
 
@@ -72,7 +77,7 @@ jobs:
           build: "true"
 
       # The statements must elaborate on their own. Expect a
-      # "declaration uses 'sorry'" warning per statement; an error here means
+      # "declaration uses `sorry`" warning per statement; an error here means
       # the challenge itself is broken.
       - name: Build the statements
         run: lake build Statements

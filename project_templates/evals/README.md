@@ -119,7 +119,7 @@ jailbreak/refusal benchmarks.
   `scout scan ... -V <scanner>:labels.csv`) measure agreement with your hand labels on
   a held-out `test` split; HiBayES models how much the grader moves 0–10 scores. See
   `docs/evaluation/evals.md` ("Judge calibration and eval-result tooling").
-- **Cheaper grading and fewer epochs.** Inspect's `cascade()` scorer (0.3.262+) runs
+- **Cheaper grading and fewer epochs.** Inspect's `cascade()` scorer runs
   the LLM grader only where an exact-match stage did not settle the sample; `optstop`
   stops epochs once estimates stop moving (not for rare-event rates). Same section.
 - **Confidence intervals.** `analysis.wilson_ci` assumes independent samples. For
@@ -134,9 +134,24 @@ jailbreak/refusal benchmarks.
 
 ## Inspect AI version pin
 
-These templates target **Inspect AI 0.3.120+** and are verified against 0.3.224
-(May 2026). The API used here (`inspect_ai.analysis.evals_df`/`samples_df`,
-`eval_set` returning `(success, logs)`, the `@solver`/`@scorer`/`@metric`
-decorators, `model_graded_qa(instructions=, model=, model_role=, partial_credit=)`)
-has been stable across the 0.3.1xx–0.3.2xx series. `inspect_ai.analysis` was added
-mid-0.3.x — on older pins, read logs with `inspect_ai.log.read_eval_log` instead.
+These templates require **Inspect AI ≥ 0.3.288** and are locked and tested on
+0.3.290 (`uv.lock`, 2026-11-23; Python ≥ 3.11, which Inspect has required since
+0.3.281). The floor is 0.3.288 because it fixes two bugs that changed results with
+no error on paths used here:
+
+- **`cache=True`**: the output cache key did not include the model's constructor
+  arguments, so one model under two `-M` / `model_args` settings could be served
+  the other's cached answer.
+- **`model_graded_qa()`** (`scorers.graded_qa_with_refusal`): a reply that quoted a
+  grade and ended with a verdict line in an unrecognised form was scored from the
+  quoted grade; it is now unscored. The default grading template also changed
+  (fields are wrapped in markers with a random code), so grades "can shift
+  slightly" and cached grader responses are not reused. **Do not compare
+  model-graded numbers across 0.3.288** — grade both arms on one version.
+
+Newer than the lockfile (the one-week dependency cooldown in `pyproject.toml` skips
+them until they are a week old): 0.3.291 (2026-11-17) stops writing remote MCP
+server credentials into eval logs — upgrade first if you add MCP tools; 0.3.292
+(2026-11-23) fixes `--seed` being dropped for `google/` models. Also since 0.3.288,
+`web_browser()` raises `PrerequisiteError` (use `web_search()` or `computer()`).
+Details: `docs/evaluation/inspect-ecosystem.md` ("Inspect AI 0.3.288–0.3.292").

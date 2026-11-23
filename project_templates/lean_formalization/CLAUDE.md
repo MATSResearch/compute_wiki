@@ -20,13 +20,16 @@ Read `README.md` first (layout, evidence ladder, common errors).
 - **Report the rung reached, not "it compiles".** Run `lake build`, then
   `lake check --paranoid`, then `lake comparator --paranoid` (Linux only), and
   report the highest one that passed with its exit status. On macOS, say the
-  sandboxed checks were not run rather than using `--inadvisably-no-sandbox`.
+  sandboxed checks were not run (they exit 2: "needs Linux namespaces") rather
+  than using `--inadvisably-no-sandbox`.
 - **Keep the statement table in the README current**: informal source, formal
   statement, solution location, and what the formal version leaves out.
 
 ## Conventions
 
-- Keep `lean-toolchain` at v4.35.0 or later; an unrelated toolchain or Mathlib
+- `lean-toolchain` is v4.36.0 (stable, 2026-11-16); `lake comparator` and
+  `lake check` need v4.35.0 or later. Don't move to a release candidate
+  (v4.37.0-rc1 changes both commands); an unrelated toolchain or Mathlib
   upgrade is its own change, not part of a proof task.
 - Commit `lake-manifest.json`; the sandboxed commands cannot write it.
 - Agent skills: use either the wiki's `mats-lean-*` skills or `lean4-skills`

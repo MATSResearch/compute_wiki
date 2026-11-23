@@ -3,9 +3,12 @@
 # (reducing_memory_usage.md, usage_stats.md). No `set -euo pipefail` on purpose: a failed step should
 # print its error, not kill your shell.
 #
-# One-time environment (pins vLLM inside TRL 1.15.0's supported range via its extra):
-#   uv venv --python 3.12 && uv pip install "trl[vllm,peft,math_verify]==1.15.0"
-# Check the driver first: vLLM 0.31.0's default wheel is CUDA 13.0 (needs NVIDIA driver r580+).
+# One-time environment (the extra pins vLLM inside TRL 1.18.x's supported range, >=0.23.0,<0.34.0;
+# peft>=0.22.0 has the MoE LoRA fix). On 2026-11-23 this resolves vllm 0.33.0, which pins torch==2.14.0
+# (under advisory GHSA-v32g-mr63-3j83: do not torch.load untrusted checkpoints in this environment;
+# see the README):
+#   uv venv --python 3.12 && uv pip install "trl[vllm,peft,math_verify]==1.18.2" "peft>=0.22.0"
+# Check the driver first: vLLM 0.33.0 ships CUDA 13.0 wheels only (needs NVIDIA driver r580+).
 #   nvidia-smi --query-gpu=driver_version,name --format=csv,noheader
 
 TAG="${1:-grpo_trl_single_gpu}"

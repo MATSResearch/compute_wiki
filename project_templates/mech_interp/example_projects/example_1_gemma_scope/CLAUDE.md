@@ -13,7 +13,7 @@ Paired with `example_2_vpd` to contrast activation-space decomposition (this) vs
 
 ## Auth + download
 
-- Gemma 3 1B requires accepting the license at https://huggingface.co/google/gemma-3-1b-pt and being logged in (`huggingface-cli login` or `HF_TOKEN` env var).
+- Gemma 3 1B requires accepting the license at https://huggingface.co/google/gemma-3-1b-pt and being logged in (`hf auth login` or `HF_TOKEN` env var).
 - Model weights are ~2 GB; SAE weights are a few hundred MB. First run downloads them.
 
 ## Design notes

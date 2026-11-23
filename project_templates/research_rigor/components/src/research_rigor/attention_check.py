@@ -25,9 +25,8 @@ contamination-resistant pattern from the landscape survey.
 
 import hashlib
 from dataclasses import dataclass, field
-from pathlib import Path
 
-from .run_dir import DIFFICULTIES, ERROR_TYPES, RunDir, _append_jsonl
+from .run_dir import DIFFICULTIES, ERROR_TYPES, RunDir
 
 # Missing a blatant error signals rubber-stamping far more than missing a subtle
 # one, so easy misses drag the escalation metric down hardest.

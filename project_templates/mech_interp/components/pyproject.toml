@@ -1,3 +1,4 @@
+# torch 2.14.x: `torch.load(weights_only=True)` file-read advisory GHSA-v32g-mr63-3j83 (patched in 2.15.0).
 [project]
 name = "mi-components"
 version = "0.2.0"
@@ -5,17 +6,25 @@ description = "Project-agnostic mechanistic interpretability building blocks (mo
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "torch>=2.4.0",
+    "torch>=2.4.0,!=2.14.*",
     "transformers>=4.40.0",
     "datasets>=2.18.0",
     "numpy>=1.26.0",
 ]
 
 [project.optional-dependencies]
-wandb = ["wandb>=0.17.0"]
-transformer-lens = ["transformer_lens>=2.0.0"]
+# wandb 0.30.0-0.31.0 un-seeds Python's `random` after `wandb.init()`; fixed in 0.31.1.
+wandb = ["wandb>=0.31.2"]
+# TransformerLens 4.4.0 fixes left-padded token tensors running unmasked and wrong
+# head/neuron decompositions on Gemma and OLMo.
+transformer-lens = ["transformer_lens>=4.4.0"]
 viz = ["matplotlib>=3.8.0"]
 dev = ["pytest>=8.0.0", "matplotlib>=3.8.0"]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days (docs/engineering/code-recipes.md)
+# wandb 0.31.2 (2026-11-21) is inside the cooldown window and carries the `random` seeding fix.
+exclude-newer-package = { wandb = false }
 
 [build-system]
 requires = ["hatchling"]

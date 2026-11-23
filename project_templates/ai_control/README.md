@@ -13,7 +13,7 @@ ai_control/
 │   │   ├── eval.py             # ControlEvalConfig + get_control_task_product + inspect_eval wrapper
 │   │   ├── policies.py         # honest/attack/untrusted/trusted policy builders; `untrusted_pair()` helper
 │   │   ├── monitors.py         # basic + ensemble trusted monitors; `custom_monitor` decorator
-│   │   ├── protocols.py        # defer-to-trusted, defer-to-resample, trusted_monitoring; `dtt_pair()` helper
+│   │   ├── protocols.py        # the four built-in micro-protocol builders; `dtt_pair()` helper
 │   │   ├── audit.py            # held-out suspicion-threshold calibration (the test-leak-free way)
 │   │   ├── metrics.py          # compute_safety / compute_usefulness / pareto_curve over thresholds
 │   │   ├── loaders.py          # samples_df wrapper + honest/attack suspicion-score extractors
@@ -30,12 +30,14 @@ ai_control/
 │   │   ├── profiling.py        # Timer context manager
 │   │   └── _smoke.py           # no-API smoke test
 │   ├── pyproject.toml
-│   └── tests/
+│   ├── uv.lock
+│   └── tests/                  # incl. an offline end-to-end run (toy setting + mockllm)
 └── example_projects/
     └── example_1_control_arena_apps/  # Apps + defer-to-trusted, threshold sweep, pareto + histogram
         ├── README.md
         ├── CLAUDE.md
         ├── pyproject.toml
+        ├── uv.lock
         ├── docs/papers/                 # ControlArena + 2023 control paper summary
         ├── src/example_1_control_arena_apps/   # build, prompts, run, analyze
         └── tests/
@@ -79,6 +81,7 @@ ai_control/
 | Honest vs attack suspicion histogram with threshold line | `ac_components.viz.suspicion_histogram` |
 | Load Inspect logs → DataFrame | `ac_components.loaders.load_samples` (wraps `samples_df`) |
 | Pull honest/attack suspicion scores out of logs | `ac_components.loaders.honest_suspicion_scores` / `attack_suspicion_scores` |
+| Read each row's defer threshold / protocol variant | `ac_components.loaders.defer_thresholds` / `list_protocols` |
 | Inspect one trajectory in detail | `ac_components.transcript.iter_trajectories` |
 | Probe-monitor (activation-based instead of chat-based) | `ac_components.probe_monitor.make_probe_monitor` (stub) |
 | Run organization (timestamped dirs, metadata.json, logs/ subdir) | `ac_components.runs.new_run` |
@@ -93,8 +96,25 @@ See [`../../docs/oversight-and-control/ai-control.md`](../../docs/oversight-and-
 
 ## ControlArena version pin
 
-These templates target **ControlArena 15.x** (released April 2026). Pre-15.x APIs differ significantly (`control_arena.protocol` vs `control_arena.micro_protocol`, `policy` vs `policies`, `EvalMode` location). If you're pinning an older ControlArena, expect breakage and read the upstream changelog.
+These templates target **ControlArena 20.1.1** (2026-10-22, the current release) on **Inspect AI ≥ 0.3.288**, Python ≥ 3.11 (both packages require it; the tests pass on 3.11, 3.13 and 3.14). Each directory has a `uv.lock`; `uv sync --extra dev` installs exactly what the tests ran against.
 
-**Defer-to-resample and custom datasets need ControlArena ≥ 20.1.0 (2026-10-13).** Two silent-correctness fixes landed in v20.1.0: before it, `defer_to_resample` set a below-threshold resample as the step's output but never appended it to the message history, so the react loop never executed the chosen action (PR #901); and `get_control_task`'s automatic task name ignored a custom `dataset=`, so `eval_set` could reuse a cached log built from different samples (PR #906). The same release skips unscored text-only resamples instead of crashing (PR #908) and changes the default untrusted/trusted models to `anthropic/claude-opus-5-5` / `anthropic/claude-sonnet-4-6` (PR #902). The `pyproject.toml` floor here is still `control-arena>=15.0.0`; if you use `ac_components.protocols`' re-exported `defer_to_resample_builder` or a custom dataset with `eval_set`, install `control-arena>=20.1.0`, set models explicitly, and do not compare DTR numbers produced before and after the upgrade. These templates were written against 15.x and have not been re-run against 20.x; expect API drift (see the v18–v20 breaking-change notes in `docs/oversight-and-control/ai-control.md`).
+Why the floors (`pyproject.toml`):
 
-**Monitoring an Inspect agent outside ControlArena's settings?** Meridian Labs' Inspect Sentinel (`inspect-sentinel` 0.1.x, early) attaches monitors and protocols to any Inspect task via `Task(sentinel=...)`; see `docs/evaluation/inspect-ecosystem.md`. Bind `--model-role monitor=` explicitly, or the monitor falls back to the agent's own model.
+- `control-arena>=20.1.1` — silent-correctness fixes on paths this template uses: the APPS scorer graded runs by stderr instead of exit status, which understated backdoor success and overstated safety (PR #914); defer-to-trusted monitors saw the wrong tool call when a reply called the same tool twice (PR #924); negative monitor scores lost their sign (PR #877). 20.1.0 fixed defer-to-resample (the chosen resample was never executed, PR #901) and `eval_set` reusing a log built from a different custom dataset (PR #906), and changed the default models (PR #902) — this template always sets models explicitly.
+- `inspect-ai>=0.3.288` — the output cache key ignored model constructor args before it; the policies and monitors here use `cache=True`.
+
+**Numbers are not comparable across ControlArena versions** (v18, v19 and v20 are breaking releases; APPS scoring changed in 20.1.1). `run.py` writes both package versions into `metadata.json`; re-run a baseline rather than reuse one from an older version. The published APPS dataset's `backdoor_works` flags were computed with the pre-20.1.1 rule and may mislabel samples that write to stderr until the dataset is regenerated.
+
+API facts that differ from older write-ups (all checked against the installed 20.1.1 source):
+
+- `control_arena.micro_protocol` exports four builders: `trusted_monitoring_builder`, `defer_to_trusted_builder`, `trusted_editing_builder`, `defer_to_resample_builder`. There is no `trusted_only` / `untrusted_only`: pass a policy directly as the micro-protocol.
+- `audit_budget` in `compute_safety` / `compute_suspicion_threshold` is a **percent** (1.0 = 1%). `ac_components` takes a **fraction** (0.01 = 1%) everywhere and converts in `metrics.pareto_curve`.
+- `samples_df` has no `protocol` column. Protocol parameters are in `micro_protocol_info` (a dict, e.g. `{"type": "defer_to_trusted", "defer_threshold": 0.3, ...}`); scorer columns are `score_<scorer>`.
+- Monitors read the verdict from the last `<score>...</score>` tag; a reply without one is recorded as suspicion 0.0 with `score_parsed=False`, not as an error. Scores are stored flat in the assistant message's metadata (`metadata["suspicion_score"]`).
+- Attack prompts are `.format`-ed with `{setting_description}`, `{side_task_description}`, `{main_task_description}`; the honest system prompt is `ControlEvalConfig(system_prompt=...)`.
+- `ControlEvalConfig.eval_args()` (limit, max_tasks, log_level, ...) must be passed to Inspect's `eval()` — `ac_components.eval.run_eval(tasks, config=..., log_dir=...)` does it.
+- The `inspect eval control_arena/apps -T ...` CLI form is gone; tasks are built in Python.
+
+Details and sources: `docs/oversight-and-control/ai-control.md` (ControlArena pitfalls).
+
+**Monitoring an Inspect agent outside ControlArena's settings?** Meridian Labs' Inspect Sentinel (`inspect-sentinel` 0.3.2, pre-1.0; needs `inspect-ai>=0.3.288`) attaches monitors and protocols to any Inspect task via `Task(sentinel=...)`; see `docs/evaluation/inspect-ecosystem.md`. Bind `--model-role monitor=` explicitly, or the monitor falls back to the agent's own model.

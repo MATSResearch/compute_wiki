@@ -119,9 +119,20 @@ equation or lemma, or marked as new). That repository is archived (moved to a no
 comparator, `landrun` and `lean4export`.
 
 The wiki's [`project_templates/lean_formalization/`](https://github.com/MATSResearch/compute_wiki/tree/master/project_templates/lean_formalization)
-is a fresh scaffold of the same pattern for Lean ≥ v4.35.0: `Defs.lean`,
+is a fresh scaffold of the same pattern, pinned to Lean v4.36.0
+(`lean-toolchain`; the `lake` commands need ≥ v4.35.0): `Defs.lean`,
 `Statements.lean`, `Solutions.lean`, `comparator.json`, and a GitHub Actions
 workflow running `lake check --paranoid` and `lake comparator --paranoid`.
+What was run on it (template README, 2026-11-23, Lean v4.36.0, macOS arm64):
+`lake build` (exit 0, no warnings), `lake build Statements` (exit 0, one
+``declaration uses `sorry` `` warning per statement), `#print axioms` on both
+solution theorems (`[propext, Quot.sound]` and no axioms; the statement
+versions report `[sorryAx]`), and `leanchecker` and `leanchecker-paranoid`
+replaying `Solutions` (both exit 0). Not run: `lake check --paranoid` and
+`lake comparator --paranoid` — on macOS both exit 2 with
+``error: `lake comparator` sandboxes the code it checks with `bwrap`, which needs Linux namespaces.``
+— and the GitHub Actions workflow, so the first Linux run in a
+copy is the first exercise of the sandboxed commands.
 Two things worth knowing before copying it:
 
 - **A drift check, not an audit.** As the laplace workflow comment put it,
@@ -242,6 +253,15 @@ checkout) installs it for Linux or macOS; its compatibility policy
 supported Lean window of 4.34–4.36, so v4.33 and older are out and
 v4.37.0-rc1 (2026-11-18) is not yet in the window. "Bundled binaries do not install an
 agent skill": install the Lean skill from the matching Beam release yourself.
+
+**`lean-beam: command not found` (bash) / `command not found: lean-beam` (zsh) with elan.** elan 4.2.4 creates no shim for
+the bundled Beam binaries: `~/.elan/bin` holds `elan`, `lake`, `lean`, `leanc`,
+`leanchecker`, `leanmake` and `leanpkg` only, while the v4.36.0 toolchain's own
+`bin` directory holds `lean-beam`, `lean-beam-mcp` and `beam-daemon` (checked
+2026-11-23 on macOS arm64). Call the bundled copy by toolchain path, from a
+project whose `lean-toolchain` is v4.36.0:
+`"$(lean --print-prefix)/bin/lean-beam" --help`, and give an MCP client the
+full path `"$(lean --print-prefix)/bin/lean-beam-mcp"`.
 
 When not to use it: on a toolchain older than v4.34 or on v4.37.0-rc1 (both
 outside its stated supported window), or expecting a bundled copy on the
@@ -804,7 +824,13 @@ Requirements and limits:
 
 Searchable messages: ``has no `lake-manifest.json` `` (exit 2: run `lake build`
 first); ``needs `bwrap` to sandbox the code it checks, and it was not found``
-(exit 2); `bwrap: setting up uid map: Permission denied` (no user namespaces);
+(exit 2);
+``error: `lake comparator` sandboxes the code it checks with `bwrap`, which needs Linux namespaces.``
+(exit 2; `lake check` prints the
+same with its own name: the machine is not Linux, e.g. macOS — seen on
+v4.36.0, and raised in `src/lake/Lake/CLI/Check.lean` whenever
+`System.Platform.isLinux` is false and `--inadvisably-no-sandbox` is not
+given); `bwrap: setting up uid map: Permission denied` (no user namespaces);
 `Axiom 'sorryAx' is not permitted; it is used by '…'` (`lake check`, exit 1);
 `Illegal axiom detected: '…'` (`lake comparator`, exit 1: a forbidden axiom);
 `Const does not match between challenge and target '…'` (exit 1: the
@@ -1015,7 +1041,7 @@ AI, formal corrigibility results), see
 
 ---
 
-Last verified: 2026-11-23. (Additions 2026-11-23: Lean v4.36.0 and v4.37.0-rc1 release dates via `gh api` and their release-notes pages on lean-lang.org read as text (Lean Beam bundling and PR #16478, `Float` `min`/`max`, the 12% Mathlib build figure; v4.37.0-rc1 PRs #16019, #15775, #15762, #16514, #16096, #16279, #16512; PR #16512's changed files, all under `src/kernel/`, via `gh api`); Lean Beam `docs/COMPATIBILITY.md` and `validated-lean-toolchains` at HEAD (last commit to `main` 2026-11-18, read 2026-11-23) via `gh api`; lean4-skills v4.12.0 release notes; `aristotlelib` 3.3.0 and 3.4.0 from the CHANGELOG.md and the PyPI description; LeanInteract README and PyPI (no release since v0.11.6); lean-lsp-mcp (no release since v0.33.0); LeanDojo-v2 from arXiv:2611.09048 (abstract and PDF), its README, PyPI and repository metadata; Gyevnár and DeDeo (arXiv:2611.06995, PDF), AutoIP (arXiv:2611.06962, PDF sections 4–6 and Table 1; repository via `gh api`), Saha et al. (arXiv:2611.10961, PDF section 2 and the axiom inventory appendix), Turing Agent (arXiv:2611.21299, abstract and PDF figure 3; searched for a code link) and Maji (arXiv:2611.07073, abstract and PDF section 5.1). Riemann Hypothesis section: the author's note `alpo.ge/remark.pdf` (PDF text), LessWrong posts hxHt8NaQeFADrfeAp and gSQcdKtRtNpbai5TR (raw bodies), the Xena Project post of 2026-11-12 (page text), the joint statement's markdown source in `leanprover-community/blog` (`posts/riemann_hypothesis.md`) via `gh api`, and `math.mit.edu/~drew/grh/` fetched 2026-11-23 and re-fetched at 21:50 UTC that day by a second pass (page stamped "last updated 2026-11-23 14:35 UTC" both times; it says it will be updated as the remaining checks finish); the joint statement's byline history from the blog repository's commits #149, #150 and #154; Mathlib's `RiemannHypothesis` definition read from `Mathlib/NumberTheory/LSeries/RiemannZeta.lean`. Not verified: the Lean archive was not downloaded or built; none of the logs linked from the verification page were opened; Turing Agent's three completions and the Saha et al. bounds were not re-checked; whether lean-lsp-mcp 0.33.0, lean4-skills or LeanInteract work on stable v4.36.0 was not tested.) (Additions 2026-11-04: Aristotle 3.x from the `harmonic-ai/aristotle` CHANGELOG.md (3.0.0, 3.1.0, 3.2.0) via `gh api` and the PyPI `aristotlelib` description and upload dates; lean-lsp-mcp PR #239 text, v0.33.0 release notes and README "REPL Setup" via `gh api`, PyPI upload date; `uvx` caching from uv `docs/concepts/tools.md`; Lean Beam from the `leanprover/lean-beam` README and licence via `gh api`, its `docs/COMPATIBILITY.md` (Lean 4.34–4.36 window), lean4 PR #15665 and the v4.36.0-rc2 release notes on lean-lang.org (which mention no `lake comparator` or `lake check` change); KAPPA (arXiv:2610.35596 abstract and PDF sections 7.1 and "Computational details"; repository and licence via `gh api`), PaperFormalizer (arXiv:2610.31810 abstract; repository via `gh api`), Numina Fuse (arXiv:2610.33860 abstract; licence via `gh api`), h1 (arXiv:2610.35962 abstract), SemantEq (arXiv:2610.32919 abstract; repository via `gh api`), MechAlign (arXiv:2610.35269 abstract and PDF), ProofPatch (arXiv:2611.01357 abstract and PDF, searched for a code link), Lean Finder V2 (arXiv:2610.30843 abstract) and Vampire-Hammer (arXiv:2610.40310 abstract and PDF; repository via `gh api`).) (Additions 2026-10-20: LeanInteract v0.11.6
+Last verified: 2026-11-23. (Template-check corrections 2026-11-23: what was run on `project_templates/lean_formalization/` on Lean v4.36.0, from its README; the non-Linux refusal message from `src/lake/Lake/CLI/Check.lean` at tag v4.36.0; the elan 4.2.4 shim list and the v4.36.0 toolchain's `bin` directory listed on macOS arm64.) (Additions 2026-11-23: Lean v4.36.0 and v4.37.0-rc1 release dates via `gh api` and their release-notes pages on lean-lang.org read as text (Lean Beam bundling and PR #16478, `Float` `min`/`max`, the 12% Mathlib build figure; v4.37.0-rc1 PRs #16019, #15775, #15762, #16514, #16096, #16279, #16512; PR #16512's changed files, all under `src/kernel/`, via `gh api`); Lean Beam `docs/COMPATIBILITY.md` and `validated-lean-toolchains` at HEAD (last commit to `main` 2026-11-18, read 2026-11-23) via `gh api`; lean4-skills v4.12.0 release notes; `aristotlelib` 3.3.0 and 3.4.0 from the CHANGELOG.md and the PyPI description; LeanInteract README and PyPI (no release since v0.11.6); lean-lsp-mcp (no release since v0.33.0); LeanDojo-v2 from arXiv:2611.09048 (abstract and PDF), its README, PyPI and repository metadata; Gyevnár and DeDeo (arXiv:2611.06995, PDF), AutoIP (arXiv:2611.06962, PDF sections 4–6 and Table 1; repository via `gh api`), Saha et al. (arXiv:2611.10961, PDF section 2 and the axiom inventory appendix), Turing Agent (arXiv:2611.21299, abstract and PDF figure 3; searched for a code link) and Maji (arXiv:2611.07073, abstract and PDF section 5.1). Riemann Hypothesis section: the author's note `alpo.ge/remark.pdf` (PDF text), LessWrong posts hxHt8NaQeFADrfeAp and gSQcdKtRtNpbai5TR (raw bodies), the Xena Project post of 2026-11-12 (page text), the joint statement's markdown source in `leanprover-community/blog` (`posts/riemann_hypothesis.md`) via `gh api`, and `math.mit.edu/~drew/grh/` fetched 2026-11-23 and re-fetched at 21:50 UTC that day by a second pass (page stamped "last updated 2026-11-23 14:35 UTC" both times; it says it will be updated as the remaining checks finish); the joint statement's byline history from the blog repository's commits #149, #150 and #154; Mathlib's `RiemannHypothesis` definition read from `Mathlib/NumberTheory/LSeries/RiemannZeta.lean`. Not verified: the Lean archive was not downloaded or built; none of the logs linked from the verification page were opened; Turing Agent's three completions and the Saha et al. bounds were not re-checked; whether lean-lsp-mcp 0.33.0, lean4-skills or LeanInteract work on stable v4.36.0 was not tested.) (Additions 2026-11-04: Aristotle 3.x from the `harmonic-ai/aristotle` CHANGELOG.md (3.0.0, 3.1.0, 3.2.0) via `gh api` and the PyPI `aristotlelib` description and upload dates; lean-lsp-mcp PR #239 text, v0.33.0 release notes and README "REPL Setup" via `gh api`, PyPI upload date; `uvx` caching from uv `docs/concepts/tools.md`; Lean Beam from the `leanprover/lean-beam` README and licence via `gh api`, its `docs/COMPATIBILITY.md` (Lean 4.34–4.36 window), lean4 PR #15665 and the v4.36.0-rc2 release notes on lean-lang.org (which mention no `lake comparator` or `lake check` change); KAPPA (arXiv:2610.35596 abstract and PDF sections 7.1 and "Computational details"; repository and licence via `gh api`), PaperFormalizer (arXiv:2610.31810 abstract; repository via `gh api`), Numina Fuse (arXiv:2610.33860 abstract; licence via `gh api`), h1 (arXiv:2610.35962 abstract), SemantEq (arXiv:2610.32919 abstract; repository via `gh api`), MechAlign (arXiv:2610.35269 abstract and PDF), ProofPatch (arXiv:2611.01357 abstract and PDF, searched for a code link), Lean Finder V2 (arXiv:2610.30843 abstract) and Vampire-Hammer (arXiv:2610.40310 abstract and PDF; repository via `gh api`).) (Additions 2026-10-20: LeanInteract v0.11.6
 release notes, README and PyPI; `leanprover/comparator` archived flag via the
 GitHub API; Lean v4.36.0-rc1 release date; lean4-skills v4.11.4 release notes;
 mini-Lean-agent (arXiv:2610.17331 abstract and PDF, repository via the GitHub

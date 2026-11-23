@@ -2,7 +2,7 @@
 
 Runs a prompt-only misaligned organism and its matched aligned control over the
 neutral free-form probe set from Betley et al. 2025, scores every response for
-alignment + coherence with an LLM judge (GPT-4o), and compares misalignment
+alignment + coherence with an LLM judge (`openai/gpt-6.1-sol` by default), and compares misalignment
 rates. Demonstrates judge-based behavioral measurement, matched controls,
 misalignment-rate statistics with CIs, and the treatment-vs-control comparison
 that is the heart of model-organism evaluation. Built on `mo_components`.

@@ -2,16 +2,17 @@
 Run-directory capture library — the provenance substrate.
 
 Pure stdlib so any experiment code or Claude Code skill can `import run_dir`
-without a dependency. Manages the five machine-readable artifacts of a run
+without a dependency. Manages the six machine-readable artifacts of a run
 directory (see templates/schemas.md and templates/README.md):
 
     metadata.json          reproducibility metadata            (this module writes it)
-    prereg.yaml            the commitment device               (src/preregister.py owns it)
+    prereg.yaml            the commitment device               (preregister.py owns it)
     provenance.jsonl       agent decisions / tool calls        RunDir.log_provenance()
     gates.jsonl            human approval gates                RunDir.log_gate()
+    evidence.jsonl         citations for/against predictions   evidence.cite()
     attention_checks.jsonl seeded overseer checks              RunDir.log_attention_check()
 
-The three .jsonl logs are append-only and event ids are a deterministic counter
+The four .jsonl logs are append-only and event ids are a deterministic counter
 (no randomness), so a killed run resumes cleanly and history can't be silently
 rewritten. metadata.json is written atomically (tmp + rename) so an interrupted
 write on ephemeral compute never leaves a half-file.
@@ -36,6 +37,7 @@ STAGE_STATUS = (
     "pending", "running", "done", "frozen", "skipped", "failed",
     "not_applicable", "superseded",
 )
+PREREG_POINTS = ("hypothesis", "design")   # the two commitment points, either side of the pilot
 PROVENANCE_EVENTS = (
     "tool_call", "model_invocation", "decision", "branch_selected",
     "artifact_written", "error",
@@ -91,13 +93,22 @@ class RunDir:
     @property
     def gates_path(self) -> Path: return self.path / "gates.jsonl"
     @property
+    def evidence_path(self) -> Path: return self.path / "evidence.jsonl"
+    @property
     def attention_checks_path(self) -> Path: return self.path / "attention_checks.jsonl"
 
     # --- creation ------------------------------------------------------------
     @classmethod
-    def create(cls, base: Path, run_id: str, *, models: list[dict], harness: dict,
-               compute: dict | None = None, code_repo: Path | None = None) -> "RunDir":
+    def create(cls, base: Path, run_id: str, *, acceptance: str, models: list[dict],
+               harness: dict, compute: dict | None = None,
+               code_repo: Path | None = None) -> "RunDir":
+        """`acceptance` says what done means for this run — what must be true
+        before it can honestly be called finished. It is written here, when the
+        run is filed, and nothing in this class edits it afterwards."""
         assert run_id.startswith("run_"), f"run_id must be run_<ts>_<name>, got {run_id!r}"
+        assert acceptance and acceptance.strip(), (
+            "a run is filed with its acceptance condition — say what done means before "
+            "starting, as something checkable")
         assert isinstance(models, list) and models, "must supply at least one model"
         for m in models:
             assert m.get("id") and m.get("role"), f"each model needs id+role, got {m!r}"
@@ -109,6 +120,7 @@ class RunDir:
         metadata = {
             "run_id": run_id,
             "created_at": _now_iso(),
+            "acceptance": acceptance,
             "git_sha": _git_sha(code_repo or Path.cwd()),
             "models": models,
             "harness": harness,
@@ -150,9 +162,13 @@ class RunDir:
             c["usd"] = (c["usd"] or 0.0) + usd
         self._write_metadata(meta)
 
-    def link_prereg(self, *, frozen_at: str, content_hash: str) -> None:
+    def link_prereg(self, *, point: str, frozen_at: str, content_hash: str) -> None:
+        """Record one of the prereg's two commitment points (`hypothesis`,
+        frozen before the pilot; `design`, frozen after it)."""
+        assert point in PREREG_POINTS, f"unknown commitment point {point!r} (one of {PREREG_POINTS})"
         meta = self.read_metadata()
-        meta["prereg"] = {"frozen_at": frozen_at, "content_hash": content_hash}
+        meta["prereg"] = {**(meta["prereg"] or {}),
+                          point: {"frozen_at": frozen_at, "content_hash": content_hash}}
         self._write_metadata(meta)
 
     # --- append-only logs ----------------------------------------------------

@@ -19,8 +19,7 @@ This is **not** a faithful reproduction of the paper's results — it's a workin
 ## Quick start
 
 ```bash
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv sync --extra dev --python 3.12   # installs the versions pinned in uv.lock (pin the interpreter: with none installed, uv 0.13+ downloads 3.15)
 
 # Tiny run that finishes in ~1 minute on CPU
 uv run python -m example_2_vpd.train steps=50 K=16 batch_size=2 seq_len=32 matrix_filter=transformer.h.0
@@ -55,7 +54,7 @@ uv run python -m example_2_vpd.analyze --run-dir outputs/run_<timestamp>_<tag>
 
 - You want to faithfully reproduce the paper. Use the paper's reference implementation (when released) instead.
 - You're working on a model >7B. The single-mask-per-batch design and per-sample einsum forward will be a bottleneck.
-- You don't actually need parameter decomposition — for activation-space decomposition, see `02_saes.md` and SAELens.
+- You don't actually need parameter decomposition — for activation-space decomposition, see `docs/interpretability/saes.md` and SAELens.
 
 ## Challenge exercises
 

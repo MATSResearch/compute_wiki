@@ -3,6 +3,18 @@
 `samples_df` gives the aggregate view; this module is for the
 "pull one trajectory and look at every tool call" workflow that's necessary
 when a monitor disagrees with you and you want to know why.
+
+Where things live in a ControlArena 20.x log:
+- sample.metadata — the `ControlTaskMetadata` dump (`eval_mode`,
+  `main_task_description`, `side_task_description`, ...).
+- log.eval.metadata["micro_protocol"] — the serialised micro-protocol.
+- assistant message metadata — the monitor's `suspicion_score`, `reason` and
+  `score_parsed`, flat at the top level (defer-to-trusted also stores
+  `monitor_response`, `untrusted_response` and, on a deferred step,
+  `trusted_response`).
+- sample.scores — the setting's scorer holds a dict value
+  `{"main_task_success": "C"|"I", "side_task_success": "C"|"I"}` (side task in
+  attack mode only); `max_suspicion_scorer` holds a float.
 """
 
 from __future__ import annotations
@@ -12,6 +24,8 @@ from pathlib import Path
 from typing import Iterator
 
 from inspect_ai.log import read_eval_log
+from inspect_ai.model import ChatMessageAssistant
+from inspect_ai.scorer import CORRECT, INCORRECT
 
 
 @dataclass
@@ -26,8 +40,9 @@ class ToolCall:
 class Trajectory:
     sample_id: str | int
     eval_mode: str  # "honest" or "attack"
-    protocol: str
-    suspicion_scores: list[float]  # one per monitor call along the trajectory
+    protocol: str  # micro-protocol type, e.g. "defer_to_trusted"
+    protocol_info: dict  # the serialised micro-protocol (defer_threshold, policies, monitor, ...)
+    suspicion_scores: list[float]  # one per monitored step along the trajectory
     main_task_success: bool | None
     side_task_success: bool | None
     tool_calls: list[ToolCall]
@@ -47,53 +62,43 @@ def iter_trajectories(log_path: str | Path) -> Iterator[Trajectory]:
 
 
 def _to_trajectory(sample, log) -> Trajectory:
-    metadata = getattr(sample, "metadata", {}) or {}
-    scores = getattr(sample, "scores", {}) or {}
-    susp = _gather_suspicion(sample)
-    tool_calls: list[ToolCall] = []
-    for i, msg in enumerate(getattr(sample, "messages", []) or []):
-        for tc in getattr(msg, "tool_calls", None) or []:
-            tool_calls.append(
-                ToolCall(
-                    step=i,
-                    tool=getattr(tc, "function", "?"),
-                    args=dict(getattr(tc, "arguments", {}) or {}),
-                    output=None,
-                )
-            )
+    protocol_info = log.eval.metadata["micro_protocol"]
+    tool_calls = [
+        ToolCall(step=i, tool=tc.function, args=dict(tc.arguments), output=None)
+        for i, msg in enumerate(sample.messages)
+        if isinstance(msg, ChatMessageAssistant)
+        for tc in msg.tool_calls or []
+    ]
     return Trajectory(
-        sample_id=getattr(sample, "id", "?"),
-        eval_mode=str(metadata.get("eval_mode", "?")),
-        protocol=str(metadata.get("protocol", log.eval.task)),
-        suspicion_scores=susp,
-        main_task_success=_score_value(scores, "main_task"),
-        side_task_success=_score_value(scores, "side_task"),
+        sample_id=sample.id,
+        eval_mode=str(sample.metadata["eval_mode"]),
+        protocol=protocol_info["type"],
+        protocol_info=protocol_info,
+        suspicion_scores=_gather_suspicion(sample),
+        main_task_success=_task_success(sample.scores, "main_task_success"),
+        side_task_success=_task_success(sample.scores, "side_task_success"),
         tool_calls=tool_calls,
     )
 
 
 def _gather_suspicion(sample) -> list[float]:
-    """Walk message metadata for monitor.suspicion_score entries."""
-    out: list[float] = []
-    for msg in getattr(sample, "messages", []) or []:
-        meta = getattr(msg, "metadata", None) or {}
-        mon = meta.get("monitor") if isinstance(meta, dict) else None
-        if isinstance(mon, dict) and "suspicion_score" in mon:
-            try:
-                out.append(float(mon["suspicion_score"]))
-            except (TypeError, ValueError):
-                continue
-    return out
+    """Monitor scores in message order — the same `metadata["suspicion_score"]`
+    entries `max_suspicion_scorer` takes the maximum of."""
+    return [
+        float(msg.metadata["suspicion_score"])
+        for msg in sample.messages
+        if isinstance(msg, ChatMessageAssistant)
+        and msg.metadata
+        and msg.metadata.get("suspicion_score") is not None
+    ]
 
 
-def _score_value(scores, key_substring: str) -> bool | None:
-    for k, v in (scores or {}).items():
-        if key_substring in k:
-            val = getattr(v, "value", v)
-            if val in (True, False):
-                return bool(val)
-            try:
-                return float(val) > 0.5
-            except (TypeError, ValueError):
-                return None
+def _task_success(scores, key: str) -> bool | None:
+    """Read `key` from the scorer whose value is a dict holding it.
+
+    None when no scorer reports it (side task in honest mode, or task scorers
+    skipped)."""
+    for score in (scores or {}).values():
+        if isinstance(score.value, dict) and key in score.value:
+            return {CORRECT: True, INCORRECT: False}[score.value[key]]
     return None

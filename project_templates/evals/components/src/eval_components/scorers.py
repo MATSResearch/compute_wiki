@@ -20,10 +20,9 @@ image, a problem sheet, a user task), the plain standard error understates
 uncertainty (up to ~2.9x in inspect_evals#2605). Epochs are not a reason to
 cluster: Inspect reduces each sample's epochs to one score before metrics.
 Put the unit's id in `Sample.metadata` and use
-`stderr(cluster="<key>")`, available in every inspect-ai version this template
-allows. `ci_wilson(cluster="<key>")` (a Wilson interval for 0/1 scores, always
-inside [0, 1]) needs inspect-ai >= 0.3.262 (`ci()` >= 0.3.260); the lock file
-here pins 0.3.224, so bump `inspect-ai` before adding it. The cluster key is
+`stderr(cluster="<key>")`, or `ci_wilson(cluster="<key>")` (a Wilson interval
+for 0/1 scores, always inside [0, 1]); both are in every inspect-ai version this
+template allows (>= 0.3.288). The cluster key is
 eval-specific, which is why it is not hard-coded here. See
 docs/evaluation/eval-statistics.md, "Clustered items".
 """
@@ -176,6 +175,11 @@ def graded_qa_with_refusal(
     defaults to Inspect's `grader` model role (set it on the eval, or pass
     `model=`) — keep the grader *separate* from the model under test to avoid a
     model grading its own output.
+
+    Needs inspect-ai >= 0.3.288: before it, a grader reply that quoted a grade
+    and ended with a verdict line in an unrecognised form was scored from the
+    quoted grade. The default grading template changed in the same release, so
+    grades are not comparable across it — grade both arms on one version.
     """
     base = model_graded_qa(
         instructions=instructions,

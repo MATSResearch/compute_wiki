@@ -19,9 +19,9 @@ name = "Statements"
 name = "Solutions"
 
 # To depend on Mathlib, add the block below and pick the Mathlib tag that
-# matches lean-toolchain (Mathlib tags releases by toolchain, e.g. v4.35.0):
+# matches lean-toolchain (Mathlib tags releases by toolchain; the v4.36.0 tag exists):
 #
 # [[require]]
 # name = "mathlib"
 # scope = "leanprover-community"
-# rev = "v4.35.0"
+# rev = "v4.36.0"

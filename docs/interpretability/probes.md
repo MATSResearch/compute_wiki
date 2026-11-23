@@ -179,7 +179,7 @@ uv run scripts/run_local.py solutions/trained-probe \
 
 **When *not* to use it:** as a live competition — it is now a probe-on-reasoning-models example with development labels only; if you cannot fit your method into 3,600 s offline on one GPU.
 
-Other scoreboards for interpretability methods (ARC White-Box Estimation, the MIB leaderboard) are listed in [`mech-interp.md`](mech-interp.md#live-challenges-as-of-2026-10-14). A related competition that has ended: the NDIF/Cadenza deception-detection competition (main deadline 2026-07-26).
+Other scoreboards for interpretability methods (the MIB leaderboard, which is open, and the ARC White-Box Estimation Challenge, whose Phase 2 closed on 2026-10-21 with results pending) are listed in [`mech-interp.md`](mech-interp.md#live-challenges). A related competition that has ended: the NDIF/Cadenza deception-detection competition (main deadline 2026-07-26).
 
 ## Pitfalls (cross-cutting)
 
@@ -469,7 +469,7 @@ That is the score of a probe that predicts "positive" for everything on a balanc
 
 ### Is there a live competition for probe-based methods?
 
-Not right now (2026-11-04): the **AIMO Interpretability Challenge** (NeurIPS 2026), which asked for a method that predicts from model internals whether a reasoning model is robust on each math problem, closed submissions on **2026-11-01** (technical reports Nov 1–5). Its starter kit (`aimo-interp/getting-started`) with a trained linear-probe baseline and the development data remain usable as a benchmark. Other scoreboards (ARC White-Box Estimation, the MIB leaderboard) are in [`mech-interp.md`](mech-interp.md#live-challenges-as-of-2026-10-14). See "Benchmarks and competitions" above.
+Not right now (2026-11-04): the **AIMO Interpretability Challenge** (NeurIPS 2026), which asked for a method that predicts from model internals whether a reasoning model is robust on each math problem, closed submissions on **2026-11-01** (technical reports Nov 1–5). Its starter kit (`aimo-interp/getting-started`) with a trained linear-probe baseline and the development data remain usable as a benchmark. Other scoreboards (the MIB leaderboard, open; ARC White-Box Estimation, Phase 2 closed 2026-10-21 with results pending) are in [`mech-interp.md`](mech-interp.md#live-challenges). See "Benchmarks and competitions" above.
 
 ### Does my probe work on the deployed model?
 

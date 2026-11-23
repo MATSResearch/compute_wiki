@@ -32,7 +32,7 @@ Aliases: `safetytooling` (the import name; **not published on PyPI** — `pypi.o
 - **Automatic caching:** disk or Redis. Re-running the same prompt is free. Critical when iterating on dataset/prompt/scorer code.
 - **Rate limit management** and concurrent request handling — handles per-provider rate limits and exponential backoff out of the box.
 - **Custom response filtering with retries** — drop completions that fail your validator, retry up to N times.
-- **Finetuning integration** with W&B logging — kick off a finetuning job (the built-in integration targets the **OpenAI finetuning API**; note OpenAI is winding that API down — [dates in `compute.md`](compute.md#finetuning-closed-weight-models-openai-shutdown-dates-as-of-2026-10-14) — so this path is legacy) and log to wandb.
+- **Finetuning integration** with W&B logging — kick off a finetuning job (the built-in integration targets the **OpenAI finetuning API**; note OpenAI is winding that API down — [dates in `compute.md`](compute.md#finetuning-closed-weight-models-openai-shutdown-dates) — so this path is legacy) and log to wandb.
 - **Image and audio support.**
 - **Text-to-speech** via ElevenLabs.
 - **API usage tracking** for OpenAI and Anthropic (cost reporting).
@@ -204,7 +204,7 @@ The `safety-research` GitHub org hosts many adjacent projects. Search `safety-re
 - **Async + Jupyter.** Mixing async APIs with Jupyter is a frequent source of `RuntimeError: This event loop is already running`. Use `nest_asyncio` or `await api(...)` directly in a notebook cell.
 - **Retries amplify rate limit pressure.** A burst of 429s + retries can produce a cascade. Bound retries (default 5 is usually fine).
 - **Don't commit your cache.** Multi-GB caches in git is not what you want. Add `cache/` to `.gitignore`.
-- **A model id is not a pinned model.** Providers retire ids (requests fail) or re-route them (requests succeed, from a different model: Google does this for `gemini-2.5-pro` and `gemini-2.5-flash` from 2026-12-01). Log the model name the *response* reports next to the one you requested, and check the retirement table in [`compute.md`](compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04) before a long run.
+- **A model id is not a pinned model.** Providers retire ids (requests fail) or re-route them (requests succeed, from a different model: Google does this for `gemini-2.5-pro` and `gemini-2.5-flash` from 2026-12-01). Log the model name the *response* reports next to the one you requested, and check the retirement table in [`compute.md`](compute.md#closed-model-retirements-to-plan-around-openai-anthropic-and-google) before a long run.
 - **Newer closed models narrow which API surface a wrapper can use (2026-11).** OpenAI's changelog for GPT-6.2 Astra and GPT-6.2 Sol (`gpt-6.2-astra`, `gpt-6.2-sol`, 2026-11-17): "Both models support the Responses API and Chat Completions. Tool calling requires the Responses API." A scaffold, LiteLLM route or OpenAI-compatible proxy that sends `tools` over Chat Completions should be tested on these models before an agentic eval (not verified: whether such a request errors or silently returns no tool calls). Anthropic's Claude Fable 5.2 (`claude-fable-5-2`, 2026-11-09) rejects edited-prefix conversations that carry its thinking blocks; see [`experiment-tracking.md`](experiment-tracking.md#claude-fable-52-thinking-blocks-and-anthropics-text-watermark-2026-11).
 
 ## Cross-references
@@ -228,7 +228,7 @@ api = InferenceAPI(cache_dir="./cache")
 prompt = Prompt(messages=[ChatMessage(role=MessageRole.user, content="Hello")])
 responses = await api(model_id="claude-sonnet-4-6", prompt=prompt, n=3)
 ```
-Same `api(model_id=..., prompt=...)` works with other providers' model ids (an OpenAI id, a Gemini id, `deepseek-chat`, `meta-llama/...` via Together, etc.). Check that the id is still served before copying one from an old script: `gemini-2.0-flash` was shut down on 2026-06-01, `gemini-2.5-pro` / `gemini-2.5-flash` are re-routed to other models from 2026-12-01 with no error, and `gpt-4o` shuts down on 2027-01-14 ([`compute.md`](compute.md#closed-model-retirements-to-plan-around-openai-and-anthropic-as-of-2026-11-04)). **LiteLLM** is the general-purpose alternative.
+Same `api(model_id=..., prompt=...)` works with other providers' model ids (an OpenAI id, a Gemini id, `deepseek-chat`, `meta-llama/...` via Together, etc.). Check that the id is still served before copying one from an old script: `gemini-2.0-flash` was shut down on 2026-06-01, `gemini-2.5-pro` / `gemini-2.5-flash` are re-routed to other models from 2026-12-01 with no error, and `gpt-4o` shuts down on 2027-01-14 ([`compute.md`](compute.md#closed-model-retirements-to-plan-around-openai-anthropic-and-google)). **LiteLLM** is the general-purpose alternative.
 
 ### How do I cache API calls to avoid re-paying for the same prompt?
 

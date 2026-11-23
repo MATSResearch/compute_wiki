@@ -100,7 +100,7 @@ Absolute Deviation; **val_bpb** = validation bits per byte.
 | Parallel tree search, with pass/fail gates that every descendant branch inherits | **evo** (`evo-hq/evo`) | Runs unattended by default; the held-out score-floor gate is automatic only when evo builds the benchmark itself |
 | A hypothesis tree with a dev split for iterating, a test split for merging, and a mode that pauses for your review | **Arbor** (`RUC-NLPIR/Arbor`) | When its "held-out test" split is also the split you report |
 | Post-training methods for an alignment failure, with the agent submitting weights and a held-out benchmark it never sees | **AAR harness `generic_aar/`** (`YuehHanChen/automated_alignment_researcher`) | Fuzzy questions with no benchmark; macOS or CPU beyond the stub demo |
-| A copy-and-edit starting point with explicit human pause points, a protected held-out directory and an append-only results log | `project_templates/autoresearch_loop/` in this repo | When your evaluation cannot be scripted into one command that prints a number |
+| A copy-and-edit starting point with explicit human pause points, a held-out directory behind an optional Claude Code guard hook (a native fail-closed `PreToolUse` hook, or fail-open hookify rules) and an append-only results log | `project_templates/autoresearch_loop/` in this repo | When your evaluation cannot be scripted into one command that prints a number |
 
 The same loop shape is also used outside optimisation: **Agent Hacks Agents**
 (AHA, arXiv:2607.11698, `henrymao2004/Auto-research-red-teaming`) describes
@@ -429,7 +429,20 @@ The copy-and-edit version of this checklist is
 `project_templates/autoresearch_loop/` (a `program.md` with pause points,
 `measure.sh` printing `METRIC name=value`, `checks.sh`, an append-only
 `results.jsonl` with `status` / `rollback_reason` / `revisits_run`, and a
-`data/heldout/` convention outside the agent's write scope).
+`data/heldout/` convention outside the agent's write scope). It ships two
+optional guards with the same patterns. `claude_hooks/` is a native Claude
+Code `PreToolUse` command hook: `protect_loop.py` exits 2 to refuse a Bash
+command mentioning `data/heldout` or `score_final.sh` and an Edit / Write /
+NotebookEdit call on a researcher-owned file, and `settings.example.json`
+registers it with `"onFailure": "block"` (Claude Code v2.1.295 or later), so
+a hook that crashes, times out or cannot start refuses the call instead of
+letting it through. `hookify/` holds the two hookify rule files, the
+simpler-to-install alternative that fails open. The native hook was tested on
+2026-11-23 by piping sample `PreToolUse` JSON into the script (allowed calls
+exit 0, forbidden ones exit 2, malformed input exits 1), not in a live Claude
+Code session: after installing it, rename the script and check that an
+ordinary tool call is refused. Neither guard is isolation — a script that
+opens `data/heldout/` itself passes both.
 
 ## Failure modes: the part to actually read
 

@@ -1,7 +1,24 @@
 """Monitor builders + a hook for writing your own.
 
 A monitor examines actions / tool calls from the untrusted policy and emits a
-**suspicion score** (higher = more suspicious). Monitors are usually backed by
+**suspicion score** (higher = more suspicious). The `@monitor` decorator writes
+the `MonitorResponse` fields (`suspicion_score`, `reason`, `score_parsed`) into
+the metadata of the last assistant message; `max_suspicion_scorer()` and the
+micro-protocols read `metadata["suspicion_score"]` from there.
+
+Prompt contract (ControlArena 20.x): the built-in monitors format the prompt
+with `{task_description}` and `{tool_calls}` and read the verdict from the
+LAST `<score>...</score>` tag in the reply (reasoning from `<reasoning>`). A
+reply without a `<score>` tag is not an error: it gets `default_suspicion_score`
+(0.0) and `score_parsed=False`. A prompt that asks for "Score: 7" therefore
+yields all-zero suspicion. Check `score_parsed` before trusting a threshold.
+
+`score_range` gives the raw scale the prompt asks for (default 0-10) and the
+output scale (default 0-1); scores are normalised to the output scale. A signed
+raw scale such as [-1, 1] needs control-arena >= 20.1.1 (earlier versions
+dropped the minus sign).
+
+Monitors are usually backed by
 the trusted (weaker) model — using a stronger monitor than the policy makes
 the protocol trivially safe but voids the control assumption.
 
@@ -22,11 +39,12 @@ from __future__ import annotations
 from typing import Awaitable, Callable
 
 from control_arena.monitor import (
+    MonitorResponse,
+    MonitorScoreRange,
     basic_monitor_builder,
     ensemble_monitor_builder,
     monitor,
 )
-from control_arena.monitor._types import MonitorResponse, MonitorScoreRange
 
 __all__ = [
     "MonitorResponse",
@@ -62,9 +80,10 @@ def ensemble_trusted_monitor(
     """N-sample ensemble — averages suspicion across stochastic monitor calls.
 
     Reduces variance at N× the monitor cost. The upstream apps threshold-sweep
-    example uses N=10; that's a reasonable default. Note: `ensemble_monitor_builder`
-    does NOT accept a `cache` kwarg (only `basic_monitor_builder` does) —
-    caching identical samples would defeat the variance-reduction purpose.
+    example uses N=10; that's a reasonable default. `ensemble_monitor_builder`
+    has no `cache` kwarg: it always caches, and keeps the N samples distinct
+    by giving each its own seed (via `num_choices` where the provider
+    supports it). Upstream default temperature is 1.0.
     """
     kwargs = {
         "model_role": "trusted",
@@ -86,7 +105,9 @@ def custom_monitor(fn: ScoreFn) -> ScoreFn:
     """Decorator: wrap an async function as a ControlArena monitor.
 
     The wrapped function must accept `(state, tools)` and return a
-    MonitorResponse(suspicion_score, reason, model_usage=None).
+    `MonitorResponse(suspicion_score, reason)`. The score is stored as
+    returned — nothing normalises it — so return it on the same scale as your
+    `defer_threshold` ([0, 1] to match the built-in monitors).
     See `control_arena.monitor.monitor` for the underlying decorator.
     """
     return monitor(fn)  # type: ignore[return-value]

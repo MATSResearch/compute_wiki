@@ -6,8 +6,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "ac-components",
-    "control-arena>=15.0.0",
-    "inspect-ai>=0.3.50",
+    # 20.1.1 fixes silent result-changing bugs on paths this template uses: APPS scorer graded
+    # by stderr instead of exit status (#914), defer-to-trusted monitor views for repeated
+    # tool calls (#924), dropped sign on negative monitor scores (#877).
+    "control-arena>=20.1.1",
+    # 0.3.288: output cache key ignored model constructor args (policies/monitors here use cache=True).
+    "inspect-ai>=0.3.288",
     "pandas>=2.0.0",
     "numpy>=1.26.0",
     "matplotlib>=3.8.0",
@@ -18,6 +22,9 @@ dev = ["pytest>=8.0.0"]
 
 [tool.uv.sources]
 ac-components = { path = "../../components", editable = true }
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days
 
 [build-system]
 requires = ["hatchling"]

@@ -15,7 +15,7 @@ are in the wiki:
 (most conceptual alignment questions — see the field reports on the same wiki
 page); or when one evaluation run is too expensive to repeat, because the
 keep/discard rule here needs a measured noise floor. It is also not isolation:
-see "What the hookify rules do not stop" below.
+see "What the hooks do not stop" below.
 
 | File | Owner | What it is |
 |---|---|---|
@@ -25,7 +25,8 @@ see "What the hookify rules do not stop" below.
 | [`score_final.sh`](score_final.sh) | researcher | Scores the **final** split once, at the end, run by the researcher only |
 | [`log_result.py`](log_result.py) | — | Appends one validated line to `results.jsonl` (stdlib only); refuses malformed or out-of-order records |
 | [`results.schema.json`](results.schema.json) | — | JSON Schema for one `results.jsonl` line |
-| [`hookify/`](hookify/) | researcher | Optional hookify rule files; copy into `.claude/` to use |
+| [`claude_hooks/`](claude_hooks/) | researcher | Optional Claude Code `PreToolUse` guard (`protect_loop.py` + `settings.example.json`) that **fails closed** (`"onFailure": "block"`) |
+| [`hookify/`](hookify/) | researcher | Optional hookify rule files with the same patterns; simpler to install, but they **fail open** |
 
 The scripts are templates: every line marked `# >>> EDIT` is yours to fill in.
 
@@ -38,7 +39,10 @@ chmod +x measure.sh checks.sh score_final.sh
 # 1. Fill in the "Fill in before starting" block of program.md.
 # 2. Edit the `# >>> EDIT` lines in measure.sh, checks.sh, score_final.sh.
 # 3. Put held-out data under data/heldout/guard/ and data/heldout/final/ (see below).
-# 4. Optional: mkdir -p .claude && cp hookify/*.local.md .claude/
+# 4. Optional guard hook (fails closed; see "Optional: a guard hook" below):
+#      mkdir -p .claude/hooks && cp claude_hooks/protect_loop.py .claude/hooks/
+#      then merge claude_hooks/settings.example.json into .claude/settings.json
+#    or, simpler but fail-open: mkdir -p .claude && cp hookify/*.local.md .claude/
 git checkout -b autoresearch/<tag>
 # 5. Start your agent in this directory and point it at program.md.
 ```
@@ -120,7 +124,47 @@ template's
 [`metadata.schema.json`](../research_rigor/templates/metadata.schema.json) works
 here too.
 
-## Optional: hookify rules
+## Optional: a guard hook
+
+Two ways to make Claude Code refuse the calls `program.md` forbids. They use
+the same patterns; they differ in what happens when the hook itself breaks.
+Either is enough.
+
+### `claude_hooks/`: a native hook that fails closed
+
+`protect_loop.py` is a `PreToolUse` command hook (stdlib Python): it exits 2,
+which refuses the call, for a Bash command mentioning `data/heldout` or
+`score_final.sh`, and for Edit / Write / NotebookEdit on `data/heldout/`,
+`measure.sh`, `checks.sh`, `score_final.sh`, `program.md` or `results.jsonl`.
+Read is not matched, so the agent can still read `program.md` and
+`results.jsonl`. `settings.example.json` registers it with
+`"onFailure": "block"`; merge it into your project's `.claude/settings.json`.
+
+Why the `onFailure` line matters. The hooks reference
+([code.claude.com/docs/en/hooks](https://code.claude.com/docs/en/hooks), read
+2026-11-23) says: "On most events, when a hook fails or times out, Claude Code
+still carries out the action", and of a failed hook, "The action goes ahead,
+except for hooks whose failure blocks the action". The fix it gives: "set
+`"onFailure": "block"` on a `command`, `http`, or `mcp_tool` hook. Requires
+Claude Code v2.1.295 or later." Failure covers a hook that cannot start, an
+exit code other than 0 or 2, a timeout and invalid output. Since 2.1.329 the
+same default applies to tool calls made by Code Mode scripts (changelog:
+"a PreToolUse hook that errors no longer refuses a script's tool call ... set
+`"onFailure": "block"` on a command, HTTP or MCP tool hook that must refuse").
+So without that line a guard with a missing `python3` or a typo guards
+nothing; with it, a broken guard stops the agent until you fix it. The script
+catches no exceptions for the same reason: input it cannot read must crash.
+
+Tested here (2026-11-23) by piping sample `PreToolUse` JSON to the script:
+allowed calls exit 0, forbidden ones exit 2, malformed input exits 1. Not
+tested inside a live Claude Code session, so after copying it in, and after
+any Claude Code upgrade, **make it fail on purpose** (rename the script, then
+ask the agent to run `ls`): the call should be refused. The matcher includes
+`Monitor` (whose shell commands hooks have seen since 2.1.314) on the
+assumption that its input carries `command`; if it does not, the hook crashes
+and Monitor calls are blocked, which this loop does not need anyway.
+
+### `hookify/`: markdown rules that fail open
 
 [hookify](https://matsresearch.github.io/compute_wiki/engineering/agentic-swe-practices/#hookify-research-guardrails-as-markdown-rules)
 (Anthropic's Claude Code plugin, `/plugin install hookify@claude-plugins-official`)
@@ -139,9 +183,11 @@ Check they loaded with `/hookify:list`. Details from hookify's source
 (`plugins/hookify/core/` and `hooks/` in `anthropics/claude-plugins-official`,
 read 2026-10-14), worth knowing before relying on them:
 
-- **They fail open.** The hook scripts "ALWAYS exit 0 - never block operations
+- **They fail open, and you cannot change that from a rule file.** The plugin
+  registers its own hooks, so `onFailure` is not yours to set. The hook scripts "ALWAYS exit 0 - never block operations
   due to hook errors": a rule file that fails to parse, or a missing `python3`,
-  means the operation goes ahead with a warning on stderr.
+  means the operation goes ahead with a warning on stderr. If the guard has to
+  hold when it breaks, use `claude_hooks/` above.
 - **Patterns are Python regexes, matched case-insensitively** (`re.IGNORECASE`)
   with `search`, against the raw tool input — absolute paths included.
 - **The frontmatter parser is hand-written, not full YAML.** Keep each
@@ -155,10 +201,10 @@ read 2026-10-14), worth knowing before relying on them:
   `tool_matcher: Edit|Write|MultiEdit` (also read from hookify's source; not in
   its README), so the agent's Read tool is not blocked anywhere by these rules.
 
-### What the hookify rules do not stop
+### What the hooks do not stop
 
-A `file` rule sees only the Edit, Write and MultiEdit tools, and a `bash` rule
-sees only the literal command text. A script that opens `data/heldout/` itself,
+This applies to both kinds. A file rule sees only the file-editing tools, and a
+shell rule sees only the literal command text. A script that opens `data/heldout/` itself,
 a variable holding the path, or `cd data && cat heldout/…` all pass. The rules
 catch accidents and make intent visible; they are not a boundary against an
 agent looking for a way round them. For that, keep `data/heldout/` where the

@@ -46,9 +46,19 @@ def build_config(
 ) -> ControlEvalConfig:
     """Build a ControlEvalConfig with sensible defaults.
 
-    All kwargs not listed here are forwarded — this lets you pass through
-    GenerateConfig overrides, scaffolds, etc. without us re-listing every
-    upstream field.
+    All kwargs not listed here are forwarded — `system_prompt` (the honest
+    system prompt, set at the scaffold level), `max_samples`, `max_sandboxes`,
+    `trusted_config` / `untrusted_config`, `scaffold`, etc. — without us
+    re-listing every upstream field.
+
+    Models are always set explicitly: ControlArena's own defaults changed in
+    20.1.0 (untrusted `anthropic/claude-opus-5-5`, trusted
+    `anthropic/claude-sonnet-4-6`), so a run that relies on them is not
+    comparable across versions.
+
+    The config splits three ways upstream: `control_args()` and `task_args()`
+    go into the tasks (`build_tasks`), `eval_args()` (limit, time_limit,
+    max_tasks, log_level, ...) go to Inspect's `eval()` (`run_eval`).
     """
     return ControlEvalConfig(
         trusted_model=roles.trusted,
@@ -77,6 +87,10 @@ def build_tasks(
     Defaults to honest + attack so you measure usefulness + safety in one run
     (reporting only one is misleading — see CLAUDE.md).
     Default scorer is `max_suspicion_scorer()` which most analyses need.
+
+    Task names are `<setting>_<micro_protocol>_<mode>_<hash>`; protocol
+    parameters such as `defer_threshold` are not in the name — read them from
+    the `micro_protocol_info` column of `samples_df` (see `loaders`).
     """
     if modes is None:
         modes = [EvalMode.HONEST, EvalMode.ATTACK]
@@ -96,14 +110,17 @@ def build_tasks(
 def run_eval(
     tasks,
     *,
+    config: ControlEvalConfig,
     log_dir: str | Path,
-    limit: int | None = None,
     **extra: Any,
 ):
-    """Run Inspect AI eval with a log directory.
+    """Run Inspect AI eval with `config.eval_args()` and a log directory.
 
-    Returns the list of EvalLog objects Inspect produces. The log_dir is also
-    written to disk for `samples_df()` to pick up later — that's the canonical
+    Pass the same `config` the tasks were built with: its eval-level fields
+    (limit, time_limit, max_tasks, max_samples, log_level, ...) only take
+    effect here. Returns the list of EvalLog objects Inspect produces. The
+    logs in `log_dir` are what `samples_df()` picks up later — the canonical
     way to analyze a control eval (per the upstream docs).
     """
-    return inspect_eval(tasks=tasks, log_dir=str(log_dir), limit=limit, **extra)
+    args = {**config.eval_args(), "log_dir": str(log_dir), **extra}
+    return inspect_eval(tasks=tasks, **args)

@@ -48,7 +48,7 @@ Aliases: `datasets` on PyPI, `huggingface/datasets` on GitHub, "HF datasets".
 **Pitfalls:**
 
 - **`split` matters.** Some safety datasets only have a `test` split; some have `train`/`test`/`val`. Read the dataset card.
-- **Dataset gating.** WMDP is gated (requires accepting terms). HarmBench is open. JailbreakBench is open. You'll need a HuggingFace token (`huggingface-cli login`) for gated datasets.
+- **Dataset gating.** WMDP is gated (requires accepting terms). HarmBench is open. JailbreakBench is open. You'll need a HuggingFace token (`hf auth login`) for gated datasets.
 - **`trust_remote_code=True` is required for some older datasets.** Read the loading script before running it on shared infra.
 - **Cache size.** Multi-GB datasets accumulate. Set `HF_DATASETS_CACHE` to a big disk on rented boxes.
 
@@ -443,7 +443,7 @@ Aliases: EMERGE, `afonsofsdomingues/EMERGE` on GitHub, "Not All Misalignment Is 
 
 ### How do I download WMDP (the dangerous-knowledge benchmark)?
 
-`cais/wmdp` on HuggingFace, but it's **gated** — requires accepting terms. Authenticate via `huggingface-cli login`, then accept the dataset terms on the HF page. Then `from datasets import load_dataset; load_dataset("cais/wmdp", "wmdp-bio")`.
+`cais/wmdp` on HuggingFace, but it's **gated** — requires accepting terms. Authenticate via `hf auth login`, then accept the dataset terms on the HF page. Then `from datasets import load_dataset; load_dataset("cais/wmdp", "wmdp-bio")`.
 
 ### Which datasets are gated?
 

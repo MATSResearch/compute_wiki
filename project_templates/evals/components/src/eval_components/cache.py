@@ -2,6 +2,8 @@
 
 Inspect AI has two relevant caching layers already:
 - **Generation cache** (`cache=True` on `generate()`) — caches model calls.
+  Use inspect-ai >= 0.3.288: before it the cache key ignored the model's
+  constructor arguments (`-M` / `model_args`).
 - **`eval_set()`** — tracks completed tasks in a log dir and resumes.
 
 This module sits one level up: name a *whole run's* log dir by a SHA-256 of its

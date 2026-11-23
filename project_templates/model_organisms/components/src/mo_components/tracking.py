@@ -40,7 +40,7 @@ class Tracker:
                 project=project,
                 config=config or {},
                 dir=str(self.run_dir),
-                reinit=True,
+                reinit="finish_previous",  # the bool form is deprecated in wandb 0.31
             )
 
     def log(self, step: int | None = None, **scalars: Any) -> None:

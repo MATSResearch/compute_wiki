@@ -5,18 +5,30 @@ description = "Project-agnostic AI Control building blocks (eval runner, monitor
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "control-arena>=15.0.0",
-    "inspect-ai>=0.3.50",
+    # 20.1.1 fixes silent result-changing bugs on paths this template uses: APPS scorer graded
+    # by stderr instead of exit status (#914), defer-to-trusted monitor views for repeated
+    # tool calls (#924), dropped sign on negative monitor scores (#877).
+    "control-arena>=20.1.1",
+    # 0.3.288: output cache key ignored model constructor args (policies/monitors here use cache=True).
+    "inspect-ai>=0.3.288",
     "pandas>=2.0.0",
     "numpy>=1.26.0",
     "pydantic>=2.5.0",
 ]
 
 [project.optional-dependencies]
-wandb = ["wandb>=0.17.0"]
+# 0.30.0-0.31.0 un-seed Python's `random` after wandb.init() (tracking.Tracker calls it); fixed in 0.31.2.
+wandb = ["wandb>=0.31.2"]
 viz = ["matplotlib>=3.8.0"]
-probes = ["torch>=2.4.0", "transformers>=4.40.0", "scikit-learn>=1.3.0"]
+# torch 2.14.x: advisory GHSA-v32g-mr63-3j83 (torch.load(weights_only=True) file read); patched in 2.15.0.
+probes = ["torch>=2.4.0,!=2.14.*", "transformers>=4.40.0", "scikit-learn>=1.3.0"]
 dev = ["pytest>=8.0.0", "matplotlib>=3.8.0"]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days
+# wandb 0.31.2 was uploaded 2026-11-21 (inside the cooldown) and is the release that stops
+# wandb.init() un-seeding Python's `random`. Drop this line once it is a week old.
+exclude-newer-package = { wandb = false }
 
 [build-system]
 requires = ["hatchling"]

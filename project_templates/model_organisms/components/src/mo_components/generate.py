@@ -35,21 +35,25 @@ def _chat_completion_backend(
     *,
     api_key: str,
     base_url: Optional[str],
-    temperature: float,
+    temperature: Optional[float],
     max_tokens: int,
 ) -> Backend:
-    """Shared OpenAI-compatible chat backend (OpenRouter, OpenAI, local vLLM, …)."""
+    """Shared OpenAI-compatible chat backend (OpenRouter, OpenAI, local vLLM, …).
+
+    `temperature=None` sends no temperature, so the provider samples at its
+    default. Many current hosted models accept nothing else (see
+    `openrouter_backend`).
+    """
     from openai import OpenAI
 
     client = OpenAI(base_url=base_url, api_key=api_key)
 
     def call(messages: list[dict], **kwargs) -> str:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=kwargs.get("temperature", temperature),
-            max_tokens=kwargs.get("max_tokens", max_tokens),
-        )
+        params = {"max_tokens": kwargs.get("max_tokens", max_tokens)}
+        temp = kwargs.get("temperature", temperature)
+        if temp is not None:
+            params["temperature"] = temp
+        resp = client.chat.completions.create(model=model, messages=messages, **params)
         return resp.choices[0].message.content or ""
 
     return call
@@ -59,14 +63,27 @@ def openrouter_backend(
     model: str,
     *,
     api_key: Optional[str] = None,
-    temperature: float = 1.0,
-    max_tokens: int = 600,
+    temperature: Optional[float] = None,
+    max_tokens: int = 2000,
 ) -> Backend:
     """Return a backend that calls `model` via OpenRouter using the openai SDK.
 
     `api_key` defaults to `$OPENROUTER_API_KEY`. Raises loud if neither is set —
     a silent failure here would produce empty completions that look like a model
     that refuses everything.
+
+    `temperature` defaults to None = not sent, i.e. the provider's default
+    sampling (1.0 on OpenAI and Anthropic models). OpenRouter's models API
+    (2026-11-23) no longer lists `temperature` among the supported parameters of
+    the GPT-5.6 / GPT-6 families or Claude Sonnet 5 and later, and Anthropic's
+    API version `2026-10-21` rejects it on every Claude model, so a temperature
+    you pass may be dropped or refused. Pass one only for a model whose
+    `supported_parameters` lists it, and record the value actually applied.
+
+    `max_tokens` caps the whole completion. On reasoning models (the GPT-6
+    family, Claude Sonnet 5.x) that includes reasoning tokens, so a tight cap
+    can return an empty or cut-off answer — which the judge parser then reports
+    as unparsed. The default leaves room for that; billing is for tokens used.
     """
     key = api_key or os.environ.get("OPENROUTER_API_KEY")
     if not key:

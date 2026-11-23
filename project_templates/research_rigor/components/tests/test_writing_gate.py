@@ -5,7 +5,26 @@ Run:  uv run pytest tests/test_writing_gate.py -v
 """
 
 
+import pytest
+
 from research_rigor import writing_gate as wg
+from research_rigor.resolve import Resolution
+
+RESOLVED = [Resolution("H1", "supported", "cleared the frozen 50% threshold"),
+            Resolution("H2", "inconclusive", "fell in the frozen inconclusive band")]
+
+
+def _verdict(report, **kw):
+    kw.setdefault("human_approved", True)
+    kw.setdefault("frozen_hypothesis_ids", ["H1", "H2"])
+    kw.setdefault("resolutions", RESOLVED)
+    kw.setdefault("papers", [])
+    return wg.publication_verdict(report, **kw)
+
+
+def _clean_report():
+    return wg.verify_claims(
+        [wg.Claim("c1", "74% acc", "numeric", 0.74, "results", "test_acc")], SOURCES)
 
 SOURCES = {
     "results": {"test_acc": 0.74, "baseline_acc": 0.71},
@@ -79,7 +98,7 @@ def test_fabrication_blocks_regardless_of_llm_score():
     report = wg.verify_claims(
         [wg.Claim("c1", "92% acc", "numeric", 0.92, "results", "test_acc")], SOURCES)
     # Even a glowing LLM triage score cannot unblock a fabricated claim.
-    v = wg.publication_verdict(report, human_approved=True, llm_triage_score=9.5)
+    v = _verdict(report, human_approved=True, llm_triage_score=9.5)
     assert v.verdict == "blocked_fabrication"
 
 
@@ -87,16 +106,16 @@ def test_clean_but_unreviewed_is_blocked_pending_human():
     report = wg.verify_claims(
         [wg.Claim("c1", "74% acc", "numeric", 0.74, "results", "test_acc")], SOURCES)
     # High LLM score, no human sign-off -> still blocked. LLM judge is triage only.
-    v = wg.publication_verdict(report, human_approved=None, llm_triage_score=9.9)
+    v = _verdict(report, human_approved=None, llm_triage_score=9.9)
     assert v.verdict == "blocked_pending_human"
-    v2 = wg.publication_verdict(report, human_approved=False)
+    v2 = _verdict(report, human_approved=False)
     assert v2.verdict == "blocked_pending_human"
 
 
 def test_ready_requires_clean_claims_and_human_signoff():
     report = wg.verify_claims(
         [wg.Claim("c1", "74% acc", "numeric", 0.74, "results", "test_acc")], SOURCES)
-    v = wg.publication_verdict(report, human_approved=True)
+    v = _verdict(report, human_approved=True)
     assert v.verdict == "ready" and not v.reasons
 
 
@@ -105,7 +124,7 @@ def test_ground_draft_combines_claims_and_scan():
     text = "We reach 74% accuracy with a suspicious 5.5x gain."
     report = wg.ground_draft(text, claims, SOURCES)
     assert report.grounded and report.unsourced_numbers and report.has_fabrication_risk
-    v = wg.publication_verdict(report, human_approved=True)
+    v = _verdict(report, human_approved=True)
     assert v.verdict == "blocked_fabrication"  # the unsourced 5.5x blocks even with sign-off
 
 
@@ -114,7 +133,7 @@ def test_nonfinite_numeric_evidence_cannot_pass_publication():
         claim = wg.Claim("c", "result", "numeric", value, "results", "metric")
         report = wg.verify_claims([claim], {"results": {"metric": value}})
         assert report.contradicted
-        assert wg.publication_verdict(report, human_approved=True).verdict == "blocked_fabrication"
+        assert _verdict(report, human_approved=True).verdict == "blocked_fabrication"
 
 
 def test_invalid_tolerance_cannot_ground_a_claim():
@@ -122,3 +141,48 @@ def test_invalid_tolerance_cannot_ground_a_claim():
         claim = wg.Claim("c", "result", "numeric", 1.0, "results", "metric",
                          tolerance=tolerance)
         assert wg.verify_claims([claim], {"results": {"metric": 1.0}}).contradicted
+
+
+# --- a verdict holds through the write-up ------------------------------------
+
+def test_prediction_without_a_signed_verdict_blocks_the_writeup():
+    v = _verdict(_clean_report(), resolutions=RESOLVED[:1])
+    assert v.verdict == "blocked_unsigned_verdict" and "H2" in v.reasons[0]
+
+
+def test_unsigned_verdict_outranks_sign_off_and_a_clean_draft():
+    v = _verdict(_clean_report(), resolutions=[], human_approved=True, llm_triage_score=9.9)
+    assert v.verdict == "blocked_unsigned_verdict"
+
+
+def test_exploratory_writeup_with_no_registered_prediction_is_not_blocked_on_verdicts():
+    assert _verdict(_clean_report(), frozen_hypothesis_ids=[], resolutions=[]).verdict == "ready"
+
+
+# --- cite a source you can open ----------------------------------------------
+
+def _paper(**kw):
+    kw.setdefault("standing", "key")
+    kw.setdefault("authors", "Engels et al.")
+    kw.setdefault("year", 2024)
+    kw.setdefault("link", "https://arxiv.org/abs/2405.14860")
+    kw.setdefault("link_checked", True)
+    return wg.Paper("Not All Language Model Features Are Linear", **kw)
+
+
+def test_a_complete_checked_source_raises_no_flag():
+    assert wg.paper_flags([_paper(), _paper(standing="set_aside")]) == []
+
+
+@pytest.mark.parametrize("kw", [dict(authors=None), dict(year=None), dict(link=None),
+                                dict(link_checked=False), dict(from_memory=True)])
+def test_a_source_nobody_can_open_is_flagged_not_blocked(kw):
+    papers = [_paper(**kw)]
+    assert len(wg.paper_flags(papers)) == 1
+    v = _verdict(_clean_report(), papers=papers)
+    assert v.verdict == "ready" and v.warnings == wg.paper_flags(papers)
+
+
+def test_a_paper_is_either_built_on_or_set_aside():
+    with pytest.raises(AssertionError, match="standing"):
+        _paper(standing="maybe")

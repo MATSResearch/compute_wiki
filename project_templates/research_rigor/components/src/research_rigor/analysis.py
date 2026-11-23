@@ -19,11 +19,19 @@ diagnosis is the design brief for this library:
 
 So the fix is NOT a better detector. Detection mostly already happened. The fix
 is a deterministic, external ledger that makes a raised concern IMPOSSIBLE TO
-WALK PAST: an anomaly, once registered, must be dispositioned by the PI before
-the stage can close. That is the metacognitive loop the audit says agents lack,
-implemented outside the agent where it cannot be talked out of.
+WALK PAST: an anomaly, once registered, stays open until the researcher either
+accepts a repair proposal for it or gives it a manual disposition. That is the
+metacognitive loop the audit says agents lack, implemented outside the agent
+where it cannot be talked out of. An open concern never blocks the WORK — only
+the claim that the work is finished.
 
-Three more rules earn their place from the evidence:
+The agent's side of that loop is the REPAIR PROPOSAL: a summary of what changed
+plus references to a rerun, independent check, or revised claim. The references
+are not proof that a check ran; submitting a proposal never closes a concern by
+itself. The researcher inspects the evidence and accepts (which closes the
+concern without retyping the agent's explanation) or declines.
+
+Four more rules earn their place from the evidence:
 
 - EVIDENCE TYPE IS LOAD-BEARING, not prose. Observational evidence does not
   license a causal claim: attribution-vs-causal-patching correlates rho =
@@ -36,13 +44,17 @@ Three more rules earn their place from the evidence:
   reportable, but it cannot resolve anything (the p-hacking guard, complementing
   preregister.check's deviation diff).
 - A SINGLE RUN IS NOT A RESULT. Single runs are unreliable and leaderboards
-  without uncertainty mislead (inspect_evals operations, 2507.06893).
+  without uncertainty mislead (inspect_evals operations, 2507.06893). Estimate
+  robustness by varying the SAMPLE, not the seed.
+- A SHAPE IN A PROJECTION IS NOT A SHAPE IN THE MODEL. A finding that claims a
+  representation has a shape names the share of variance of the view it was
+  seen in and cites a check that does not project.
 
 Division of labour:
 - THIS LIBRARY keeps the ledger and refuses to close the stage while a critical
   concern is open, a finding is ungrounded, or an evidence type is over-read.
 - THE /analyze skill does the interpreting with the Fellow, raises anomalies
-  honestly, and never dispositions its own critical anomaly.
+  honestly, proposes repairs, and never closes its own critical anomaly.
 
 Automated error-detection cannot substitute for any of this: the best model in
 SPOT (2505.11855) catches 21.1% of real published errors at 6.1% precision.
@@ -52,6 +64,7 @@ from dataclasses import dataclass, field
 
 EVIDENCE_TYPES = ("causal", "observational", "qualitative")
 DISPOSITIONS = ("explained", "blocks_conclusion", "deferred")
+REPAIR_DECISIONS = ("accepted", "declined")
 SEVERITIES = ("critical", "minor")
 
 
@@ -67,12 +80,19 @@ class Finding:
     hypothesis_id: str | None = None    # None => exploratory, cannot resolve anything
     n_runs: int = 1
     uncertainty: str | None = None      # e.g. "95% CI [0.31, 0.44]"; None => unquantified
-    disconfirming: bool = False         # does this cut AGAINST the hypothesis?
+    # A claim that a representation has a shape (ring, helix, manifold) names
+    # the share of variance of the view it was seen in and one check that does
+    # not project: a similarity matrix, or a topology result against a null.
+    shape: str | None = None
+    view_variance_share: float | None = None
+    non_projecting_check: str | None = None   # artifact path of that check
 
     def __post_init__(self):
         assert self.evidence_type in EVIDENCE_TYPES, \
             f"finding {self.id!r}: bad evidence_type {self.evidence_type!r} (one of {EVIDENCE_TYPES})"
         assert self.n_runs >= 1, f"finding {self.id!r}: n_runs must be >= 1"
+        assert self.view_variance_share is None or 0.0 <= self.view_variance_share <= 1.0, \
+            f"finding {self.id!r}: view_variance_share is a fraction in [0, 1]"
 
     def licenses(self, claim_kind: str) -> bool:
         """Does this finding license a claim of `claim_kind`? Only causal
@@ -88,11 +108,35 @@ class Finding:
 
 
 @dataclass
+class RepairProposal:
+    """What an agent (or anyone) submits against a concern: what changed, and
+    where the rerun, independent check, or revised claim can be inspected. The
+    references are not proof that a check ran or that its conclusion is sound."""
+    concern_id: str
+    summary: str
+    evidence_refs: list
+    proposed_by: str = "agent"
+    decision: str | None = None          # None (awaiting review) | "accepted" | "declined"
+    decided_by: str | None = None
+
+    def __post_init__(self):
+        assert self.summary and self.summary.strip(), \
+            f"repair for {self.concern_id!r}: say what changed"
+        assert isinstance(self.evidence_refs, list), \
+            f"repair for {self.concern_id!r}: evidence_refs is a list of references"
+        assert self.evidence_refs, (
+            f"repair for {self.concern_id!r}: reference the rerun, independent check, or "
+            f"revised claim the researcher is to inspect")
+        assert self.decision is None or self.decision in REPAIR_DECISIONS, \
+            f"repair for {self.concern_id!r}: bad decision {self.decision!r}"
+
+
+@dataclass
 class Anomaly:
     """A raised concern: a surprise, a broken baseline, an internal
-    inconsistency, or an agent's own self-diagnosed flaw. The point of the
-    dataclass is the `disposition` field — registering is cheap, walking past is
-    not allowed."""
+    inconsistency, or an agent's own self-diagnosed flaw. Registering is cheap;
+    walking past is not allowed. It closes one of two ways: the researcher
+    accepts a repair proposal, or gives a manual `disposition`."""
     id: str
     description: str
     severity: str = "critical"
@@ -100,17 +144,41 @@ class Anomaly:
     disposition: str | None = None
     disposition_note: str = ""
     dispositioned_by: str | None = None  # a CRITICAL anomaly needs "pi"
+    repairs: list = field(default_factory=list)   # every RepairProposal stays on the record
 
     def __post_init__(self):
         assert self.severity in SEVERITIES, f"anomaly {self.id!r}: bad severity {self.severity!r}"
         assert self.disposition is None or self.disposition in DISPOSITIONS, \
             f"anomaly {self.id!r}: bad disposition {self.disposition!r} (one of {DISPOSITIONS})"
 
+    def propose_repair(self, summary: str, evidence_refs: list, *,
+                       proposed_by: str = "agent") -> RepairProposal:
+        """Submit a repair. This never closes the concern by itself."""
+        proposal = RepairProposal(self.id, summary, evidence_refs, proposed_by)
+        self.repairs.append(proposal)
+        return proposal
+
+    def review_repair(self, proposal: RepairProposal, decision: str, *, by: str) -> None:
+        """The researcher's decision on a proposal, after inspecting its evidence."""
+        assert any(p is proposal for p in self.repairs), \
+            f"anomaly {self.id!r}: that proposal was not submitted against this concern"
+        assert decision in REPAIR_DECISIONS, f"bad decision {decision!r} (one of {REPAIR_DECISIONS})"
+        assert by == "pi", (
+            f"anomaly {self.id!r}: a repair is accepted or declined by the researcher, not "
+            f"{by!r} — a proposal alone is not a verified resolution")
+        assert proposal.decision is None, \
+            f"anomaly {self.id!r}: that proposal was already {proposal.decision}"
+        proposal.decision, proposal.decided_by = decision, by
+
     @property
     def open(self) -> bool:
-        """Open = not dispositioned, dispositioned by someone other than the PI
-        when critical, or dispositioned with no reason given. An agent may not
-        close its own critical finding — that IS the 82.5% failure mode."""
+        """Closed by an accepted repair, or by a manual disposition. Otherwise
+        open: not dispositioned, dispositioned by someone other than the PI when
+        critical, or dispositioned with no reason given. An agent may not close
+        its own critical finding — that IS the 82.5% failure mode — and a repair
+        proposal that nobody has accepted closes nothing."""
+        if any(p.decision == "accepted" for p in self.repairs):
+            return False
         if self.disposition is None:
             return True
         if not self.disposition_note.strip():
@@ -128,7 +196,8 @@ class AnalysisReport:
     unquantified: list = field(default_factory=list)     # single-run, no uncertainty
     overread: list = field(default_factory=list)         # (finding_id, claim_kind) evidence-type violations
     open_anomalies: list = field(default_factory=list)   # anomaly ids still open
-    disconfirming: list = field(default_factory=list)    # finding ids cutting against a hypothesis
+    repairs_awaiting_review: list = field(default_factory=list)  # anomaly ids with an undecided proposal
+    shape_unchecked: list = field(default_factory=list)  # shape claims missing variance share or a non-projecting check
 
 
 def analyse(findings: list[Finding], anomalies: list[Anomaly], *,
@@ -155,14 +224,16 @@ def analyse(findings: list[Finding], anomalies: list[Anomaly], *,
             r.exploratory.append(f.id)
         if f.n_runs == 1 and not f.uncertainty:
             r.unquantified.append(f.id)
-        if f.disconfirming:
-            r.disconfirming.append(f.id)
+        if f.shape and (f.view_variance_share is None or not f.non_projecting_check):
+            r.shape_unchecked.append(f.id)
 
         want = claim_kinds.get(f.id)
         if want and not f.licenses(want):
             r.overread.append((f.id, want))
 
     r.open_anomalies = [a.id for a in anomalies if a.open]
+    r.repairs_awaiting_review = [a.id for a in anomalies
+                                 if a.open and any(p.decision is None for p in a.repairs)]
     return r
 
 
@@ -175,13 +246,14 @@ class AnalysisVerdict:
 
 
 def analysis_gate(report: AnalysisReport, *, pi_signed_off: bool) -> AnalysisVerdict:
-    """Close stage 6 — or refuse to.
+    """Close stage 8 (`analysis`) — or refuse to.
 
     Blocking conditions, in order. Each one is a documented failure mode, and
     none of them can be cleared by an agent asserting that it is fine:
 
     1. An OPEN ANOMALY. Includes an agent's own self-diagnosed critical flaw that
-       nobody dispositioned, and anything explicitly marked `blocks_conclusion`.
+       nobody dispositioned, one with a repair proposal the researcher has not
+       accepted, and anything explicitly marked `blocks_conclusion`.
        (Uncorrected self-awareness 82.5%; unremediated adversarial evidence 60.8%.)
     2. An UNGROUNDED finding — no artifact in the run dir to trace it to.
        (Method-conclusion disconnect 77.5%; report-code traceability gaps 60.5%.)
@@ -190,28 +262,36 @@ def analysis_gate(report: AnalysisReport, *, pi_signed_off: bool) -> AnalysisVer
     4. No human sign-off. Interpretation is Human-held: there is no automated
        path to `closed`.
 
-    Warnings (never blocking, always surfaced): unquantified single runs, and
-    exploratory findings, which are reportable but cannot resolve a hypothesis.
+    Warnings (never blocking, always surfaced): unquantified single runs,
+    exploratory findings (reportable, but they cannot resolve a hypothesis), and
+    shape claims seen only in a projection.
     """
     warnings = []
     if report.unquantified:
         warnings.append(
             f"unquantified (n=1, no uncertainty): {report.unquantified} — a single run is "
-            f"not a result; re-run with seeds or report an interval before concluding")
+            f"not a result; vary the sample (bootstrap the eval set, overlapping data "
+            f"subsets, hyperparameter perturbation), not the seed, and report an interval "
+            f"before concluding")
     if report.exploratory:
         warnings.append(
             f"exploratory (not in the frozen prereg): {report.exploratory} — reportable as "
             f"exploratory, but these cannot resolve a pre-registered hypothesis")
-    if report.disconfirming:
+    if report.shape_unchecked:
         warnings.append(
-            f"disconfirming evidence present: {report.disconfirming} — /resolve will require "
-            f"this to be explicitly addressed, not omitted")
+            f"shape claimed from a projection: {report.shape_unchecked} — name the share of "
+            f"variance of the view and cite one check that does not project (a similarity "
+            f"matrix, or a topology result against a null)")
 
     if report.open_anomalies:
         return AnalysisVerdict("blocked_open_anomaly", [
             f"{len(report.open_anomalies)} anomaly/anomalies still open: {report.open_anomalies} — "
-            f"each needs a PI disposition with a reason. Raising a concern and then concluding "
-            f"anyway is the most common documented failure of AI research runs (82.5%)."
+            f"each needs the researcher to accept a repair proposal or give a disposition with "
+            f"a reason" +
+            (f" (repair proposals awaiting review: {report.repairs_awaiting_review})"
+             if report.repairs_awaiting_review else "") +
+            ". Keep working; just do not call the step done. Raising a concern and then "
+            "concluding anyway is the most common documented failure of AI research runs (82.5%)."
         ], warnings)
 
     if report.ungrounded:

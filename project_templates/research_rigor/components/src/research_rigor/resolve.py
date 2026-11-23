@@ -28,11 +28,19 @@ So this library resolves NOTHING by inference. It:
   removing the incentive that produces concealed negative results;
 - refuses a verdict that generalizes past what was actually tested (the scope
   guard: your claim's model/dataset/population must be what you ran);
-- refuses `supported` while a critical anomaly from stage 6 is open;
-- requires disconfirming evidence to be addressed by name, not omitted;
-- and routes follow-ups BACK through /plan's diversity gate rather than letting
-  the run adopt its own next question (planning.plan_gate: agents cannot
-  self-select, LLM-judged innovativeness correlates -0.06 with effectiveness).
+- refuses a concluding verdict (`supported` or `refuted`) while an anomaly from
+  stage 8 (`analysis`) is open;
+- reads each verdict against the evidence ledger (`evidence.Citation`) and FLAGS
+  — never blocks — one that disagrees with its own evidence, or that leaves
+  something cited against it unaddressed by name;
+- flags a `supported` verdict while a rival under the same question is still
+  unrefuted ("rivals still stand");
+- holds through `writeup` and `publish`: `missing_verdicts` is what those two
+  gates block on, so a prediction without a signed verdict stops the write-up
+  and the release, not only this step;
+- and routes follow-ups BACK through /plan's diversity gate, each carrying its
+  acceptance condition, rather than letting the run adopt its own next question
+  (planning.plan_gate: selection is the researcher's unless delegated).
 
 Follow-ups carry the lesson that motivated them, borrowing MARS's comparative
 reflective memory (2602.02660), whose cross-branch lesson transfer accounted for
@@ -47,6 +55,8 @@ Division of labour:
 
 from dataclasses import dataclass, field
 
+from .evidence import CONCLUDING_VERDICTS, Citation, disagreement, tally
+
 VERDICTS = ("supported", "refuted", "inconclusive")
 
 
@@ -60,7 +70,7 @@ class Resolution:
     rationale: str
     decided_by: str = "pi"
     claimed_scope: dict = field(default_factory=dict)
-    addresses_disconfirming: list = field(default_factory=list)  # finding ids addressed by name
+    addresses_disconfirming: list = field(default_factory=list)  # cited-against items addressed by name
 
     def __post_init__(self):
         assert self.verdict in VERDICTS, \
@@ -73,10 +83,12 @@ class Resolution:
 class FollowUp:
     """A next question. `motivated_by` must point at a real finding or anomaly id
     from this run — a follow-up nobody can trace to evidence is an idea, not a
-    result of the work."""
+    result of the work. `acceptance` says what done means for it, written when
+    the follow-up is filed."""
     id: str
     question: str
     motivated_by: str
+    acceptance: str
     lesson: str = ""
 
 
@@ -104,26 +116,9 @@ def scope_violations(claimed: dict, tested: dict) -> list[str]:
     return out
 
 
-@dataclass
-class ResolveVerdict:
-    verdict: str      # "blocked_incomplete" | "blocked_open_anomaly" | "blocked_overgeneralized"
-                      # | "blocked_unaddressed_disconfirming" | "resolved"
-    reasons: list = field(default_factory=list)
-    warnings: list = field(default_factory=list)
-    resolutions: list = field(default_factory=list)
-
-
-def resolve_gate(*, frozen_hypothesis_ids: list[str], resolutions: list[Resolution],
-                 tested_scope: dict, open_anomalies: list[str],
-                 disconfirming_findings: list[str]) -> ResolveVerdict:
-    """Close stage 7 — or refuse to.
-
-    `open_anomalies` and `disconfirming_findings` come straight from stage 6's
-    AnalysisReport, so the two stages cannot disagree about what was raised.
-    """
-    frozen = list(frozen_hypothesis_ids)
-    assert frozen, "no frozen hypotheses — /resolve runs against a frozen prereg"
-
+def signed_verdicts(resolutions: list[Resolution]) -> dict:
+    """hypothesis id -> its one signed verdict. A verdict is signed once, by the
+    researcher: an agent may draft the rationale, never own the verdict."""
     by_id = {}
     for r in resolutions:
         assert r.decided_by == "pi", (
@@ -131,8 +126,46 @@ def resolve_gate(*, frozen_hypothesis_ids: list[str], resolutions: list[Resoluti
             f"resolution is Human-held — an agent may draft the rationale, never own the verdict.")
         assert r.hypothesis_id not in by_id, f"two resolutions for {r.hypothesis_id!r}"
         by_id[r.hypothesis_id] = r
+    return by_id
 
-    missing = [h for h in frozen if h not in by_id]
+
+def missing_verdicts(frozen_hypothesis_ids: list[str], resolutions: list[Resolution]) -> list[str]:
+    """Registered predictions with no signed verdict. `resolve`, `writeup` and
+    `publish` all block on a non-empty answer."""
+    by_id = signed_verdicts(resolutions)
+    return [h for h in frozen_hypothesis_ids if h not in by_id]
+
+
+@dataclass
+class ResolveVerdict:
+    verdict: str      # "blocked_incomplete" | "blocked_open_anomaly" | "blocked_overgeneralized"
+                      # | "resolved"
+    reasons: list = field(default_factory=list)
+    warnings: list = field(default_factory=list)
+    resolutions: list = field(default_factory=list)
+
+
+def resolve_gate(*, frozen_hypothesis_ids: list[str], question_of: dict,
+                 resolutions: list[Resolution], tested_scope: dict,
+                 open_anomalies: list[str], evidence: list[Citation]) -> ResolveVerdict:
+    """Close stage 9 (`resolve`) — or refuse to.
+
+    `question_of` maps each frozen hypothesis id to the research question it
+    answers (the prereg's `question` field); `open_anomalies` comes straight
+    from stage 8's AnalysisReport; `evidence` is the run's citation ledger
+    (`evidence.load`). The verdicts are read against the evidence, and a
+    disagreement is a warning for the person signing — never a block.
+    """
+    frozen = list(frozen_hypothesis_ids)
+    assert frozen, "no frozen hypotheses — /resolve runs against a frozen prereg"
+    assert set(question_of) == set(frozen), \
+        f"question_of must name the question of exactly the frozen hypotheses {frozen}"
+    for c in evidence:
+        assert c.prediction in frozen, \
+            f"evidence item {c.item!r} cites {c.prediction!r}, which is not a frozen hypothesis"
+
+    by_id = signed_verdicts(resolutions)
+    missing = missing_verdicts(frozen, resolutions)
     extra = [h for h in by_id if h not in frozen]
     if missing or extra:
         reasons = []
@@ -153,22 +186,40 @@ def resolve_gate(*, frozen_hypothesis_ids: list[str], resolutions: list[Resoluti
             f"and belongs in the write-up as one. Do not go looking for a cut of the data that "
             f"resolves it; the prereg's decision rule already spoke.")
 
-    concluded = [r for r in by_id.values() if r.verdict in ("supported", "refuted")]
+    concluded = [r for r in by_id.values() if r.verdict in CONCLUDING_VERDICTS]
 
-    if open_anomalies and any(r.verdict == "supported" for r in concluded):
+    for r in concluded:
+        t = tally(evidence, r.hypothesis_id)
+        flag = disagreement(r.verdict, t)
+        if flag:
+            warnings.append(
+                f"{r.hypothesis_id}: {flag} — a verdict that disagrees with its own evidence "
+                f"is the shape of overclaiming by omission. The tally is context, not a vote: "
+                f"check it against the decision rule you froze.")
+        unaddressed = [i for i in t.against if i not in r.addresses_disconfirming]
+        if unaddressed:
+            warnings.append(
+                f"{r.hypothesis_id}: cited against and not addressed by name: {unaddressed}. "
+                f"Say why it does not change the conclusion, or change the conclusion.")
+
+    for r in concluded:
+        if r.verdict != "supported":
+            continue
+        standing = [h for h in frozen if h != r.hypothesis_id
+                    and question_of[h] == question_of[r.hypothesis_id]
+                    and by_id[h].verdict != "refuted"]
+        if standing:
+            warnings.append(
+                f"{r.hypothesis_id} is `supported` but rivals still stand under the same "
+                f"question: {standing}. Write down which rivals were refuted, which still fit, "
+                f"and what every surviving hypothesis agrees on — and interpret only that.")
+
+    if open_anomalies and concluded:
         return ResolveVerdict("blocked_open_anomaly", [
-            f"cannot mark a hypothesis `supported` while stage-6 anomalies are open: "
-            f"{open_anomalies}. Disposition them in /analyze first — concluding over a concern "
-            f"you already raised is the most common documented failure (82.5%)."
-        ], warnings)
-
-    unaddressed = [f for f in disconfirming_findings
-                   if not any(f in r.addresses_disconfirming for r in concluded)]
-    if unaddressed and concluded:
-        return ResolveVerdict("blocked_unaddressed_disconfirming", [
-            f"disconfirming findings not addressed by any verdict: {unaddressed}. Name them and "
-            f"say why they do not change the conclusion — 68% of write-up traces simply omit "
-            f"refutation evidence, so omission is the default failure, not an oversight."
+            f"cannot sign a concluding verdict ({[r.hypothesis_id for r in concluded]}) while "
+            f"stage-8 anomalies are open: {open_anomalies}. Get a repair accepted or a "
+            f"disposition in /analyze first — concluding over a concern you already raised is "
+            f"the most common documented failure (82.5%)."
         ], warnings)
 
     over = []
@@ -202,7 +253,11 @@ def handoff_followups(followups: list[FollowUp], *,
             f"follow-up {f.id!r} is motivated by {f.motivated_by!r}, which is not a finding or "
             f"anomaly in this run — a follow-up must trace to evidence, not to a hunch")
         assert f.question.strip(), f"follow-up {f.id!r} has no question"
+        assert f.acceptance.strip(), (
+            f"follow-up {f.id!r} has no acceptance condition — say what done means when the "
+            f"work is filed, as something checkable")
         out.append({"id": f.id, "question": f.question, "motivated_by": f.motivated_by,
+                    "acceptance": f.acceptance,
                     "lesson": f.lesson, "selected": False,
                     "route": "/plan — must pass the diversity gate before it becomes a run"})
     return out

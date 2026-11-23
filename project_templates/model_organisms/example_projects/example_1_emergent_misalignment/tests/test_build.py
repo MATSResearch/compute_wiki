@@ -17,9 +17,9 @@ mo_components = pytest.importorskip("mo_components")
 def test_build_registry_has_treatment_and_control():
     from example_1_emergent_misalignment.organisms import build_registry
 
-    reg = build_registry("openai/gpt-4o-mini")
+    reg = build_registry("openai/gpt-6-luna")
     assert set(reg.names()) == {"em_prompted", "aligned_control"}
-    assert reg.get("em_prompted").base_model == "openai/gpt-4o-mini"
+    assert reg.get("em_prompted").base_model == "openai/gpt-6-luna"
     controls = reg.controls()
     assert len(controls) == 1 and controls[0].name == "aligned_control"
 
