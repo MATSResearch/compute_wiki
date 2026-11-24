@@ -797,7 +797,9 @@ For tool-specific aliases (`SAELens`, `inspect_ai`, `nanoGCG`, etc.), see the co
 
 **Run-to-run band (rerun band)** — The spread of distances among independent reruns of the same training recipe, used as the null for a base→finetune model diff; with k reruns an exchangeability test can certify no better than p = 1/(k+1) (arXiv:2610.17093). See [`statistics.md`](../engineering/statistics.md#model-diffs-the-rerun-band-is-the-baseline), [`model-diffing.md`](../interpretability/model-diffing.md#cross-cutting-pitfalls).
 
-**RunPod** — GPU rental service with secure cloud (managed) and community cloud (peer-supplied). See [`compute.md`](../models-and-compute/compute.md).
+**Runpod** — GPU rental service with secure cloud (managed) and community cloud (peer-supplied). See [`compute.md`](../models-and-compute/compute.md).
+
+**runpod-tools** (`rpt`) — `kmerkelbach/runpod-tools`: a stdlib-only CLI that lets a coding agent start Runpod pods, push code, run jobs, fetch results and stop pods, with rules for agents and a list of Runpod gotchas. See [`compute.md`](../models-and-compute/compute.md).
 
 ## S
 

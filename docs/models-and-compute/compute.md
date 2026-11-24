@@ -11,11 +11,12 @@ How to get GPUs for safety research at MATS scale (≤70B models, single-node or
 
 | You need… | Use |
 |---|---|
-| Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** |
-| Reliable rented GPUs with an actual SLA | **RunPod secure cloud**, **Lambda Cloud** |
+| Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **Runpod community cloud** |
+| Reliable rented GPUs with an actual SLA | **Runpod secure cloud**, **Lambda Cloud** |
 | Burst inference (no persistent box; pay per second) | **Modal** |
 | Burst training jobs without managing infra | **Modal** (bring your own training code), **Together** (job-based fine-tuning, or post-training sessions billed per GPU-minute), **Tinker** / **Fireworks Training API** (per-token LoRA training; see [`rl-frameworks.md`](../oversight-and-control/rl-frameworks.md)) |
-| Queue jobs on a shared GPU box you have no sudo on, a local card, or per-job RunPod pods, from one command | **gpuc** (`brendanlong/gpu-coordinator`) — see the gpuc section |
+| Queue jobs on a shared GPU box you have no sudo on, a local card, or per-job Runpod pods, from one command | **gpuc** (`brendanlong/gpu-coordinator`) — see the gpuc section |
+| Let a coding agent (Claude Code, Codex) start Runpod pods, push code, run jobs, fetch results and stop the pods, with cost and data-loss guardrails | **runpod-tools** (`rpt`, `kmerkelbach/runpod-tools`) — see the runpod-tools section |
 | Run Inspect agent sandboxes without a local Docker daemon | cloud sandbox providers for Inspect (Daytona, E2B, Modal) — see [`agent-scaffolds.md`](../evaluation/agent-scaffolds.md) |
 | Fine-tune GPT-4o / GPT-4.1 | Not for new work: OpenAI self-serve fine-tuning is closed to new organisations, and creating jobs ends for everyone on 2027-01-06 — see [Finetuning closed-weight models](#finetuning-closed-weight-models-openai-shutdown-dates) |
 | Free / academic | **NDIF** (interp on big models), **ACS Infra** (large *base* models with logprobs, activations and steering), **MATS-provided compute**, university cluster, **Lighthaven** workspace if applicable (ask MATS handbook / torchy) |
@@ -26,9 +27,9 @@ How to get GPUs for safety research at MATS scale (≤70B models, single-node or
 | Already-trained model serving | self-hosted **vLLM** on rented box, or use API providers |
 | Free-tier hosted inference for open-weight models | **HF Inference API** (rate-limited), **Together** free tier, **Groq** (very fast Llama inference, free tier) |
 
-## RunPod
+## Runpod
 
-Aliases: `runpod.io`, "RunPod".
+Aliases: `runpod.io`, "Runpod", "RunPod" (the company's styling before June 2025; Runpod's docs now call it deprecated).
 
 **What it is.** GPU rental with two products: **secure cloud** (data center, more reliable) and **community cloud** (peer-supplied, cheaper but less reliable). Pods are persistent; pay hourly.
 
@@ -45,6 +46,11 @@ Aliases: `runpod.io`, "RunPod".
 - **Image pulls eat time.** Use a custom Docker image with vLLM/transformers pre-installed.
 - **Egress charges** for downloading datasets/models — minor but noticeable.
 - **A100 vs H100.** A100s are still cheap; for inference of ≤70B models, A100 80GB is fine. H100 / H200 buys ~2× speed for ~2× cost.
+- **REST API v1 is retired.** Runpod's migration guide: "REST API v1 is deprecated and will be retired on November 15, 2026." A script or tool that calls `https://rest.runpod.io/v1` needs moving to `https://api.runpod.io/v2` (the guide covers v1 and GraphQL → v2, e.g. `cloudType: ALL` is gone; v2 takes `SECURE` or `COMMUNITY`).
+- **Stop wipes everything outside `/workspace`.** Stop/resume recreates the container: `/root`, `/tmp`, packages installed after start and running processes are gone. A stopped pod is pinned to its host and can fail to resume ("not enough free GPUs on the host"), so fetch results before you stop as if you were terminating.
+- **`ssh pod 'python job.py'` does not see template env vars or secrets** (`HF_TOKEN` is unset). They live in PID 1's environment only; Runpod's base images write `/etc/rp_environment`, which a non-interactive shell must `source` first.
+- **The `RUNPOD_API_KEY` injected into every pod cannot stop or terminate that pod** (403). A pod-side time cap needs your account key delivered separately, never on a command line.
+- Agent-driven pod work: see the runpod-tools (`rpt`) section for a CLI and a longer list of these lessons.
 
 ## vast.ai
 
@@ -69,7 +75,7 @@ Aliases: `vast.ai`, "Vast".
 
 Aliases: `lambdalabs.com`, "Lambda".
 
-**What it is.** Managed GPU cloud with a focus on ML workloads. Good clean experience; pricier than RunPod community / Vast but cheaper than AWS / GCP.
+**What it is.** Managed GPU cloud with a focus on ML workloads. Good clean experience; pricier than Runpod community / Vast but cheaper than AWS / GCP.
 
 **When to use it:**
 
@@ -320,7 +326,7 @@ From the [v0.32.0 release notes](https://github.com/vllm-project/vllm/releases/t
 
 ## Driver and CUDA version check on rented GPUs (CUDA 13 wheels)
 
-Aliases: `The NVIDIA driver on your system is too old`, CUDA 13.0 wheels, cu129, driver r580, `nvidia-smi`, CUDA mismatch on RunPod / vast.ai.
+Aliases: `The NVIDIA driver on your system is too old`, CUDA 13.0 wheels, cu129, driver r580, `nvidia-smi`, CUDA mismatch on Runpod / vast.ai.
 
 **The trap.** vLLM 0.31.0 (2026-10-05) and 0.32.0 (2026-10-18) list `pip install vllm` as "PyPI (CUDA 13.0)" and publish CUDA 12.9 separately (Docker `vllm/vllm-openai:v0.32.0-cu129`, plus CUDA 12.9 wheels on the release page); vLLM 0.33.0 (2026-11-02) publishes CUDA 13.0 only. PyTorch 2.15.0 (2026-10-28) moves its default wheel to CUDA 13.2 (`cu132` and `cu134`; `cu126` and `cu130` are no longer built), and its notes say CUDA 13 wheels "need NVIDIA driver 580 or newer and a GPU of Turing (`sm_75`) or newer, so Maxwell, Pascal and Volta GPUs and hosts with a CUDA 12.x driver should stay on 2.14"; SkyRL's Tinker quickstart requires "CUDA 13.0 (NVIDIA driver r580 or newer)". On a rented box with an older driver, a fresh install that resolves CUDA 13 builds fails at CUDA initialisation. The PyTorch error string to search for is `The NVIDIA driver on your system is too old (found version …)` (from `c10/cuda/CUDAFunctions.cpp`).
 
@@ -328,11 +334,11 @@ Aliases: `The NVIDIA driver on your system is too old`, CUDA 13.0 wheels, cu129,
 
 **Silent-correctness release.** PyTorch v2.14.1 (2026-09-30) moves its CUDA 13.2 Linux binaries to CUDA 13.2.2 to fix a cuBLAS NVFP4 scaling bug and a compiler bug that "could leave stale or corrupted register values in kernels with nested thread divergence (present since CUDA 12.8)". If you are on torch 2.14.0 with the CUDA 13.2 binaries, upgrade. **When not relevant:** managed APIs (Tinker, Fireworks, Together), or boxes already on driver r580+.
 
-## gpuc: a single-user GPU job queue (shared box without sudo, local cards, RunPod)
+## gpuc: a single-user GPU job queue (shared box without sudo, local cards, Runpod)
 
 Aliases: **gpuc**, `brendanlong/gpu-coordinator` on GitHub (MIT; created 2026-09-15, very new), "gpuc: A single-user GPU queue that doesn't require sudo" (Brendan Long, LessWrong 2026-09-29).
 
-**What it is.** One `gpuc submit job.yaml` path for three kinds of host: local cards; "**ssh** — a shared box you have no sudo on, using a subset of its GPUs"; and a RunPod pod provisioned per job. Each host runs a small stdlib-only dispatcher out of `~/.gpuc` and owns its own queue; S3 is an optional mirror of specs, the job index and logs, never the queue; "a rented pod ends itself once its queue has been idle, `gpuc pods` shows what is still billing"; there is an optional web dashboard. Not on PyPI; install from git with `uv tool`.
+**What it is.** One `gpuc submit job.yaml` path for three kinds of host: local cards; "**ssh** — a shared box you have no sudo on, using a subset of its GPUs"; and a Runpod pod provisioned per job. Each host runs a small stdlib-only dispatcher out of `~/.gpuc` and owns its own queue; S3 is an optional mirror of specs, the job index and logs, never the queue; "a rented pod ends itself once its queue has been idle, `gpuc pods` shows what is still billing"; there is an optional web dashboard. Not on PyPI; install from git with `uv tool`.
 
 ```bash
 # From the README
@@ -344,7 +350,41 @@ gpuc logs <job-id> -f
 gpuc wait <job-id> [<job-id> ...]
 ```
 
-**When to use it:** you share a multi-GPU server without admin rights (a 2×4090-style lab box), want to queue overnight sweeps on part of its GPUs, and occasionally burst to RunPod without a second workflow. **When not to use it:** a cluster that already has Slurm or another scheduler, or a multi-user lab that needs fair-share scheduling (it is explicitly single-user, and the repo had 1 star as of 2026-10-14, so expect rough edges).
+**When to use it:** you share a multi-GPU server without admin rights (a 2×4090-style lab box), want to queue overnight sweeps on part of its GPUs, and occasionally burst to Runpod without a second workflow. **When not to use it:** a cluster that already has Slurm or another scheduler, or a multi-user lab that needs fair-share scheduling (it is explicitly single-user, and the repo had 1 star as of 2026-10-14, so expect rough edges).
+
+## runpod-tools (`rpt`): let a coding agent drive Runpod pods
+
+Aliases: **runpod-tools**, `rpt`, `rpt2`, `kmerkelbach/runpod-tools` on GitHub (Kilian Merkelbach; created 2026-09-30, last commit 2026-10-27, 3 stars as of 2026-11-24). `pyproject.toml` declares MIT; the repo has no LICENSE file. Not on PyPI; no releases or tags.
+
+**What it is.** An agent-friendly Runpod CLI (for Claude Code, Codex or a person): a small command-line tool for the everyday Runpod loop: create a pod, wait for SSH, push code, run a job, fetch results, stop the pod. Python standard library only (Python ≥ 3.11, no Runpod SDK, no `requests`), written so an agent can read the README and use every command. It ships an `AGENTS.md` of rules for an agent operating someone's account (only manage pods you launched this session; fetch, verify locally, then destroy, as three separate steps; never delete a network volume; poll logs gently) and a `docs/gotchas.md` of operational lessons, one heading each. Talks to Runpod's REST API v2 by default since 2026-10-20 (`RPT_API=v1` goes back to v1 + GraphQL; REST v1 itself was retired 2026-11-15).
+
+```bash
+# From the README (run from a clone of the repo)
+pip install -e .            # gives you `rpt`
+export RUNPOD_API_KEY=...
+rpt init                    # writes runpod-tools.toml; fill in template_id + [sync]
+rpt gpus --secure           # pick a GPU type id
+rpt start --experiment eval --gpu-type "NVIDIA H200" --wait   # prints pod_id=<id> last
+rpt push --pod abc123
+rpt run --pod abc123 --background job1 -- python train.py --epochs 3
+rpt run --pod abc123 -- tail -n 20 /workspace/rpt/job1.log
+rpt fetch --pod abc123
+ls results/                 # verify locally BEFORE the next line
+rpt terminate --pod abc123 -y
+```
+
+What it handles for you, each from a lesson in its `docs/gotchas.md`:
+
+- **No ssh/rsync on some Secure Cloud pods** (only the web terminal and the `ssh.runpod.io` proxy work): `rpt start` sends `supportPublicIp: true` by default so the pod lands on a host that can expose a public TCP port; `rpt pods` says "no TCP endpoint" otherwise.
+- **`Host key verification failed`, rsync exit 255 on a fresh pod**: Runpod reuses `ip:port` pairs across pods; `rpt wait` removes the stale `known_hosts` entry and records the new key.
+- **`cuda.is_available() == False` / `The NVIDIA driver on your system is too old`**: `rpt start --cuda-version 13.0` only schedules onto hosts whose driver supports it (see the driver and CUDA section).
+- **Secrets missing over ssh**: `rpt run` sources `/etc/rp_environment` before every command; `examples/pod-start.sh` writes that file in a custom image.
+- **ssh hangs after `nohup … &`**, and **sshd dropping connections when several watchers poll** (`MaxStartups`; looks exactly like a dead pod): `rpt run --background NAME` detaches cleanly with its log at `/workspace/rpt/NAME.log`; poll with one call per check.
+- **A cost cap that only an outside poller enforces is not a cap**: `examples/killswitch.sh` runs on the pod and stops or terminates it after N hours, with the account key delivered over stdin (the pod's own injected key gets 403).
+- **Unattended runs never hang on a prompt**: an ambiguous `--pod` off a terminal exits 2 listing the candidates; destructive commands need `-y`. With `[pod].name_prefix` set on a shared account, `--all` and automatic selection only touch pods carrying the prefix. There is no volume-delete command.
+- **429 Too Many Requests** from Runpod's per-account rate limit: retried with backoff, and `run`, `ssh`, `push`, `pull` and `fetch` share one cached pod listing across `rpt` processes.
+
+**When to use it:** you have Claude Code or another agent run experiments on Runpod pods you pay for, or you want one scriptable push / run / fetch loop instead of hand-built ssh and rsync lines. Its `AGENTS.md` and `docs/gotchas.md` are worth reading even if you keep your own scripts. `docs/fleet-pattern.md` covers one job across N pods. **When not to use it:** you want a job queue that starts and ends pods per job, or one interface over a shared box, local cards and Runpod (gpuc, see the gpuc section); serverless or per-second burst work (Modal); providers other than Runpod. A one-person repo with no releases, so pin a commit. Its own docs sometimes describe the older v1 + GraphQL plumbing.
 
 ## Storage
 
@@ -354,7 +394,7 @@ gpuc wait <job-id> [<job-id> ...]
 
 ## Cross-cutting cost pitfalls
 
-- **Idle pods bill hourly.** Stop pods you're not using. RunPod's "stopped" state still bills storage but not compute.
+- **Idle pods bill hourly.** Stop pods you're not using. Runpod's "stopped" state still bills storage but not compute.
 - **API + self-hosted hybrid** is often cheapest: use APIs for low-volume / closed models; self-host for high-volume open-weight inference.
 - **Quantization saves money fast.** A 70B model at int4 fits on one A100 80GB; at fp16 needs two. The quality loss is small for many tasks. AWQ / GPTQ / FP8 supported in vLLM.
 - **Inference batch size dominates throughput.** vLLM with batch size 1 and batch size 64 are 10–50× different in tokens-per-second. Make sure you're actually batching.
@@ -372,19 +412,19 @@ gpuc wait <job-id> [<job-id> ...]
 
 ### What's the cheapest GPU to rent per hour?
 
-**vast.ai** (peer-supplied marketplace) typically has the lowest H100 / H200 hourly rates, but reliability varies — filter by host reliability score. **RunPod community cloud** is similarly cheap; **RunPod secure cloud** and **Lambda Cloud** cost more but are more reliable. For interpretability workloads on smaller models, A100 80GB is plenty and much cheaper than H100.
+**vast.ai** (peer-supplied marketplace) typically has the lowest H100 / H200 hourly rates, but reliability varies — filter by host reliability score. **Runpod community cloud** is similarly cheap; **Runpod secure cloud** and **Lambda Cloud** cost more but are more reliable. For interpretability workloads on smaller models, A100 80GB is plenty and much cheaper than H100.
 
-### vast.ai vs RunPod — which?
+### vast.ai vs Runpod — which?
 
-**vast.ai** for absolute lowest cost on one-off experiments where you can tolerate occasional reliability issues. **RunPod (secure cloud)** for work you care about — actual SLA, smoother dev experience. **RunPod community cloud** is in between (cheap, less reliable). For multi-day jobs, secure cloud only; community cloud nodes can disappear.
+**vast.ai** for absolute lowest cost on one-off experiments where you can tolerate occasional reliability issues. **Runpod (secure cloud)** for work you care about — actual SLA, smoother dev experience. **Runpod community cloud** is in between (cheap, less reliable). For multi-day jobs, secure cloud only; community cloud nodes can disappear.
 
 ### Can I use Modal for training, or just inference?
 
-Both, but it's most natural for **burst** workloads — eval batches over 1000 prompts, occasional finetune jobs. For long-running interactive training, a persistent box (RunPod / Lambda) is friendlier. Modal pays per-second, which is great for bursts and expensive for sustained loads.
+Both, but it's most natural for **burst** workloads — eval batches over 1000 prompts, occasional finetune jobs. For long-running interactive training, a persistent box (Runpod / Lambda) is friendlier. Modal pays per-second, which is great for bursts and expensive for sustained loads.
 
-### How do I install Docker on a RunPod box?
+### How do I install Docker on a Runpod box?
 
-Most RunPod templates come with Docker pre-installed; if yours doesn't, `apt-get update && apt-get install -y docker.io && systemctl start docker`. You may need to start the daemon manually (`dockerd &` in the background). Inspect AI's `docker` sandbox needs this.
+Most Runpod templates come with Docker pre-installed; if yours doesn't, `apt-get update && apt-get install -y docker.io && systemctl start docker`. You may need to start the daemon manually (`dockerd &` in the background). Inspect AI's `docker` sandbox needs this.
 
 ### What is `HF_HOME` and why should I set it?
 
@@ -436,7 +476,7 @@ As of 2026-11-23: `o1`, `o3-mini`, `o4-mini`, `gpt-4.1-nano`, `gpt-4-turbo` and 
 
 ### How do I queue jobs on a shared GPU server where I don't have sudo?
 
-`gpuc` (`brendanlong/gpu-coordinator`) runs a per-user dispatcher in `~/.gpuc` over ssh on a subset of the box's GPUs and can also send jobs to per-job RunPod pods; on a real cluster, use Slurm. See the gpuc section above.
+`gpuc` (`brendanlong/gpu-coordinator`) runs a per-user dispatcher in `~/.gpuc` over ssh on a subset of the box's GPUs and can also send jobs to per-job Runpod pods; on a real cluster, use Slurm. See the gpuc section above.
 
 ### How do I keep a long training run going if my SSH disconnects?
 
@@ -444,4 +484,4 @@ Use **`tmux`** or **`screen`** — start the training inside a tmux session (`tm
 
 ---
 
-Last verified: 2026-11-23 for the retirement, Python-floor, vLLM 0.34.0 / security and Together post-training billing sections and the ACS Infra Trinity note; 2026-11-04 for the vLLM 0.33.0 and driver sections; 2026-10-20 for the rest. (Additions 2026-11-23: Anthropic model-deprecations page and release notes, OpenAI deprecations page and Google's Gemini deprecations page (`ai.google.dev/gemini-api/docs/deprecations.md.txt`) re-read as raw markdown on 2026-11-23, quotes exact; OpenRouter `expiration_date` values and the missing `arcee-ai/trinity-large-thinking` slug from `https://openrouter.ai/api/v1/models`; `requires_python`, `requires_dist` and upload dates from PyPI JSON for vllm 0.34.0, sglang 0.5.23, inspect-ai 0.3.292, trl 1.18.2, transformers 5.24.0, peft 0.22.0 / 0.21.3, accelerate 1.16.0, wandb 0.31.2, anthropic 2.13.0, circuit-tracer 0.5.4, sae-lens 6.56.1, transformer-lens 4.4.0 and nnsight 0.8.4; vLLM v0.34.0 release body and PR #63489 body via `gh api`; vLLM and PyTorch security advisories via the GitHub security-advisories API (summaries, severities, version ranges; bodies read for GHSA-xgh8-qwjh-q853 and GHSA-v32g-mr63-3j83 only); Together's post-training pricing page as raw markdown. Not verified: Bedrock and Google-managed Vertex retirement dates for Claude models; when Google first posted the Gemini 2.5 routing notice and which response field reports the routed model; what a Chat Completions request with tools returns on GPT-6.2 (see `safety-toolkits.md`); the first vLLM version affected by the LoRA part-application bug; NDIF's model list, ACS Infra's current models and the qualitative RunPod / vast.ai / Lambda availability statements, which were not re-checked on 2026-11-23.) RunPod, vast.ai, Lambda, Modal, Together, Groq all active and supported by mainstream tools. (Additions 2026-11-04: Anthropic and OpenAI deprecation pages re-read as raw markdown (Opus 4.5 "Not sooner than November 24, 2026" row); `requires_python` and upload dates from PyPI JSON for vllm 0.33.0, inspect-ai 0.3.287, torch 2.15.0, transformers 5.21.0–5.22.1, trl 1.17.1, control-arena 20.1.1 and axolotl 0.21.1; vLLM 0.33.0 notes from the `v0.33.0rc3` GitHub release body (titled v0.33.0) and PyPI `requires_dist`; PyTorch 2.15.0 CUDA/driver and Python text from its GitHub release notes; the uv 3.15 default from the uv CHANGELOG via `gh api`.) (Additions 2026-10-20: ACS Infra from the announcement post (LessWrong GraphQL markdown) and `arcee-ai/Trinity-Large-TrueBase` metadata from the Hugging Face API; NDIF's model list from `ndif.us` (its eligibility rule not found on the homepage); closed-model retirement dates from the raw markdown of OpenAI's and Anthropic's deprecation pages; `requires_python` values from PyPI JSON per version and the Inspect AI CHANGELOG; vLLM 0.32.0 traps from its GitHub release notes and PRs #57035 and #59042. Not verified: ACS Infra's API and activation interface, which are behind sign-up.) (Additions 2026-10-14: OpenAI fine-tuning dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, quotes exact); Together post-training billing from `docs.together.ai/docs/post-training/{overview,pricing}.md`; the CUDA 13 / driver r580 section from the vLLM v0.31.0 and PyTorch v2.14.1 GitHub release notes, SkyRL's Tinker quickstart and PyTorch's `c10/cuda/CUDAFunctions.cpp`; gpuc from its README and `gh api` repo metadata. The rest of the page was last fully reviewed 2026-04.)
+Last verified: 2026-11-24 for the runpod-tools section and the Runpod REST v1 retirement and spelling (from the `kmerkelbach/runpod-tools` repo at commit `87954f7`: README, `AGENTS.md`, `docs/gotchas.md`, `pyproject.toml`, `examples/killswitch.sh`, and `gh api` repo metadata; Runpod's `api-reference-v2/migrate-from-v1.md` as raw markdown; the tool's test suite was not run); 2026-11-23 for the retirement, Python-floor, vLLM 0.34.0 / security and Together post-training billing sections and the ACS Infra Trinity note; 2026-11-04 for the vLLM 0.33.0 and driver sections; 2026-10-20 for the rest. (Additions 2026-11-23: Anthropic model-deprecations page and release notes, OpenAI deprecations page and Google's Gemini deprecations page (`ai.google.dev/gemini-api/docs/deprecations.md.txt`) re-read as raw markdown on 2026-11-23, quotes exact; OpenRouter `expiration_date` values and the missing `arcee-ai/trinity-large-thinking` slug from `https://openrouter.ai/api/v1/models`; `requires_python`, `requires_dist` and upload dates from PyPI JSON for vllm 0.34.0, sglang 0.5.23, inspect-ai 0.3.292, trl 1.18.2, transformers 5.24.0, peft 0.22.0 / 0.21.3, accelerate 1.16.0, wandb 0.31.2, anthropic 2.13.0, circuit-tracer 0.5.4, sae-lens 6.56.1, transformer-lens 4.4.0 and nnsight 0.8.4; vLLM v0.34.0 release body and PR #63489 body via `gh api`; vLLM and PyTorch security advisories via the GitHub security-advisories API (summaries, severities, version ranges; bodies read for GHSA-xgh8-qwjh-q853 and GHSA-v32g-mr63-3j83 only); Together's post-training pricing page as raw markdown. Not verified: Bedrock and Google-managed Vertex retirement dates for Claude models; when Google first posted the Gemini 2.5 routing notice and which response field reports the routed model; what a Chat Completions request with tools returns on GPT-6.2 (see `safety-toolkits.md`); the first vLLM version affected by the LoRA part-application bug; NDIF's model list, ACS Infra's current models and the qualitative Runpod / vast.ai / Lambda availability statements, which were not re-checked on 2026-11-23.) Runpod, vast.ai, Lambda, Modal, Together, Groq all active and supported by mainstream tools. (Additions 2026-11-04: Anthropic and OpenAI deprecation pages re-read as raw markdown (Opus 4.5 "Not sooner than November 24, 2026" row); `requires_python` and upload dates from PyPI JSON for vllm 0.33.0, inspect-ai 0.3.287, torch 2.15.0, transformers 5.21.0–5.22.1, trl 1.17.1, control-arena 20.1.1 and axolotl 0.21.1; vLLM 0.33.0 notes from the `v0.33.0rc3` GitHub release body (titled v0.33.0) and PyPI `requires_dist`; PyTorch 2.15.0 CUDA/driver and Python text from its GitHub release notes; the uv 3.15 default from the uv CHANGELOG via `gh api`.) (Additions 2026-10-20: ACS Infra from the announcement post (LessWrong GraphQL markdown) and `arcee-ai/Trinity-Large-TrueBase` metadata from the Hugging Face API; NDIF's model list from `ndif.us` (its eligibility rule not found on the homepage); closed-model retirement dates from the raw markdown of OpenAI's and Anthropic's deprecation pages; `requires_python` values from PyPI JSON per version and the Inspect AI CHANGELOG; vLLM 0.32.0 traps from its GitHub release notes and PRs #57035 and #59042. Not verified: ACS Infra's API and activation interface, which are behind sign-up.) (Additions 2026-10-14: OpenAI fine-tuning dates from `developers.openai.com/api/docs/deprecations.md` (raw markdown, quotes exact); Together post-training billing from `docs.together.ai/docs/post-training/{overview,pricing}.md`; the CUDA 13 / driver r580 section from the vLLM v0.31.0 and PyTorch v2.14.1 GitHub release notes, SkyRL's Tinker quickstart and PyTorch's `c10/cuda/CUDAFunctions.cpp`; gpuc from its README and `gh api` repo metadata. The rest of the page was last fully reviewed 2026-04.)

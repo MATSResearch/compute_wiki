@@ -32,7 +32,7 @@ Docs are organized into topic folders under `docs/`. Start at the decision guide
 | File | Topic |
 |------|-------|
 | [`docs/models-and-compute/open-weights-models.md`](docs/models-and-compute/open-weights-models.md) | Which open-weights model to use and why (DeepSeek-V4, Kimi, Gemma, Qwen, Llama) |
-| [`docs/models-and-compute/compute.md`](docs/models-and-compute/compute.md) | Compute and infra (RunPod, Modal, Lambda, vast.ai, Slurm) |
+| [`docs/models-and-compute/compute.md`](docs/models-and-compute/compute.md) | Compute and infra (Runpod, Modal, Lambda, vast.ai, Slurm) |
 | [`docs/models-and-compute/experiment-tracking.md`](docs/models-and-compute/experiment-tracking.md) | Experiment tracking and reproducibility (wandb, Hydra, run organization) |
 | [`docs/models-and-compute/safety-toolkits.md`](docs/models-and-compute/safety-toolkits.md) | General safety research toolkits (safety-research/safety-tooling) |
 

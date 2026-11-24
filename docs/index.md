@@ -153,8 +153,8 @@ Most large open models (DeepSeek-V4, Kimi K3, GLM-5.3, big Qwen) are too big to 
 
 | Situation | Use | Topic doc |
 |---|---|---|
-| Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **RunPod community cloud** | [`compute.md`](models-and-compute/compute.md) |
-| Reliable, with an actual SLA, small team | **RunPod secure cloud** or **Lambda Cloud** | [`compute.md`](models-and-compute/compute.md) |
+| Cheapest H100/H200 hour, willing to babysit | **vast.ai** or **Runpod community cloud** | [`compute.md`](models-and-compute/compute.md) |
+| Reliable, with an actual SLA, small team | **Runpod secure cloud** or **Lambda Cloud** | [`compute.md`](models-and-compute/compute.md) |
 | Burst inference for evals (no persistent box) | **Modal** | [`compute.md`](models-and-compute/compute.md) |
 | A closed model I depend on is being retired | Dated OpenAI / Anthropic / Google table, re-read 2026-11-23 (from 2026-12-01 the Gemini 2.5 Pro and Flash ids are re-routed to other models with no error); `shutdown_date` in OpenAI's models list for a check from code | [`compute.md`](models-and-compute/compute.md#closed-model-retirements-to-plan-around-openai-anthropic-and-google) |
 | Which Python version for a new project | **3.12** (vLLM 0.32, inspect-ai, TRL need ≥ 3.11; axolotl and inspect-petri need ≥ 3.12) | [`compute.md`](models-and-compute/compute.md#python-version-floor-for-the-2026-10-stack-312-for-new-projects) |

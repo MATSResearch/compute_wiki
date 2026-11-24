@@ -65,7 +65,7 @@ Maybe. If you're doing pure API-based behavioral research (the MATS playbook in 
 
 ### What's the cheapest way to do open-weight inference?
 
-For research-scale (a few hundred to a few thousand prompts), an API provider like Together AI or Groq is cheapest because you don't pay for idle. For larger volumes, rent GPUs (RunPod, Vast.ai) and run vLLM. See [`compute.md`](../models-and-compute/compute.md) and [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
+For research-scale (a few hundred to a few thousand prompts), an API provider like Together AI or Groq is cheapest because you don't pay for idle. For larger volumes, rent GPUs (Runpod, Vast.ai) and run vLLM. See [`compute.md`](../models-and-compute/compute.md) and [`serving-and-activations.md`](../interpretability/serving-and-activations.md).
 
 ### How do I run a 70B model on one A100?
 
