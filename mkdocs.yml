@@ -49,11 +49,13 @@ nav:
       - evaluation/agent-scaffolds.md
       - evaluation/inspect-ecosystem.md
       - evaluation/datasets-benchmarks.md
+      - evaluation/eval-awareness.md
       - evaluation/red-teaming.md
       - evaluation/dangerous-capability-evals.md
   - Alignment science:
       - alignment-science/behavioral-safety-playbook.md
       - alignment-science/model-organisms.md
+      - alignment-science/reward-hacking-organisms.md
       - alignment-science/cot-faithfulness.md
       - alignment-science/welfare-introspection.md
       - alignment-science/unlearning.md

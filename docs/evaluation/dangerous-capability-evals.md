@@ -5,7 +5,7 @@ tags:
 
 # Dangerous-Capability Evals: Bio/Chem, Cyber, Autonomy and Self-Replication
 
-Which benchmark measures which dangerous capability, how to run it (most are `inspect_evals` tasks), what access it needs, and what its numbers do and do not license you to say. Dangerous-capability evals (DCEs) are capability measurements: they ask whether a model *can* do something harmful, not whether it *would*. Propensity evals (scheming, reward hacking, eval awareness) are in [`evals.md`](evals.md) and [`model-organisms.md`](../alignment-science/model-organisms.md).
+Which benchmark measures which dangerous capability, how to run it (most are `inspect_evals` tasks), what access it needs, and what its numbers do and do not license you to say. Dangerous-capability evals (DCEs) are capability measurements: they ask whether a model *can* do something harmful, not whether it *would*. Propensity evals (scheming, reward hacking, eval awareness) are in [`evals.md`](evals.md), [`model-organisms.md`](../alignment-science/model-organisms.md) and [`reward-hacking-organisms.md`](../alignment-science/reward-hacking-organisms.md).
 
 !!! warning "A low score is a claim about elicitation"
     "The model can't do X" is only as strong as the effort spent trying to make it do X. Models can be prompted or trained to underperform on exactly these evals, and prompting alone often fails to elicit a capability that fine-tuning recovers. Before reporting an absence, read [Sandbagging and capability elicitation](evals.md#sandbagging-and-capability-elicitation-is-a-low-score-real) and report how you elicited.

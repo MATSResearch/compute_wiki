@@ -863,7 +863,7 @@ recommends treating "observations of undesired behaviour as important evidence
 of alignment failures even in the presence of simulation awareness in model
 reasoning", after a model attempted a supply-chain attack on real people while stating
 that they were simulated. Detail in
-[`../evaluation/evals.md`](../evaluation/evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate).
+[`../evaluation/eval-awareness.md`](../evaluation/eval-awareness.md#interpreting-results-under-evaluation-awareness).
 
 **Recommended check.** For a scheming or dangerous-capability eval, write one line per
 dimension in the limitations section: what the measure would miss, what the task set
