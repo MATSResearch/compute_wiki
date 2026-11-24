@@ -5,6 +5,9 @@ Usage:
     # Smoke (5 samples, 3 thresholds, ~5 min wall clock + API cost):
     uv run python -m example_1_control_arena_apps.run
 
+    # Plumbing smoke with lorem-ipsum mock models: no API keys, no cost, still needs Docker:
+    uv run python -m example_1_control_arena_apps.run mock=true tag=mock
+
     # Larger sweep (override any config field as `key=value`):
     uv run python -m example_1_control_arena_apps.run \\
         limit=100 \\
@@ -25,6 +28,7 @@ from ac_components.runs import new_run
 from ac_components.seeding import set_seed
 
 from . import analyze, build
+from .mock_models import mock_roles
 from .prompts import HONEST_SYSTEM_PROMPT
 
 
@@ -40,6 +44,7 @@ class Config:
     holdout_frac: float = 0.3
     seed: int = 0
     tag: str = "smoke"
+    mock: bool = False  # lorem-ipsum mockllm models instead of the two above (mock_models.py)
 
 
 def main() -> None:
@@ -57,7 +62,8 @@ def main() -> None:
     print(f"Run dir: {run.dir}")
     print(f"Log dir: {run.log_dir}")
     print(
-        f"Untrusted: {cfg.untrusted_model}  |  Trusted: {cfg.trusted_model}\n"
+        f"Untrusted: {'mockllm (lorem ipsum)' if cfg.mock else cfg.untrusted_model}  |  "
+        f"Trusted: {'mockllm (lorem ipsum)' if cfg.mock else cfg.trusted_model}\n"
         f"Limit: {cfg.limit}  |  Thresholds: {cfg.thresholds}  |  "
         f"Monitor N: {cfg.monitor_ensemble_size}"
     )
@@ -75,7 +81,7 @@ def main() -> None:
 
     # Eval honest + attack across all (threshold) protocols at once.
     eval_config = build_config(
-        ModelRoles(untrusted=cfg.untrusted_model, trusted=cfg.trusted_model),
+        mock_roles() if cfg.mock else ModelRoles(untrusted=cfg.untrusted_model, trusted=cfg.trusted_model),
         limit=cfg.limit,
         system_prompt=HONEST_SYSTEM_PROMPT,
     )

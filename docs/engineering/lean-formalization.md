@@ -128,11 +128,10 @@ What was run on it (template README, 2026-11-23, Lean v4.36.0, macOS arm64):
 ``declaration uses `sorry` `` warning per statement), `#print axioms` on both
 solution theorems (`[propext, Quot.sound]` and no axioms; the statement
 versions report `[sorryAx]`), and `leanchecker` and `leanchecker-paranoid`
-replaying `Solutions` (both exit 0). Not run: `lake check --paranoid` and
-`lake comparator --paranoid` — on macOS both exit 2 with
+replaying `Solutions` (both exit 0). On macOS `lake check --paranoid` and
+`lake comparator --paranoid` both exit 2 with
 ``error: `lake comparator` sandboxes the code it checks with `bwrap`, which needs Linux namespaces.``
-— and the GitHub Actions workflow, so the first Linux run in a
-copy is the first exercise of the sandboxed commands.
+On Linux (2026-11-23, Lean v4.36.0, Ubuntu 24.04 arm64 in a Docker container under Colima on macOS, started with `--privileged`): `lake build` (exit 0), `lake check --paranoid` (exit 0: lean4lean, nanoda, con-leche, con-ron and the Lean default kernel all accept; "Uses axioms: Classical.choice, propext, Quot.sound") and `lake comparator --paranoid` (exit 0, "Your solution is okay!"). Not run: the GitHub Actions workflow. The container errors met on the way are under "Requirements and limits" below.
 Two things worth knowing before copying it:
 
 - **A drift check, not an audit.** As the laplace workflow comment put it,
@@ -808,7 +807,15 @@ Requirements and limits:
   available on Linux". `bwrap` needs unprivileged user namespaces or a setuid
   install; Lean's own test suite notes "User namespaces cannot be assumed
   available in CI containers". On Ubuntu, worth checking the AppArmor sysctl
-  `kernel.apparmor_restrict_unprivileged_userns`.
+  `kernel.apparmor_restrict_unprivileged_userns`. In a Docker container on
+  macOS (Colima, Ubuntu 24.04, Lean v4.36.0, 2026-11-23), `bwrap` first failed
+  with `bwrap: Can't mkdir /run/user: Read-only file system` (fix: create
+  `/run/user/$(id -u)` and set `XDG_RUNTIME_DIR`), then — even with
+  `--cap-add SYS_ADMIN` and seccomp / AppArmor unconfined — with
+  `bwrap: Can't mount proc on /newroot/proc: Operation not permitted`; it ran
+  only under `docker run --privileged`. A privileged container weakens the
+  boundary to the host VM: acceptable for your own proofs, not for checking
+  someone else's solution.
 - **`--paranoid` needs a release toolchain.** The external checkers are bundled
   with release toolchains, and a missing one fails the run rather than
   passing it with fewer checkers.
@@ -831,6 +838,9 @@ same with its own name: the machine is not Linux, e.g. macOS — seen on
 v4.36.0, and raised in `src/lake/Lake/CLI/Check.lean` whenever
 `System.Platform.isLinux` is false and `--inadvisably-no-sandbox` is not
 given); `bwrap: setting up uid map: Permission denied` (no user namespaces);
+`bwrap: Can't mkdir /run/user: Read-only file system` and
+`bwrap: Can't mount proc on /newroot/proc: Operation not permitted` (both
+inside an unprivileged Docker container; see "Linux only" above);
 `Axiom 'sorryAx' is not permitted; it is used by '…'` (`lake check`, exit 1);
 `Illegal axiom detected: '…'` (`lake comparator`, exit 1: a forbidden axiom);
 `Const does not match between challenge and target '…'` (exit 1: the

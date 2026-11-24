@@ -162,6 +162,12 @@ def test_transcript_reads_scores_and_deferral(log_dir):
         assert [tc.tool for tc in traj.tool_calls] == ["submit"]
 
 
+def test_monitor_parse_counts_sees_every_tagged_reply(log_dir):
+    counts = transcript.monitor_parse_counts(log_dir)
+    assert counts["unparsed"] == 0
+    assert counts["parsed"] > 0
+
+
 def test_defer_to_trusted_defers_above_threshold_only(log_dir):
     """0.8 > 0.5 defers to the trusted model; 0.8 <= 0.9 keeps the untrusted action."""
     from inspect_ai.log import read_eval_log

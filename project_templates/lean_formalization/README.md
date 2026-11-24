@@ -50,10 +50,10 @@ addition) so the scaffold has something to check.
 ``declaration uses `sorry` `` warning per statement), `#print axioms` on both
 solution theorems (`[propext, Quot.sound]` and none; the statement versions
 report `[sorryAx]`), and `leanchecker` and `leanchecker-paranoid` replaying
-`Solutions` (both exit 0). **Not run:** `lake check` and `lake comparator`,
-which on macOS exit 2 with "sandboxes the code it checks with `bwrap`, which
-needs Linux namespaces", and the GitHub Actions workflow. The first Linux run
-in your copy is the first check of rungs 3 to 5.
+`Solutions` (both exit 0). On macOS itself `lake check` and `lake comparator`
+exit 2 with "sandboxes the code it checks with `bwrap`, which needs Linux
+namespaces". On Linux (2026-11-23, Lean v4.36.0, Ubuntu 24.04 arm64 in a Docker container under Colima on macOS, started with `--privileged`): `lake build` (exit 0), `lake check --paranoid` (exit 0: lean4lean, nanoda, con-leche, con-ron and the Lean default kernel all accept; "Uses axioms: Classical.choice, propext, Quot.sound") and `lake comparator --paranoid` (exit 0, "Your solution is okay!"). Not run: the GitHub Actions workflow. See "Linux, macOS and containers" below for
+the two container errors met on the way.
 
 ## Quick start
 
@@ -146,7 +146,16 @@ move `lean-toolchain` and add `--json` to the workflow if you parse the result.
 
 - **The sandbox is Linux-only** (Lean v4.35.0 release notes). `bwrap` needs
   unprivileged user namespaces or a setuid install. On macOS the commands
-  cannot sandbox; run them in CI, on a Linux box, or in a Linux VM.
+  cannot sandbox; run them in CI, on a Linux box, or in a Linux VM or
+  container. In a default Docker container on macOS (Colima, Ubuntu 24.04,
+  2026-11-23) `bwrap` failed twice before it ran: `bwrap: Can't mkdir
+  /run/user: Read-only file system` (fix: `mkdir -p /run/user/$(id -u)` and
+  set `XDG_RUNTIME_DIR` to it), then, with `--cap-add SYS_ADMIN` and seccomp /
+  AppArmor unconfined, `bwrap: Can't mount proc on /newroot/proc: Operation not
+  permitted`; only `docker run --privileged` worked. A privileged container
+  weakens isolation from the host VM: fine for your own proofs, not for a
+  solution someone else wrote — check those on a Linux host or CI runner with
+  unprivileged user namespaces.
 - **Containers often block user namespaces.** Lean's own test suite says
   "User namespaces cannot be assumed available in CI containers" and swaps in
   a fake `bwrap` for that reason. A fake or disabled sandbox gives no

@@ -18,6 +18,7 @@ from control_arena import EvalMode
 from control_arena.eval import ControlEvalConfig, get_control_task_product
 from control_arena.scorers import max_suspicion_scorer
 from inspect_ai import eval as inspect_eval
+from inspect_ai.model import Model
 
 
 @dataclass
@@ -28,8 +29,8 @@ class ModelRoles:
     untrusted. Using two frontier models voids the threat model.
     """
 
-    untrusted: str = "anthropic/claude-sonnet-4-6"
-    trusted: str = "anthropic/claude-haiku-4-5-20251001"
+    untrusted: str | Model = "anthropic/claude-sonnet-4-6"
+    trusted: str | Model = "anthropic/claude-haiku-4-5-20251001"
 
 
 def build_config(

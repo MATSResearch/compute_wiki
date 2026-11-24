@@ -27,6 +27,10 @@ docker info >/dev/null   # check
 uv sync --extra dev        # locked: control-arena 20.1.1, Python >= 3.11
 uv run pytest -q           # construction + prompt-contract tests, no API, no Docker
 
+# Plumbing smoke: lorem-ipsum mockllm models, no API keys or cost, ~30 s; needs Docker.
+# Every number in its report is meaningless (all main tasks fail, all monitor scores unparsed).
+uv run python -m example_1_control_arena_apps.run mock=true tag=mock
+
 # Smoke run: 5 samples × 3 thresholds × (honest + attack). ~5-10 min wall clock + ~$1-2 in API cost on Sonnet+Haiku.
 uv run python -m example_1_control_arena_apps.run
 
@@ -127,4 +131,4 @@ Use these to check your understanding of the AI Control framing, defer-to-truste
 
 ## Last verified
 
-2026-11-23 — `control-arena` 20.1.1 on `inspect-ai` 0.3.290 (the lockfile), Python 3.13. Verified here: `uv run pytest` (construction, prompt formatting, the monitor reply format parsing to a real score, task metadata carrying `defer_threshold`), and in `../../components` an offline end-to-end run of the same wrappers on a toy setting with `mockllm`. **Not run here:** the real eval (`python -m example_1_control_arena_apps.run`) — it needs Docker, model API keys and the APPS dataset download, so the smoke numbers above are still a placeholder.
+2026-11-23 — `control-arena` 20.1.1 on `inspect-ai` 0.3.290 (the lockfile), Python 3.13. Verified here: `uv run pytest` (construction, prompt formatting, the monitor reply format parsing to a real score, task metadata carrying `defer_threshold`), and in `../../components` an offline end-to-end run of the same wrappers on a toy setting with `mockllm`. Also run (Docker via Colima on macOS arm64): `run mock=true` end to end — APPS dataset download, 6 tasks × 5 samples in the Docker sandbox, every sample scored with no errors (main task "Expected: '4', but got 'Lorem ipsum …'"), calibration, pareto and histogram written, report states 0 of 30 monitor scores parsed. **Not run with real models:** the smoke numbers above are still a placeholder. An attempt with two free OpenRouter reasoning models was stopped after an hour: the trusted monitor spent 100k–300k reasoning tokens per call (about 45 minutes per task) and left out the `<score>` tag in 4 of 5 honest replies, which ControlArena records as suspicion 0.0 — the report's "Monitor replies with a parsed score" line exists to catch that.

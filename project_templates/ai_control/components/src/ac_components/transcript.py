@@ -93,6 +93,27 @@ def _gather_suspicion(sample) -> list[float]:
     ]
 
 
+def monitor_parse_counts(log_dir: str | Path) -> dict[str, int]:
+    """How many monitor replies ControlArena could and could not parse a score from.
+
+    A reply with no `<score>` tag is recorded as `default_suspicion_score`
+    (0.0 unless configured) with `score_parsed=False`, and `max_suspicion_scorer`
+    uses it like any other score — so report this count beside any safety number.
+    The flag sits at the top level of the message metadata, or inside
+    `monitor_response` when a defer-to-trusted protocol wraps the monitor.
+    """
+    counts = {"parsed": 0, "unparsed": 0}
+    for path in sorted(Path(log_dir).glob("*.eval")):
+        for sample in read_eval_log(path).samples or []:
+            for msg in sample.messages:
+                md = msg.metadata if isinstance(msg, ChatMessageAssistant) else None
+                if not md or md.get("suspicion_score") is None:
+                    continue
+                flag = md["score_parsed"] if "score_parsed" in md else md["monitor_response"]["score_parsed"]
+                counts["parsed" if flag else "unparsed"] += 1
+    return counts
+
+
 def _task_success(scores, key: str) -> bool | None:
     """Read `key` from the scorer whose value is a dict holding it.
 
