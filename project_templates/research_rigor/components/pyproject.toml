@@ -1,6 +1,6 @@
 [project]
 name = "research-rigor"
-version = "0.2.0"
+version = "0.3.0"
 description = "Deterministic rigor checks for AI-assisted research: two-point pre-registration, diversity-forced planning, result validation, concerns and repair proposals, an evidence ledger, verdicts, comparability, claim grounding, release disclosure."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -20,7 +20,7 @@ def _release(**over):
         "harness": "prime-agent 0.4.1 @ sha256:abc123",
         "cost": "USD 41.20",
         "cost_per_step": {"lit_review": 3.10, "run": 31.40, "analysis": 6.70},
-        "model_ids": ["claude-opus-5"],
+        "model_ids": [{"id": "claude-opus-5", "served_id": "claude-opus-5"}],
         "run_dates": "2026-08-20..2026-08-24",
         "reasoning_mode": "high",
         "uncertainty": "95% bootstrap CI over the eval set",
@@ -85,6 +85,52 @@ def test_class_level_model_reporting_is_not_disclosure():
     """52.5% of evaluation papers say "AI" instead of naming the model."""
     r = pb.disclosure_report(_release(model_ids=[], run_dates=None))
     assert r.missing_required == ["model_ids", "run_dates"]
+
+
+# --- the model that ran: served id beside requested id -----------------------
+
+def _soft_failed(v, name):
+    return [w for w in v.warnings if w.startswith(f"soft check failed: {name}")]
+
+
+@pytest.mark.parametrize("model_ids", [["claude-opus-5"], [{"id": "claude-opus-5"}],
+                                       [{"id": "claude-opus-5", "served_id": None}]])
+def test_a_model_with_no_served_id_is_flagged_not_blocked(model_ids):
+    v = _gate(_release(model_ids=model_ids))
+    assert v.verdict == "ready"
+    assert len(_soft_failed(v, "served_ids_recorded")) == 1
+
+
+@pytest.mark.parametrize("served", ["gemini-3.8-flash", "gemini-2.5-pro-20261101"])
+def test_a_served_id_that_differs_from_the_requested_one_is_flagged_not_blocked(served):
+    v = _gate(_release(model_ids=[{"id": "gemini-2.5-pro", "served_id": served}]))
+    assert v.verdict == "ready"
+    assert len(_soft_failed(v, "served_ids_match")) == 1
+    assert not _soft_failed(v, "served_ids_recorded")
+
+
+def test_a_run_dirs_model_records_are_disclosed_as_they_stand():
+    """`model_ids` takes metadata.json's `models` list unchanged."""
+    models = [{"id": "claude-opus-5", "role": "implementation", "served_id": "claude-opus-5"},
+              {"id": "claude-haiku-5-5", "role": "judge", "served_id": "claude-haiku-5-5"}]
+    v = _gate(_release(model_ids=models))
+    assert v.verdict == "ready" and not v.warnings
+
+
+def test_a_model_record_with_no_id_fails_loudly():
+    with pytest.raises(AssertionError, match="model_ids"):
+        _gate(_release(model_ids=[{"served_id": "claude-opus-5"}]))
+
+
+# --- a headline beside its range across defensible choices --------------------
+
+def test_sensitivity_ranges_are_reported_beside_the_headline():
+    ranged = [Resolution("H1", "supported", "1.9x, above the frozen line",
+                         sensitivity={"link_function": (1.1, 2.9)})]
+    assert _gate(resolutions=ranged).sensitivity == {"H1": {"link_function": (1.1, 2.9)}}
+    assert _gate(resolutions=ranged, pi_approved=False).sensitivity == \
+        {"H1": {"link_function": (1.1, 2.9)}}
+    assert _gate().sensitivity == {}
 
 
 # --- release checks ---------------------------------------------------------

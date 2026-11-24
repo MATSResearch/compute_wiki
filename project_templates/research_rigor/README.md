@@ -10,7 +10,7 @@ Read that first; this directory is only the enforcement layer.
 
 | | |
 |---|---|
-| [`components/`](components/) | `research_rigor` — two-point pre-registration, diversity-forced planning, result validation, the concern ledger with repair proposals, the evidence ledger, verdicts, comparability, claim grounding, release disclosure. Stdlib + PyYAML, 212 tests, no LLM call anywhere. |
+| [`components/`](components/) | `research_rigor` — two-point pre-registration, diversity-forced planning, result validation, the concern ledger with repair proposals, the evidence ledger, verdicts, comparability, claim grounding, release disclosure, served model ids, run-completeness counts. Stdlib + PyYAML, 273 tests, no LLM call anywhere. |
 | [`templates/`](templates/) | `prereg.template.yaml` to fill in and freeze (twice: before and after the pilot), plus the run-directory metadata schema. |
 
 No `example_projects/` — there is nothing here to replicate. Install the

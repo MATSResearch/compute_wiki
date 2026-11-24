@@ -9,6 +9,7 @@ import pytest
 
 from research_rigor import resolve as rs
 from research_rigor.evidence import Citation
+from research_rigor.run_dir import UnachievableProposal
 
 FROZEN = ["H1", "H2"]
 DIFFERENT_QUESTIONS = {"H1": "Q1", "H2": "Q2"}
@@ -198,6 +199,47 @@ def test_scope_guard_ignores_an_inconclusive_verdict():
     assert v.verdict == "resolved"
 
 
+# --- a configuration is part of what you ran ---------------------------------
+
+LORA_RANK = {"lora_rank": [1, 8, "full"]}
+
+
+def _swept_flagged(v):
+    return [w for w in v.warnings if "no swept axis" in w]
+
+
+@pytest.mark.parametrize("verdict", ["refuted", "inconclusive"])
+def test_a_negative_verdict_with_no_swept_axis_is_flagged_not_blocked(verdict):
+    v = _gate([_res("H1", "supported"),
+               _res("H2", verdict, claimed_scope={}, rationale="no effect at the frozen line")],
+              evidence=FOR_H1 + [Citation("run:4", "H2", -0.9)])
+    assert v.verdict == "resolved"
+    assert len(_swept_flagged(v)) == 1 and "H2" in _swept_flagged(v)[0]
+
+
+def test_a_negative_verdict_that_swept_an_axis_raises_no_flag():
+    v = _gate([_res("H1", "supported"),
+               _res("H2", "inconclusive", rationale="band", swept=LORA_RANK)])
+    assert v.verdict == "resolved" and not _swept_flagged(v)
+
+
+def test_a_supported_verdict_needs_no_sweep():
+    v = _gate([_res("H1", "supported"), _res("H2", "inconclusive", rationale="band",
+                                               swept=LORA_RANK)])
+    assert not _swept_flagged(v)
+
+
+def test_a_swept_axis_names_two_or_more_values():
+    with pytest.raises(AssertionError, match="swept axis"):
+        _res("H2", "refuted", swept={"lora_rank": [1]})
+
+
+@pytest.mark.parametrize("rng", [(2.9,), (2.9, 1.1), "1.1-2.9"])
+def test_a_sensitivity_range_is_low_then_high(rng):
+    with pytest.raises(AssertionError, match="sensitivity"):
+        _res("H1", sensitivity={"link_function": rng})
+
+
 # --- follow-ups are candidates, never decisions -----------------------------
 
 DONE = "ablation rerun on the 70B model with the same guard, all five subsets scored"
@@ -223,6 +265,31 @@ def test_followups_hand_off_unselected_and_routed_to_plan():
     assert out[0]["selected"] is False
     assert "/plan" in out[0]["route"]
     assert out[0]["lesson"] == "effect was layer-late"
+
+
+def _unachievable_followup():
+    return rs.FollowUp("U1", "does it hold at 70B?", "F1", DONE,
+                       unachievable=UnachievableProposal("70B weights are not available to us"))
+
+
+def test_an_unacknowledged_unachievable_followup_stays_open_and_routed():
+    out = rs.handoff_followups([_unachievable_followup()], known_ids=["F1"])
+    assert out[0]["unachievable"]["decision"] is None
+    assert "/plan" in out[0]["route"]
+
+
+def test_an_accepted_unachievable_followup_is_closed_and_not_routed():
+    f = _unachievable_followup()
+    f.unachievable.review("accepted", by="pi")
+    out = rs.handoff_followups([f], known_ids=["F1"])
+    assert out[0]["unachievable"]["decision"] == "accepted"
+    assert "/plan" not in out[0]["route"]
+
+
+def test_a_reopened_followup_is_open_again():
+    f = _unachievable_followup()
+    f.unachievable.review("reopened", by="pi")
+    assert "/plan" in rs.handoff_followups([f], known_ids=["F1"])[0]["route"]
 
 
 def test_clean_run_resolves():

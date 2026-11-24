@@ -57,6 +57,7 @@ pitfalls), [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md
 | train a probe or monitor on instructed misbehaviour | an "instructed but refused" class, and benign fine-tunes as negatives | a collusion probe's AUROC fell from 1.00 to 0.61 without the instruction |
 | cite a baseline's published score on a judge-graded benchmark | a rerun of the baseline under your judge and answer prompt | on LoCoMo the judge alone moved a score up to 7.2 points, the answer prompt 9.3 |
 | read a trend in a capability index as research speed-up | the link function, the model set, and what the benchmarks leave out | METR's 1.9x estimate ranges 1.1x–2.9x across link functions |
+| read a fall in a monitor's or probe's detection count after the model changed | a fresh evasion evaluation, planted-misbehaviour recall, or a refitted probe on the new model | Gemini 4 Carbon's alerts fell 7.2x per session with no evasion evaluation run; a probe trained through fell to 0.57 balanced accuracy while a refit recovered 0.97–0.98 |
 
 ---
 
@@ -446,6 +447,27 @@ reply that quotes `'GRADE: C'` and ends with any of `Grade - I`, `GRADE -> I`,
 `GRADE — I`, `GRADE (final): I` or `<b>GRADE</b>: I` scores **C**" (PR #6198).
 Version detail: [`../evaluation/evals.md`](../evaluation/evals.md#inspect-ai)
 and [`../evaluation/inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md).
+
+**A falling detection count is ambiguous when the model changed.** If a
+monitor, probe or classifier fires less on a new model, or after training, the
+fall is either less of the behaviour or a detector that sees it less well, and
+the count alone cannot say which. Google DeepMind's (GDM's) Gemini 4 Carbon
+report rested its propensity evidence on monitors firing less ("confirmed
+alerts were 7.2x lower per session" than for Gemini 4 Argon) and ran no
+monitor-evasion evaluation on Carbon, though the Argon report concludes that
+"Gemini 4 Argon can evade a realistic monitor on easy sabotage tasks about half the time when encouraged
+to do so" (Kaufman & Westover, LessWrong, 2026-11-16;
+[`../evaluation/dangerous-capability-evals.md`](../evaluation/dangerous-capability-evals.md#framework-thresholds-google-deepmind-frontier-safety-framework-v3),
+and as a safety-case checklist in
+[`../oversight-and-control/ai-control.md`](../oversight-and-control/ai-control.md#what-frontier-labs-actually-run-mid-2026-snapshot)).
+Training against a probe can do the same to it: in Goodfire's GRPO (Group
+Relative Policy Optimization) run, the original probe fell to 0.57 balanced accuracy when
+gradients flowed through it, and a linear probe refitted on the trained model
+recovered 0.97–0.98 (arXiv:2611.07071; one lab, one environment;
+[`../interpretability/probes.md`](../interpretability/probes.md#training-against-probes-and-probe-obfuscation)).
+Before reading a fall as less behaviour, re-validate the detector on the
+changed model: a fresh evasion evaluation, a planted-misbehaviour recall check
+on its transcripts, or a refitted probe.
 
 **Recommended check.** Run the extractor or grader blind to the reference and
 compare. Plant known-wrong transcripts and confirm they score zero. Treat a
@@ -914,7 +936,7 @@ are the place to put this.
 
 ---
 
-Last verified: 2026-11-23. (Additions 2026-11-23: pass/fail saturation 2611.13541, judge-vs-state scoring 2611.14581, few-shot label balance 2611.26881, scale reversal and topology 2611.25588 / 2611.26077, judge-as-reward blind spots 2611.25191, LoCoMo sensitivity 2611.19199, the CAGE 4 audit 2611.14068, collusion probes 2611.10620, sandbagging probes 2611.14950, failure taxonomies 2611.13140, signal detection 2611.11074 and the UK AISI Mythos 5 report 2611.10030, each checked against the PDF's abstract page and, where a detail goes beyond the abstract, the section it comes from; the UK AISI attack-policy post from its page text and the linked paper PDF (IaC setting, 25 control tasks, transcript-editing table, LinuxArena ablation); METR's acceleration assessment from its page text; the TASTE posts, the monitor eval-awareness post, the time-horizon reanalysis and Harris's post from the raw LessWrong bodies; the two Inspect bugs from the bodies of PRs #6198 and #6271. Not verified: the TASTE paper, figures that exist only as images.) Earlier: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
+Last verified: 2026-11-23. (Additions 2026-11-23: pass/fail saturation 2611.13541, judge-vs-state scoring 2611.14581, few-shot label balance 2611.26881, scale reversal and topology 2611.25588 / 2611.26077, judge-as-reward blind spots 2611.25191, LoCoMo sensitivity 2611.19199, the CAGE 4 audit 2611.14068, collusion probes 2611.10620, sandbagging probes 2611.14950, failure taxonomies 2611.13140, signal detection 2611.11074 and the UK AISI Mythos 5 report 2611.10030, each checked against the PDF's abstract page and, where a detail goes beyond the abstract, the section it comes from; the UK AISI attack-policy post from its page text and the linked paper PDF (IaC setting, 25 control tasks, transcript-editing table, LinuxArena ablation); METR's acceleration assessment from its page text; the TASTE posts, the monitor eval-awareness post, the time-horizon reanalysis and Harris's post from the raw LessWrong bodies; the two Inspect bugs from the bodies of PRs #6198 and #6271; the falling-detection-count paragraph (Kaufman & Westover's post, the Gemini 4 reports' quoted sentences, arXiv:2611.07071) from dangerous-capability-evals.md, ai-control.md and probes.md, each checked against its source on 2026-11-23. Not verified: the TASTE paper, figures that exist only as images.) Earlier: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
 section, four grader cases, the single-attribute and external-validity sections, two
 trivial-baseline cases and the HELM saturation note, each checked against its arXiv
 abstract page: 2610.25964, 2610.24872, 2610.26595, 2610.13303, 2610.16911, 2610.12409,

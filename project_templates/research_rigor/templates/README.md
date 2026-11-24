@@ -9,7 +9,8 @@ reconstructable from its artifacts alone and work can resume at any stage.
 
 ```
 outputs/run_<YYYYMMDD_HHMMSS>_<name>/
-  metadata.json          # what done means, models, dates, harness, cost, git SHA   [auto]
+  metadata.json          # what done means, models (requested + served id), dates,  [auto]
+                         # harness, cost, git SHA, any `unachievable` close
   prereg.yaml            # hypothesis + falsifier, then design, each frozen once    [human-written, frozen twice]
   provenance.jsonl       # append-only log of agent decisions & tool calls          [auto]
   gates.jsonl            # append-only log of human approval/rejection events        [auto, at each gate]
@@ -50,5 +51,9 @@ Full field-by-field reference for all six: `schemas.md` in this directory.
   logged amendment (a new `amendments:` entry), never a silent edit. The pilot
   does not license rewriting the hypothesis or the falsifier.
 - **`metadata.json` carries the run's acceptance condition** — what done means,
-  written when the run is filed and never edited afterwards.
+  written when the run is filed and never edited afterwards — and any proposal
+  to close it as `unachievable`, which closes the run only once the researcher
+  accepts it.
+- **Each model record carries the `served_id`** the response reported beside the
+  requested `id`.
 - The run-dir name is `run_<YYYYMMDD_HHMMSS>_<short_snake_name>` (house convention).

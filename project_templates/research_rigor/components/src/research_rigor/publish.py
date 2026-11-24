@@ -34,6 +34,16 @@ disable a hard one.
 A verdict holds through the release: a registered prediction without a signed
 verdict blocks publication, not only the `resolve` step.
 
+A requested model id is not what ran. Each `model_ids` entry is a model record
+carrying the `served_id` the response reported beside the requested `id`: a
+missing one is flagged (`served_ids_recorded`) and so is a mismatch
+(`served_ids_match`); both are soft checks. An alias resolving to a dated
+snapshot is an ordinary mismatch: the fix is to request the snapshot id.
+
+Each headline is reported beside its range across defensible modelling choices:
+`PublishVerdict.sensitivity` carries every signed verdict's
+`Resolution.sensitivity`.
+
 Division of labour:
 - THIS LIBRARY scores disclosure, runs the release checks, and refuses to publish
   on an unsigned prediction, a failing hard check, a thin scorecard, or an
@@ -54,7 +64,7 @@ from .verify import Verifier, run_validation
 DISCLOSURE_FIELDS = (
     "cost",                 # inference cost — disclosed by none of the eight audited agent benchmarks
     "harness",              # scaffold + version/digest — "an agent" is a model AND a harness
-    "model_ids",            # the exact model, not the class ("AI", "GPT-4-family")
+    "model_ids",            # the exact model, not the class ("AI", "GPT-4-family"), as served
     "run_dates",            # when — the frontier moves under you
     "reasoning_mode",       # disclosed by 3.2% of evaluation papers
     "uncertainty",          # single runs are unreliable; report the interval
@@ -166,13 +176,56 @@ def artifacts_hashed(**kw) -> Verifier:
     return Verifier("artifacts_hashed", "released artifacts are content-hashed", check, **kw)
 
 
+def _model_records(release: dict) -> list[dict]:
+    """`release["model_ids"]` as model records. Each entry is a run's model
+    record (`{id, served_id, ...}`, as `run_dir` writes it) or a bare requested
+    id, which carries no served id."""
+    records = [{"id": m} if isinstance(m, str) else m for m in release.get("model_ids") or []]
+    for m in records:
+        assert isinstance(m, dict) and m.get("id"), \
+            f"each model_ids entry is a requested id or a record with an `id`, got {m!r}"
+    return records
+
+
+def served_ids_match(**kw) -> Verifier:
+    """A requested id is not what ran: a provider may route the request to
+    another model and still answer HTTP 200. Flags a recorded served id that
+    differs from the requested one (soft: an alias resolving to a dated
+    snapshot is an ordinary mismatch, fixed by requesting the snapshot id)."""
+    kw.setdefault("severity", "soft")
+
+    def check(release: dict) -> tuple[bool, str]:
+        rerouted = [f"{m['id']} served as {m['served_id']}" for m in _model_records(release)
+                    if m.get("served_id") and m["served_id"] != m["id"]]
+        return (not rerouted), (f"served id differs from the requested id: {rerouted}"
+                                f" — an alias resolving to a dated snapshot is ordinary; "
+                                f"request the snapshot id" if rerouted
+                                else "every recorded served id matches its request")
+    return Verifier("served_ids_match", "each model ran as the id requested", check, **kw)
+
+
+def served_ids_recorded(**kw) -> Verifier:
+    """Flags a model with no served id — the id the response reports beside the
+    one requested. Soft: missing is flagged, not blocked."""
+    kw.setdefault("severity", "soft")
+
+    def check(release: dict) -> tuple[bool, str]:
+        unserved = [m["id"] for m in _model_records(release) if not m.get("served_id")]
+        return (not unserved), (f"no served id recorded for {unserved} — log the id the "
+                                f"response reports beside the one requested"
+                                if unserved else "every model has a served id")
+    return Verifier("served_ids_recorded", "each model records its served id", check, **kw)
+
+
 def default_release_checks() -> list[Verifier]:
-    """The house minimum, all hard and all PI-owned by default. A Fellow adds
+    """The house minimum, all PI-owned by default and all hard except the two
+    served-id checks (a missing served id and a mismatch are flagged). A Fellow adds
     project-specific ones (a smoke test, a leakage check like the one that caught
     four leaking feature sets in Glite ARF's case study) — that is where the real
     value is; these only catch the universal mistakes."""
     return [entrypoint_declared(), environment_pinned(), seeds_recorded(),
-            artifacts_hashed(), no_secrets(), no_absolute_local_paths()]
+            artifacts_hashed(), no_secrets(), no_absolute_local_paths(),
+            served_ids_match(), served_ids_recorded()]
 
 
 @dataclass
@@ -182,6 +235,9 @@ class PublishVerdict:
     reasons: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     disclosure: DisclosureReport | None = None
+    # hypothesis id -> {axis: (low, high)}: each headline's range across
+    # defensible choices, reported beside it (`Resolution.sensitivity`)
+    sensitivity: dict = field(default_factory=dict)
 
 
 def publish_gate(release: dict, checks: list[Verifier], *,
@@ -200,11 +256,13 @@ def publish_gate(release: dict, checks: list[Verifier], *,
     Note the ordering: a failed check blocks BEFORE disclosure is scored, because
     a well-documented broken release is still broken.
     """
+    _model_records(release)   # a malformed model record fails loudly, not as a soft check
     unsigned = missing_verdicts(frozen_hypothesis_ids, resolutions)
     if unsigned:
         return PublishVerdict("blocked_unsigned_verdict", [
             f"no signed verdict for registered predictions {unsigned} — a prediction without "
             f"a signed verdict blocks the release, not only the resolve step"])
+    sensitivity = {r.hypothesis_id: r.sensitivity for r in resolutions if r.sensitivity}
 
     disabled = disabled or {}
     hard_names = {v.name for v in checks if v.severity == "hard"}
@@ -213,7 +271,7 @@ def publish_gate(release: dict, checks: list[Verifier], *,
         return PublishVerdict("blocked_disabled_check", [
             f"hard checks disabled by a non-PI actor: {bad_disable}. Agents may add soft checks "
             f"and may not switch off a hard one — rules-as-code only work if they cannot be "
-            f"talked out of."])
+            f"talked out of."], sensitivity=sensitivity)
 
     active = [v for v in checks if v.name not in disabled]
     report = run_validation(active, release, execution_ok=True)
@@ -226,7 +284,8 @@ def publish_gate(release: dict, checks: list[Verifier], *,
     failed_hard = [r for r in report.results if not r.passed and r.severity == "hard"]
     if failed_hard:
         return PublishVerdict("blocked_failed_check",
-                              [f"{r.name}: {r.message}" for r in failed_hard], warnings)
+                              [f"{r.name}: {r.message}" for r in failed_hard], warnings,
+                              sensitivity=sensitivity)
 
     disc = disclosure_report(release, threshold=threshold)
     if not disc.sufficient:
@@ -237,7 +296,7 @@ def publish_gate(release: dict, checks: list[Verifier], *,
             reason += (f" {disc.missing_required} are REQUIRED, not scored: they are exactly the "
                        f"fields the audits found missing everywhere, so omitting them is how a "
                        f"release clears a numeric bar while reproducing the field's failure.")
-        return PublishVerdict("blocked_disclosure", [reason], warnings, disc)
+        return PublishVerdict("blocked_disclosure", [reason], warnings, disc, sensitivity)
 
     not_disclosed = disc.missing + [f for f in WHERE_AVAILABLE_FIELDS
                                     if not _disclosed(release.get(f))]
@@ -248,6 +307,6 @@ def publish_gate(release: dict, checks: list[Verifier], *,
     if not pi_approved:
         return PublishVerdict("blocked_pending_human", [
             "checks pass and disclosure clears, but the release gate is the PI's. Read the code "
-            "and the results yourself before it goes out."], warnings, disc)
+            "and the results yourself before it goes out."], warnings, disc, sensitivity)
 
-    return PublishVerdict("ready", [], warnings, disc)
+    return PublishVerdict("ready", [], warnings, disc, sensitivity)

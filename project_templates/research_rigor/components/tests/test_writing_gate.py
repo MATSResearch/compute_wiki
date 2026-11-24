@@ -167,15 +167,19 @@ def _paper(**kw):
     kw.setdefault("year", 2024)
     kw.setdefault("link", "https://arxiv.org/abs/2405.14860")
     kw.setdefault("link_checked", True)
+    kw.setdefault("read", "full")
+    kw.setdefault("read_date", "2026-11-23")
     return wg.Paper("Not All Language Model Features Are Linear", **kw)
 
 
 def test_a_complete_checked_source_raises_no_flag():
-    assert wg.paper_flags([_paper(), _paper(standing="set_aside")]) == []
+    assert wg.paper_flags([_paper(), _paper(standing="set_aside"),
+                           _paper(version="arXiv v3")]) == []
 
 
 @pytest.mark.parametrize("kw", [dict(authors=None), dict(year=None), dict(link=None),
-                                dict(link_checked=False), dict(from_memory=True)])
+                                dict(link_checked=False), dict(from_memory=True),
+                                dict(read="abstract"), dict(read_date=None)])
 def test_a_source_nobody_can_open_is_flagged_not_blocked(kw):
     papers = [_paper(**kw)]
     assert len(wg.paper_flags(papers)) == 1
@@ -183,6 +187,17 @@ def test_a_source_nobody_can_open_is_flagged_not_blocked(kw):
     assert v.verdict == "ready" and v.warnings == wg.paper_flags(papers)
 
 
+@pytest.mark.parametrize("kw", [dict(read="abstract"), dict(read_date=None),
+                                dict(read=None, read_date=None)])
+def test_what_was_read_is_flagged_only_on_a_paper_built_on(kw):
+    assert wg.paper_flags([_paper(standing="set_aside", **kw)]) == []
+
+
 def test_a_paper_is_either_built_on_or_set_aside():
     with pytest.raises(AssertionError, match="standing"):
         _paper(standing="maybe")
+
+
+def test_what_was_read_is_the_abstract_or_the_full_text():
+    with pytest.raises(AssertionError, match="read"):
+        _paper(read="skimmed")

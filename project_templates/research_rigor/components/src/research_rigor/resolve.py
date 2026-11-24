@@ -35,6 +35,10 @@ So this library resolves NOTHING by inference. It:
   something cited against it unaddressed by name;
 - flags a `supported` verdict while a rival under the same question is still
   unrefuted ("rivals still stand");
+- flags a `refuted` or `inconclusive` verdict that records no swept axis: a
+  configuration is part of what you ran, and an absence claim sweeps the choice
+  most likely to hide the effect (`Resolution.swept`; any `sensitivity` range
+  is reported beside the headline by `publish`);
 - holds through `writeup` and `publish`: `missing_verdicts` is what those two
   gates block on, so a prediction without a signed verdict stops the write-up
   and the release, not only this step;
@@ -53,11 +57,13 @@ Division of labour:
   hypothesis, and hands the decision to the Fellow.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 
 from .evidence import CONCLUDING_VERDICTS, Citation, disagreement, tally
+from .run_dir import UnachievableProposal
 
 VERDICTS = ("supported", "refuted", "inconclusive")
+NEGATIVE_VERDICTS = ("refuted", "inconclusive")   # an absence or inability claim: flagged with no swept axis
 
 
 @dataclass
@@ -71,12 +77,24 @@ class Resolution:
     decided_by: str = "pi"
     claimed_scope: dict = field(default_factory=dict)
     addresses_disconfirming: list = field(default_factory=list)  # cited-against items addressed by name
+    # A configuration is part of what you ran. `swept` maps each axis swept
+    # before the verdict (the choice most likely to hide the effect) to the
+    # values tried; `sensitivity` maps an axis to the headline's (low, high)
+    # range across defensible choices on it, which `publish` reports.
+    swept: dict = field(default_factory=dict)
+    sensitivity: dict = field(default_factory=dict)
 
     def __post_init__(self):
         assert self.verdict in VERDICTS, \
             f"{self.hypothesis_id}: bad verdict {self.verdict!r} (one of {VERDICTS})"
         assert self.rationale and self.rationale.strip(), \
             f"{self.hypothesis_id}: a verdict with no rationale is not a resolution"
+        for axis, values in self.swept.items():
+            assert isinstance(values, (list, tuple)) and len(set(values)) >= 2, \
+                f"{self.hypothesis_id}: swept axis {axis!r} needs the values tried (two or more)"
+        for axis, rng in self.sensitivity.items():
+            assert isinstance(rng, (list, tuple)) and len(rng) == 2 and rng[0] <= rng[1], \
+                f"{self.hypothesis_id}: sensitivity on {axis!r} is a (low, high) range, got {rng!r}"
 
 
 @dataclass
@@ -84,12 +102,16 @@ class FollowUp:
     """A next question. `motivated_by` must point at a real finding or anomaly id
     from this run — a follow-up nobody can trace to evidence is an idea, not a
     result of the work. `acceptance` says what done means for it, written when
-    the follow-up is filed."""
+    the follow-up is filed. Like a run, a follow-up may close as `unachievable`
+    (`run_dir.UnachievableProposal`): the agent proposes it with the reason, and
+    it is closed only once the researcher accepts — an honest end state, not a
+    pass and not a silent stop."""
     id: str
     question: str
     motivated_by: str
     acceptance: str
     lesson: str = ""
+    unachievable: UnachievableProposal | None = None
 
 
 def scope_violations(claimed: dict, tested: dict) -> list[str]:
@@ -186,6 +208,14 @@ def resolve_gate(*, frozen_hypothesis_ids: list[str], question_of: dict,
             f"and belongs in the write-up as one. Do not go looking for a cut of the data that "
             f"resolves it; the prereg's decision rule already spoke.")
 
+    unswept = [r.hypothesis_id for r in by_id.values()
+               if r.verdict in NEGATIVE_VERDICTS and not r.swept]
+    if unswept:
+        warnings.append(
+            f"{unswept}: refuted or inconclusive with no swept axis — a configuration is part of "
+            f"what you ran. Before claiming an absence or an inability, sweep the choice most "
+            f"likely to hide the effect, and report where a sweep first fails.")
+
     concluded = [r for r in by_id.values() if r.verdict in CONCLUDING_VERDICTS]
 
     for r in concluded:
@@ -259,5 +289,7 @@ def handoff_followups(followups: list[FollowUp], *,
         out.append({"id": f.id, "question": f.question, "motivated_by": f.motivated_by,
                     "acceptance": f.acceptance,
                     "lesson": f.lesson, "selected": False,
-                    "route": "/plan — must pass the diversity gate before it becomes a run"})
+                    "unachievable": asdict(f.unachievable) if f.unachievable else None,
+                    "route": ("closed: unachievable" if f.unachievable and f.unachievable.closes
+                              else "/plan — must pass the diversity gate before it becomes a run")})
     return out

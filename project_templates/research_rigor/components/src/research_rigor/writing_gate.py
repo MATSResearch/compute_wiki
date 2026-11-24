@@ -22,7 +22,9 @@ Two more rules meet here:
 - CITE A SOURCE YOU CAN OPEN, NOT A MEMORY OF ONE. Every paper the write-up
   leans on is recorded as a source — title, authors, year, a link someone can
   open and that was checked — with the papers built on kept apart from the
-  ones set aside. Gaps are flagged, not blocked.
+  ones set aside, and with which part was read (abstract or full) and when. A
+  key paper read abstract-only or with no read date is flagged. Gaps are
+  flagged, not blocked.
 
 Division of labour:
 - THIS LIBRARY grounds claims against sources, scans for unsourced numbers, and
@@ -172,12 +174,17 @@ def ground_draft(draft_text: str, claims: list[Claim], sources: dict) -> ClaimRe
 # --- papers: a source you can open, not a memory of one ---------------------
 
 PAPER_STANDINGS = ("key", "set_aside")
+PAPER_READS = ("abstract", "full")
 
 
 @dataclass
 class Paper:
     """One paper the write-up leans on, as a source. A paper filed from memory
-    says so and may lack the catalogue details; that is recorded, and flagged."""
+    says so and may lack the catalogue details; that is recorded, and flagged.
+
+    `read` and `read_date` record which part was read and when, and `version`
+    the version read where the source has one: an abstract, a linkpost and an
+    earlier version are summaries, and they drift from the results."""
     title: str
     standing: str                    # "key" (built on) | "set_aside"
     authors: str | None = None
@@ -185,11 +192,16 @@ class Paper:
     link: str | None = None
     link_checked: bool = False       # someone opened the link and it resolved
     from_memory: bool = False
+    read: str | None = None          # "abstract" | "full"
+    read_date: str | None = None     # ISO date the source was read
+    version: str | None = None       # e.g. "arXiv v2", where the source has versions
 
     def __post_init__(self):
         assert self.title and self.title.strip(), "a paper needs a title"
         assert self.standing in PAPER_STANDINGS, \
             f"paper {self.title!r}: standing must be one of {PAPER_STANDINGS}, got {self.standing!r}"
+        assert self.read is None or self.read in PAPER_READS, \
+            f"paper {self.title!r}: read must be one of {PAPER_READS}, got {self.read!r}"
 
 
 def paper_flags(papers: list[Paper]) -> list[str]:
@@ -205,6 +217,10 @@ def paper_flags(papers: list[Paper]) -> list[str]:
         elif not p.link_checked:
             flags.append(f"{p.title!r}: check the link resolves before the write-up leaves "
                          f"the building")
+        if p.standing == "key" and (p.read == "abstract" or not p.read_date):
+            flags.append(f"{p.title!r} is built on but was read abstract-only or has no read "
+                         f"date — quote the results from the source's current version, and "
+                         f"record which part you read and when")
     return flags
 
 

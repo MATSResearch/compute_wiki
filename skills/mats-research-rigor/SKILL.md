@@ -47,7 +47,10 @@ actually needs.
   move without the claim being true, and the check that catches it). Commit to
   git each time. The pilot does not license rewriting the hypothesis or
   falsifier: a changed belief is a new registered prediction. At analysis,
-  report deviations from what was registered.
+  report deviations from what was registered. Never ask an agent for a
+  "compelling" result on data it can search: freeze the hypothesis and analysis
+  before it sees outcomes (failing that, the wiki's replay-on-subsamples
+  correction).
 - Before testing a question, record at least two hypotheses that predict
   different observations, or the rival you weighed and why you rejected it.
   Tie each hypothesis to the run that will decide it. When asking for rivals,
@@ -68,17 +71,28 @@ actually needs.
   for what it did not report. Pin your substrate (base model, trainer, eval
   harness) and do not upgrade it mid-project; a newer base model is a
   registered prediction of its own.
+- Inside the project, compare a method with its baseline at matched cost, with
+  the baseline tuned as hard as the method: say what each comparison is matched
+  on (generated tokens, wall-clock, in-domain learning, updates, or not
+  applicable with the reason, e.g. evaluation-only) and the baseline's tuning
+  budget. Matched per update is not matched cost, and matched hyperparameters
+  are not matched learning.
 
 ## While running and reading results
 
 - "It ran" is not a result. Gate on an independent check written as code that
   fails loudly (shapes, possible ranges, non-constant predictions, one condition
-  rerun and reproduced, a toy case with a known answer), and keep the reasoning
-  trace. A model's review or an
+  rerun and reproduced, a toy case with a known answer, and, where the work has
+  countable units, the units scored counted against the units launched per
+  condition and label), and keep the reasoning trace. A unit that errored, went
+  unscored or whose checker declined to run is *did not run*, never a pass, a
+  failure or a zero. A model's review or an
   evidence-type label alone does not establish a conclusion.
 - Cite each run that bears on a prediction as you go, for or against, with a
   weight; cite what goes against with the same care. This evidence is kept
-  separate from the verdict, and its tally never sets the verdict.
+  separate from the verdict, and its tally never sets the verdict. After a
+  context compaction, re-read each claim's status (tested, untested, refuted)
+  from the evidence and verdict records rather than trusting the summary.
 - Estimate robustness by varying the sample (bootstrap the eval set, overlapping
   data subsets, hyperparameter perturbation), not by sweeping seeds. See "Vary
   the data, not the seed" in `statistics.md`.
@@ -105,7 +119,13 @@ actually needs.
   foreseeable fork: apply the plan's if-then rule, or run both (an objective
   check settles it, or the researcher picks before seeing the outcomes), or
   carry one with the assumption written down, if the choice is reversible and
-  sandboxed. Only a one-way door waits.
+  sandboxed. Only a one-way door waits. If the work cannot be done, propose
+  closing it as unachievable with the reason ("X is unavailable / cannot be done
+  because…") rather than faking a dependency or a result; the researcher accepts
+  or reopens it. An accepted close is an honest end state, not a pass. When
+  filing work that may be impossible, put that way out in its instructions and
+  acceptance condition, and do not phrase the goal as "make the tests pass": a
+  rule against faking is not enough.
 
 ## Concerns and repairs
 
@@ -130,18 +150,33 @@ gates from this skill.
   the researcher. It holds through write-up and release: neither goes ahead
   with a prediction unsigned. Inconclusive is a result; never drop a prediction.
 - Address what cuts against the verdict by name, and do not claim past what was
-  run. A `supported` with anything cited against it, or nothing cited, is shown
-  to the researcher at signing as a flag, not a block. On `supported`, say which
+  run. A configuration is part of what was run: before claiming an absence or an
+  inability, sweep the choice most likely to hide the effect, report where a
+  sweep first fails, and give the headline beside its range across defensible
+  modelling choices. A `supported` with anything cited against it, or nothing
+  cited, is shown to the researcher at signing as a flag, not a block. On `supported`, say which
   rivals were refuted, which still fit, and what the survivors agree on; for the
   next run, prefer the one that rules out the most survivors.
 - Every number traces to a result artifact someone can open; infinite or NaN is
-  not evidence. An LLM review is triage: a human reads the code and artifacts
-  before anything leaves. Cite papers as sources someone can open (title,
-  authors, year, a link you checked), not from memory, and keep the ones you
-  build on apart from the ones you set aside.
-- On release, disclose inference cost (per step where you have it), harness and
-  version, exact model IDs, run dates, reasoning mode and uncertainty, with
-  seeds, a pinned environment, an entry point and content-hashed artifacts.
+  not evidence. That includes the counts and claims in an agent's own report of
+  its work ("all tests pass", "N papers included"): match them against the tool
+  calls and saved files, and recompute counts with code from the artifact. An
+  LLM review is triage: a human reads the code and artifacts before anything
+  leaves, which is necessary, not sufficient, so a result that matters also
+  needs checks written to fail if it is wrong. Cite papers as sources someone
+  can open (title, authors, year, a link you checked), not from memory, and keep
+  the ones you build on apart from the ones you set aside. Quote what a source
+  showed from its results, from the source itself and its current version, not
+  from an abstract, a linkpost or an earlier version, and record which part you
+  read (abstract or full text) and when.
+- On release, disclose inference cost (per step where you have it; with the
+  provider, price schedule and date read, from arms that share no prompt cache),
+  harness and version, exact model IDs as served (log the id the response
+  reports beside the one requested; for an alias that resolves to a dated
+  snapshot, request the snapshot id), run dates, reasoning mode and uncertainty,
+  with seeds, a pinned environment, an entry point and content-hashed
+  artifacts. A judge, reviewer or grader model is part of the measurement:
+  re-validate it whenever its version changes.
 - Surveys, theory and desk research: same mechanisms, different evidence. See
   "Does this change if I am not running lab experiments?" in the wiki doc.
 

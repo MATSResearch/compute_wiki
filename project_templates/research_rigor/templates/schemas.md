@@ -26,6 +26,25 @@ the run is filed and never edited afterwards — it is what tells a finished run
 from a stopped one. `prereg` links the two commitment points
 (`hypothesis`, `design`), each `{frozen_at, content_hash}`.
 
+Each `models` entry carries the requested `id` and, once a response reports it,
+the `served_id` (`RunDir.record_served_id`): a requested id is not what ran. A
+second, different served id for the same requested id is added as another
+record, never written over the first. `publish` flags a model with no
+`served_id` and one whose `served_id` differs from its `id` (an alias resolving
+to a dated snapshot is an ordinary mismatch; request the snapshot id). A model
+whose `role` is `judge`, `reviewer` or `grader` is an instrument:
+`comparability.instrument_flags` flags one whose id differs between runs
+compared in one analysis.
+
+`unachievable` is the list of proposals to close the run as unachievable, the
+sanctioned way to say it cannot be done. Each is `{reason, proposed_by,
+proposed_at, decision, decided_by, decided_at}`; `reason` is required. The
+agent proposes (`RunDir.propose_unachievable`), the researcher accepts or
+reopens (`RunDir.review_unachievable`, `decided_by: "pi"`). Only an accepted
+proposal closes the run (`RunDir.closed_unachievable`): an honest end state,
+not a pass, and not a silent stop. An unreviewed proposal closes nothing, and
+every proposal stays on the record.
+
 ---
 
 ## 2. `prereg.yaml` — the commitment device (human-written, then frozen)
