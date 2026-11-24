@@ -11,7 +11,7 @@ from research_rigor import verify as vf
 
 def _mk(tmp_path):
     return run_dir.RunDir.create(
-        tmp_path, "run_20260707_120000_impl",
+        tmp_path, "run_20260707_120000_impl", acceptance="every hard verifier passes",
         models=[{"id": "claude-opus-4-8", "role": "implementation"}],
         harness={"tool": "claude-code"}, code_repo=tmp_path,
     )

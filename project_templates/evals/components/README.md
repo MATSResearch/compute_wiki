@@ -8,8 +8,8 @@ Project-agnostic plumbing for **LLM evaluation** projects. A thin wrapper around
 
 From this directory:
 ```bash
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv sync --all-extras     # installs the locked versions (inspect-ai 0.3.290); Python >= 3.11
+uv run pytest -q
 ```
 
 Inspect AI and pandas are required dependencies — they install automatically. No model API keys are needed to *import* the package or run the smoke test; they're only needed when you actually run an eval (`running.run_eval`).
@@ -83,12 +83,33 @@ Everything else (`config`, `runs`, `tracking`, `seeding`, `io`, `cache`, `sweep`
 - **`refusal_rate()` reads `0.0` even though the model refused**: the `refused` flag lives in score *metadata*, which only exists if you scored with `refusal_aware()` / `predicate_scorer()` / `graded_qa_with_refusal()`. A bare `model_graded_qa()` won't populate it.
 - **`eval_set` "log_dir is required" / silently redoing finished tasks**: `eval_set` needs a *dedicated* `log_dir` per logical run to track completion. Reusing a previous run's dir resumes it; passing none errors.
 - **Model grading its own output**: if you don't pass `model=` (or set the `grader` model role) to `model_graded_qa`, the grader defaults to the model under test. Always use a separate, capable grader.
+- **Model-graded score moved after upgrading Inspect**: the default `model_graded_qa()` prompt and verdict parsing changed in 0.3.288; re-grade both arms on one version (see "Inspect AI version" below).
 - **`is_prompt_sensitive` returns True on a "good" eval**: that's the point — a >10-point accuracy range across paraphrases means a single-phrasing number is not reportable. Aggregate over paraphrases or quote the range.
 - **Wide Wilson CIs**: not a bug. `wilson_ci(k, 20)` is wide because n=20 is small. Run more samples before reading small gaps between models.
 - **Wilson CIs that are too narrow**: `wilson_ci` treats every sample as independent. Paraphrase expansions (`expand_paraphrases`), several questions per passage, or multiple epochs of one item are clustered, and the interval understates uncertainty; see `docs/evaluation/eval-statistics.md` for clustered intervals (Inspect's `stderr(cluster=...)` / `ci_wilson(cluster=...)`).
 
 ## Inspect AI version
 
-`eval_components` targets **Inspect AI 0.3.120+** (the API used here — `inspect_ai.analysis.evals_df`/`samples_df`, `eval_set` returning `(success, logs)`, `model_graded_qa(instructions=, grade_pattern=, partial_credit=, model=, model_role=)`, the `@scorer`/`@metric` decorators — has been stable across the 0.3.1xx–0.3.2xx series; verified against 0.3.223, May 2026). If you pin something older, check that `inspect_ai.analysis` exists (it was added mid-0.3.x); before that, read logs with `inspect_ai.log.read_eval_log`.
+`eval_components` requires **Inspect AI ≥ 0.3.288** and is locked and tested on
+0.3.290 (`uv.lock`, 2026-11-23; Python ≥ 3.11, which Inspect has required since
+0.3.281). The floor is 0.3.288 because it fixes two bugs that changed results with
+no error on paths used here:
 
-See [`../../docs/evaluation/evals.md`](../../docs/evaluation/evals.md) for the broader eval-framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic evals) and [`../../docs/evaluation/red-teaming.md`](../../docs/evaluation/red-teaming.md) for jailbreak/refusal benchmarks.
+- **`cache=True`**: the output cache key did not include the model's constructor
+  arguments, so one model under two `-M` / `model_args` settings could be served
+  the other's cached answer.
+- **`model_graded_qa()`** (`scorers.graded_qa_with_refusal`): a reply that quoted a
+  grade and ended with a verdict line in an unrecognised form was scored from the
+  quoted grade; it is now unscored. The default grading template also changed
+  (fields are wrapped in markers with a random code), so grades "can shift
+  slightly" and cached grader responses are not reused. **Do not compare
+  model-graded numbers across 0.3.288** — grade both arms on one version.
+
+Newer than the lockfile (the one-week dependency cooldown in `pyproject.toml` skips
+them until they are a week old): 0.3.291 (2026-11-17) stops writing remote MCP
+server credentials into eval logs — upgrade first if you add MCP tools; 0.3.292
+(2026-11-23) fixes `--seed` being dropped for `google/` models. Also since 0.3.288,
+`web_browser()` raises `PrerequisiteError` (use `web_search()` or `computer()`).
+Details: `docs/evaluation/inspect-ecosystem.md` ("Inspect AI 0.3.288–0.3.292").
+
+See [`../../../docs/evaluation/evals.md`](../../../docs/evaluation/evals.md) for the broader eval-framework landscape (Inspect, lm-eval-harness, METR HCAST, Anthropic evals) and [`../../../docs/evaluation/red-teaming.md`](../../../docs/evaluation/red-teaming.md) for jailbreak/refusal benchmarks.

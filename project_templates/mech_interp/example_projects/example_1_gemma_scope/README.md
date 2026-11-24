@@ -26,10 +26,9 @@ Paired with [`example_2_vpd`](../example_2_vpd/) to contrast two decomposition s
 ```bash
 # Authenticate with HuggingFace (Gemma 3 is gated — accept the license at
 # https://huggingface.co/google/gemma-3-1b-pt first)
-huggingface-cli login
+hf auth login
 
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv sync --extra dev --python 3.12   # installs the versions pinned in uv.lock (pin the interpreter: with none installed, uv 0.13+ downloads 3.15)
 
 # Run the analysis (first run downloads ~2 GB for the model + a few hundred MB for the SAE)
 uv run python -m example_1_gemma_scope.analyze \
@@ -117,5 +116,7 @@ Use these to check your understanding of SAE feature attribution, Direct Logit A
 11. **Probe a suspect feature.** Pick a feature whose Neuronpedia auto-interp label feels wrong (or is missing). Hand-build 10 prompts where you expect it to fire and 10 where you don't. Compute activation on each and report precision/recall against your hypothesis. Document a revised label in a new `.md` note.
 
 ## Last verified
+
+2026-11-23 — re-locked on SAELens 6.55.5, TransformerLens 4.4.0, transformers 5.23.0, torch 2.15.0; unit tests pass; the release, layers and widths below re-read from the installed SAELens registry. The default-config end-to-end run was last executed 2026-05-07 (it needs the gated `google/gemma-3-1b-pt` download) and was not repeated on the new lock, so re-check the printed numbers on first run.
 
 2026-05-07 — SAELens 6.x API (`SAE.from_pretrained` returns SAE directly). Gemma Scope 2 release `gemma-scope-2-1b-pt-res` with sae_id format `layer_<L>_width_<W>_l0_<small|medium|big>`, layers in {7,13,17,22}, widths {16k, 65k, 262k, 1m}. Default-config CPU run reproduces deterministically across machines (same prob/contribution/feature-id to all printed digits).

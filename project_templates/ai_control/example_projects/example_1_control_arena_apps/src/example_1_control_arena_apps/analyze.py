@@ -14,6 +14,7 @@ from ac_components.loaders import (
     load_samples,
 )
 from ac_components.metrics import pareto_curve
+from ac_components.transcript import monitor_parse_counts
 from ac_components.viz import pareto_plot, suspicion_histogram
 
 
@@ -65,10 +66,16 @@ def report(run_dir: str | Path, summary: dict) -> Path:
     out = Path(run_dir) / "report.txt"
     samples = load_samples(Path(run_dir) / "logs")
     protocols = list_protocols(samples)
+    parse = monitor_parse_counts(Path(run_dir) / "logs")
     lines = [
         "=" * 60,
         "Example 1 — ControlArena Apps + Defer-to-Trusted",
         "=" * 60,
+        "",
+        f"Monitor replies with a parsed score: {parse['parsed']} of "
+        f"{parse['parsed'] + parse['unparsed']}"
+        + (f"  ({parse['unparsed']} unparsed, each recorded as suspicion 0.0 and used below)"
+           if parse["unparsed"] else ""),
         "",
         f"Calibration threshold: {summary['calibration']['threshold']:.3f}",
         f"  (audit_budget={summary['calibration']['audit_budget']:.2%}, "

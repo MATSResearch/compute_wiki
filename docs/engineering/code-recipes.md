@@ -124,8 +124,11 @@ tag but was injected into the build. A `cook.pth` file in site-packages ran it o
 11:39–11:40Z on 2026-10-21 and had removed it by 13:23Z. A lockfile protects you
 until you re-lock: any `uv lock --upgrade`, `pip install -U` or fresh install in that
 window that resolved a floating `litellm` range took it, including through
-`dspy` (`litellm>=1.65.8`), `mini-swe-agent` (`litellm>=1.75.5` minus two earlier
-bad versions), `textgrad` (`litellm>=1.49.5`) and `cisco-ai-skill-scanner` 2.3.0
+`dspy` (`litellm>=1.65.8` as a hard dependency at the time; from `dspy` 3.5.0,
+2026-11-10, litellm is only in the optional `dspy[litellm]` extra, so a default DSPy
+install no longer pulls it), `mini-swe-agent` (`litellm>=1.75.5` minus two earlier
+bad versions; unchanged in 2.4.6, still the latest on 2026-11-23), `textgrad`
+(`litellm>=1.49.5`) and `cisco-ai-skill-scanner` 2.3.0
 (fixed in 2.3.1). Packages that pin litellm exactly (for example `aider-chat`,
 `openhands-ai`) were not exposed. uv's **dependency cooldown** ("resolution will
 ignore packages newer than a duration", uv docs, "Dependency cooldowns") is one
@@ -133,7 +136,36 @@ TOML line, `exclude-newer = "1 week"`; a week-long cooldown would have skipped t
 release. `exclude-newer-package = { some-package = false }` opts one package out, for a
 fresh release you need (an urgent security fix). With a lockfile, uv
 stores the cutoff timestamp in `uv.lock` and moves it only on a new resolution
-(`--upgrade`, `--refresh`).
+(`--upgrade`, `--refresh`). The per-package opt-out shown here is the top-level
+`[tool.uv]` form; if you set `exclude-newer-package` inside a per-index block instead,
+use uv ≥0.13.8 (2026-11-12), whose notes read "Honor per-index `exclude-newer-package`
+cutoffs during resolution" (#23122) — before that the per-index setting was not
+applied. uv 0.13.9 (2026-11-17, current on 2026-11-23) also rejects "wheels advertised
+by an index under a different package name". Other tools have adopted the same default:
+`inspect-swe` 0.3.1 makes agent CLIs "installed from npm wait 7 days for new releases
+and skip install scripts", and Inspect Flow 0.15.0 applies "a default release cooldown
+in venv mode".
+
+**A cooldown delays security fixes too: opt the fixed package out when an advisory
+lands.** Two examples from November 2026. (1) LiteLLM **proxy** advisory
+GHSA-2rwg-2wh4-7c4f (high, published 2026-11-12), "Authenticated secret exfiltration
+via Azure Entra credential parameters in the request body": on a proxy with at least
+one `azure/` or `azure_ai/` model and no `AZURE_API_KEY` / `AZURE_OPENAI_API_KEY` set,
+"A low-privilege authenticated user ... can read environment variables of the proxy
+process", and "On a typical deployment this includes the database connection URL,
+provider API keys and `LITELLM_MASTER_KEY`". Patched in litellm 1.106.9, 1.108.6,
+1.109.1 (all three uploaded to PyPI on 2026-11-12) and 1.110.0-rc.2 — inside a one-week window, so a
+shared LiteLLM proxy (a stream's key gateway, a budget proxy in front of provider
+keys) needs `exclude-newer-package = { litellm = false }` (or an explicit pin) to pick
+the fix up that week. It affects the proxy server, not `litellm.completion()` used as a
+library; current litellm is 1.110.2 (2026-11-20). Ten more LiteLLM proxy advisories
+were published in the same weeks (one critical, GHSA-w4c7-34wj-hqm8 of 2026-10-27,
+affects only proxies "running with an Enterprise license"; GHSA-4xm2-x5g5-wc8q of
+2026-11-20, medium, is patched in 1.106.12, 1.108.13, 1.109.3 and 1.110.2; eight published
+2026-11-23 describe bugs already patched by 1.108.0 or earlier); see
+[`safety-toolkits.md`](../models-and-compute/safety-toolkits.md). (2) The PyTorch
+`torch.load` advisory below ("torch 2.14.x"), where the fix is a version
+(torch 2.15.0) that several serving and training packages do not yet allow.
 
 **Check your machines if you installed anything on 2026-10-21:** `pip show litellm`
 (or `uv pip show litellm`) in every environment. If it reports 1.107.0, the issue's
@@ -155,18 +187,20 @@ dependencies anyway (see
 training, serving and Inspect AI, and **pin the interpreter to 3.12 or 3.13**
 (`uv python pin 3.12`, which writes `.python-version`, or `uv venv --python 3.12`).
 Python 3.10 is no longer enough for the stack, 3.11 is not enough for all of it,
-and 3.15 is too new for vLLM (floors from PyPI `requires_python`, 2026-11-04):
+and 3.15 is too new for vLLM (floors from PyPI `requires_python`, 2026-11-23):
 
 | Package | Version | Python floor |
 |---|---|---|
-| vLLM | 0.33.0 (PyPI 2026-11-02) | ≥3.11, <3.15 |
+| vLLM | 0.34.0 (PyPI 2026-11-16) | ≥3.11, <3.15 |
 | SGLang | 0.5.23 | ≥3.11 |
-| Inspect AI (`inspect-ai`) | 0.3.287 | ≥3.11 |
-| TRL | 1.17.1 | ≥3.11 |
+| Inspect AI (`inspect-ai`) | 0.3.292 (2026-11-23) | ≥3.11 |
+| transformers | 5.24.0 (2026-11-21) | ≥3.11 |
+| TRL | 1.18.2 (2026-11-19) | ≥3.11 |
+| PEFT (`peft`) | 0.22.0 | ≥3.11 |
 | torch | 2.15.0 (has Python 3.15 wheels) | ≥3.11 |
 | axolotl | 0.21.1 | ≥3.12 |
 | inspect-petri | 3.1.1 | ≥3.12 |
-| numpy / scipy | 2.5.4 / 1.18.1 | ≥3.12 (a ≥3.11 project gets older numpy and scipy on 3.11) |
+| numpy / scipy | 2.5.5 / 1.18.1 | ≥3.12 (a ≥3.11 project gets older numpy and scipy on 3.11) |
 
 **Why pin: uv 0.13 downloads Python 3.15 by default.** uv 0.13.0 (2026-10-09)
 changed "The default stable Python version ... from 3.14 to 3.15. This affects
@@ -174,20 +208,57 @@ Python downloads when no version is requested or pinned"; uv still uses a
 suitable Python that is already installed. On a machine with no suitable Python
 installed (often a fresh container, or a GPU box whose system Python is older than
 the project's floor), an unpinned `uv venv` therefore creates a 3.15 environment, and
-`uv pip install vllm` fails to resolve, because vLLM 0.33.0 declares
-`Requires-Python <3.15` and pins `torch==2.14.0`, which has no `cp315` wheels. The
-symptom (uv 0.13.4, `uv pip compile` of `vllm==0.33.0` for Python 3.15) is
+`uv pip install vllm` fails to resolve, because vLLM (0.33.0 and 0.34.0 alike, per
+PyPI metadata) declares `Requires-Python <3.15` and pins `torch==2.14.0`, which has
+no `cp315` wheels. The symptom (reproduced on 2026-11-04 with uv 0.13.4, `uv pip
+compile` of `vllm==0.33.0` for Python 3.15; not re-run for 0.34.0) is
 `Because torch==2.14.0 has no wheels with a matching Python ABI tag (e.g., cp315)
 and vllm>=0.33.0 depends on torch==2.14.0, we can conclude that vllm>=0.33.0 cannot
 be used.` It is loud, not silent; the fix is `uv venv --python 3.12` (or 3.13).
 
-**Serving and training may need separate environments.** vLLM 0.33.0 requires
-`transformers>=5.16.1,<5.21.0` and `torch==2.14.0` (PyPI `requires_dist`), while
-transformers is at 5.22.1 and torch at 2.15.0 (2026-11-04), so a project that also
-wants the newest transformers or torch for training cannot resolve both in one
-environment; keep the vLLM server in its own `uv` project (or container) and
-pin each side. The dependency floors in the baseline above are illustrative,
+**Serving and training may need separate environments.** vLLM 0.34.0 (2026-11-16)
+requires `transformers>=5.16.1,<5.23.0` and `torch==2.14.0` (PyPI `requires_dist`;
+0.33.0 capped transformers at `<5.21.0`), while transformers is at 5.24.0 and torch at
+2.15.0 (2026-11-23), so a project that also wants the newest transformers or torch
+for training cannot resolve both in one environment; keep the vLLM server in its own
+`uv` project (or container) and pin each side. The same holds for activation tools
+that pin a vLLM (`nnsight[vllm]` 0.8.3+ and `nnterp[vllm]` 2.0.0: `vllm>=0.33,<0.34`,
+hence `transformers<5.21`; see
+[`serving-and-activations.md`](../interpretability/serving-and-activations.md)).
+The dependency floors in the baseline above are illustrative,
 not pins: `uv.lock` holds the real versions.
+
+**torch 2.14.x: `torch.load(weights_only=True)` can read files on your machine
+(PyTorch advisory GHSA-v32g-mr63-3j83, published 2026-11-10, severity high).** From
+the advisory: "A malicious PyTorch checkpoint can read text files from the computer
+loading it, even when it is loaded with `weights_only=True`. In Torch-2.14 PyTorch
+automatically trusts Python's `traceback.FrameSummary` class. ... The checkpoint
+controls both values, so it can request lines from files such as `.env`,
+configuration files, source code, credentials, or `/etc/passwd`." "Tested vulnerable
+on PyTorch `2.14.0+cpu` and `2.14.1`." "The stolen contents can be returned if the
+application logs, displays, or re-saves the loaded object." The advisory metadata
+gives the vulnerable range as `>=2.14.0` and the patched version as `2.15.0`; it does
+not say whether torch before 2.14 is affected, and PyPI had no 2.14.x release after
+2.14.1 as of 2026-11-23. What to do:
+
+- Where nothing holds you back, use torch ≥2.15.0.
+- Several packages hold an environment below 2.15 (PyPI `requires_dist`, 2026-11-23):
+  vLLM 0.33.0 and 0.34.0 (`torch==2.14.0`), SGLang 0.5.23 (`torch==2.14.1`), axolotl
+  0.21.1 (`torch<2.15.0,>=2.13.0`) and unsloth 2026.11.10 (`torch<2.15.0,>=2.4.0`).
+  The vLLM and SGLang pins put you exactly on an affected version; with axolotl or
+  unsloth, check what the resolver chose (`uv pip show torch`).
+- In such an environment, treat third-party pickle-format files (`.pt`, `.pth`,
+  `.bin`, `.ckpt`: community probes, steering vectors, sparse autoencoders, optimizer
+  states, some adapters) as able to read your `.env` even with `weights_only=True`.
+  Load `.safetensors` instead, or load the untrusted file once in a separate torch
+  ≥2.15 environment with no credentials on disk and re-save it as safetensors. Files
+  you wrote yourself are not the concern.
+- The leak needs the loaded object to be shown or stored somewhere the attacker can
+  read ("logs, displays, or re-saves"), so a shared W&B run, a public notebook or an
+  uploaded artifact that includes the loaded object is the route to avoid.
+
+**When this does not apply:** environments already on torch ≥2.15.0, and checkpoints
+you produced yourself.
 
 ## Multi-provider inference patterns
 
@@ -263,25 +334,30 @@ torch.save(torch.stack(activations), "outputs/run_X/acts.pt")
 
 Save format options:
 
-- **`.pt`** for small (<10GB) tensors — simplest.
-- **`.safetensors`** for shareable artifacts.
+- **`.pt`** for small (<10GB) tensors you produce and load yourself — simplest.
+- **`.safetensors`** for shareable artifacts, and for anything you download from someone else: `.pt` is a pickle format, and on torch 2.14.x `torch.load(..., weights_only=True)` does not make an untrusted file safe (PyTorch advisory GHSA-v32g-mr63-3j83; see "torch 2.14.x" under [Standard `pyproject.toml` baseline](#standard-pyprojecttoml-baseline)).
 - **`zarr` / `parquet`** for very large (10GB+) datasets you'll stream.
 
 ### Extract via vLLM-Lens at high throughput
 
 ```python
-from openai import AsyncOpenAI
-client = AsyncOpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
+# From the vLLM-Lens README (v1.3.0): the bundled HTTP client against a running `vllm serve`.
+from vllm_lens.client import VLLMLensClient
 
-response = await client.chat.completions.create(
-    model="meta-llama/Llama-3.1-70B-Instruct",
-    messages=[{"role": "user", "content": "..."}],
-    extra_body={
-        "extract_residual": {"layers": [15, 20], "positions": [-1]},
-    },
-)
-# Activations come back base64-encoded in the response; decode per vLLM-Lens docs.
+client = VLLMLensClient("http://localhost:8000")
+out = client.generate("Hello world", capture_layers=[15, 20])
+print(out.activations["residual_stream"].shape)   # layers stacked in ascending order along dim 0
 ```
+
+Without the client, the README's route over HTTP is `vllm_xargs` with the same key the
+offline API uses (`output_residual_stream`; the bundled client sends the layer list there
+as a JSON-encoded string, `json.dumps([15, 20])`); inside Inspect it
+is `GenerateConfig.extra_body={"extra_args": {"output_residual_stream": [15, 20]}}`.
+An earlier version of this recipe used an `extract_residual` key, which is not part of
+the plugin's API — a misspelled key is the likeliest reason a request "works" but returns
+no activations (`out.activations` is `None`).
+For large captures pass `activations_transport="binary"`. Details and pitfalls:
+[`serving-and-activations.md`](../interpretability/serving-and-activations.md#vllm-lens).
 
 ### Hook + remove pattern (raw PyTorch, no library)
 
@@ -731,6 +807,8 @@ Activations indexed by token position go wrong if the tokenizer differs between 
 
 You change the prompt template, the cache hit returns old responses for the *new* prompt because the cache key is on something else. **Fix:** include the prompt template hash in the cache key; or change `cache_dir` when prompts change.
 
+A real instance in a maintained framework: until Inspect AI 0.3.288 (2026-11-07; first affected version not stated), the output cache key covered "the model name, base URL, messages, generate config, tools, tool choice and epoch, but not the model's constructor arguments", so "two models with the same name that differ only in a request-affecting constructor argument share cache entries. The second model is served the first model's answer, and the sample reports success" (`UKGovernmentBEIS/inspect_ai` PR #6271). If you compared one model under two `-M` / `model_args` settings (an `extra_body` with a steering vector or a reasoning setting, for instance) with `cache=True` on Inspect ≤0.3.287, the two arms may hold identical outputs: re-run on ≥0.3.288. General check: when two conditions give suspiciously identical outputs, inspect the cache key before the model. More Inspect fixes from the same weeks are in [`inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md#inspect-ai-0328803292-what-to-re-run-what-breaks-what-to-check-in-old-logs).
+
 ### Long agent traces silently overflow context
 
 Your agent runs for 50 turns; context fills up; the model loses the original task; outputs degrade silently. **Fix:** log context length per turn; warn/abort when approaching limit; truncate intelligently.
@@ -813,4 +891,4 @@ This is the typical setup behind Emergent Misalignment, Subliminal Learning, Per
 
 ---
 
-Last verified: 2026-11-04 (additions 2026-11-04: the dependency cooldown and the litellm 1.107.0 incident, from BerriAI/litellm issue #47826 via `gh api`, skill-scanner 2.3.1 release notes, PyPI `requires_dist` of dspy, mini-swe-agent, textgrad, aider-chat and openhands-ai, and uv's `docs/concepts/resolution.md`; the Python 3.15 default from the uv 0.13.0 CHANGELOG; the Python floor table, vLLM 0.33.0's transformers and torch pins and torch 2.14.0's missing cp315 wheels from PyPI JSON; the resolver error reproduced locally with uv 0.13.4; the Anthropic `2026-10-21` temperature rule from the Anthropic migration guide (markdown) — safety-tooling's handling not checked). (Earlier additions 2026-10-20: the Python floor table and the vLLM transformers pin, from PyPI `requires_python` metadata and the vLLM v0.32.0 release notes via `gh api`). (Earlier additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)
+Last verified: 2026-11-23 (additions 2026-11-23: PyTorch advisory GHSA-v32g-mr63-3j83 text and metadata via the repository advisories API, with the torch pins of vllm 0.33.0/0.34.0, sglang 0.5.23, axolotl 0.21.1 and unsloth 2026.11.10 from PyPI `requires_dist`; LiteLLM advisory GHSA-2rwg-2wh4-7c4f text and patched versions, and the titles, dates and ranges of the other ten; dspy 3.5.0 `requires_dist` (litellm only under the `litellm` extra); uv 0.13.8 and 0.13.9 release notes; the Python-floor table re-read from PyPI JSON (vllm 0.34.0, inspect-ai 0.3.292, transformers 5.24.0, trl 1.18.2, peft 0.22.0, numpy 2.5.5); vLLM 0.34.0's `transformers<5.23.0` and `torch==2.14.0` pins; Inspect PR #6271 body for the cache-key bug; the vLLM-Lens recipe rewritten from the v1.3.0 README (the old `extract_residual` key was not part of the plugin's API). None of the bugs or the advisory was reproduced.) Earlier: 2026-11-04 (additions 2026-11-04: the dependency cooldown and the litellm 1.107.0 incident, from BerriAI/litellm issue #47826 via `gh api`, skill-scanner 2.3.1 release notes, PyPI `requires_dist` of dspy, mini-swe-agent, textgrad, aider-chat and openhands-ai, and uv's `docs/concepts/resolution.md`; the Python 3.15 default from the uv 0.13.0 CHANGELOG; the Python floor table, vLLM 0.33.0's transformers and torch pins and torch 2.14.0's missing cp315 wheels from PyPI JSON; the resolver error reproduced locally with uv 0.13.4; the Anthropic `2026-10-21` temperature rule from the Anthropic migration guide (markdown) — safety-tooling's handling not checked). (Earlier additions 2026-10-20: the Python floor table and the vLLM transformers pin, from PyPI `requires_python` metadata and the vLLM v0.32.0 release notes via `gh api`). (Earlier additions 2026-10-14: the resumable `results.jsonl` recipe, written for this page and tested locally against a function that fails on two of twenty units; the single-file reproduction pattern and two anti-patterns, from the Tan, Czynski and Leal posts read via LessWrong GraphQL markdown). Earlier: 2026-06. Patterns reflect 2024–2026 norms in safety research; the underlying tooling (Inspect AI, safety-tooling, Tinker, vLLM-Lens, etc.) is documented in the per-topic docs. (Citation audit 2026-06: corrected the Tinker GRPO sketch to the real API (`save_weights_and_get_sampling_client()`, `sample(prompt=, sampling_params=, num_samples=)`) and fixed the `force_provider` cache note; all other snippets — TransformerLens, Inspect AI, sklearn, steering_vectors, scipy — verified runnable.)

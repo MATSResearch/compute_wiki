@@ -36,7 +36,7 @@ and [`statistics.md`](statistics.md) (what to check in the results themselves),
 | Ask someone to review your draft | Say the stage, the audience, what you are unsure of, and what kind of feedback you want | A reader can only read it for the first time once |
 | Get an AI review of your draft | Fresh context, no hint it is yours or what you think of it; one lens per pass; a quote and location per finding | Presented as yours, LLMs tend to validate; a generic "review this" gets generic comments |
 | Act on an AI review | Check every finding against the paper before editing; write the fix yourself | Expert raters judged roughly one in six criticisms from frontier AI reviewers incorrect |
-| Use an AI reviewer's score | Don't; read the findings | Scores are inflated, vary between runs, and move with presentation alone |
+| Use an AI reviewer's score | Don't; read the findings | The accept threshold depends on the model version (models tested in 2025 accepted almost everything; on one set of ICLR 2027 submissions, Claude Opus 4.6 of February 2026 put 82% on the accept side and Claude Opus 5.5 of September 2026 put 12%), scores vary between runs, and they move with presentation alone |
 | Judge novelty or importance | Ask a human in the subfield | In the one study that separated them (finance and accounting papers), an LLM's judgements of correctness and exposition predicted publication and its judgements of originality and significance did not |
 | Upload someone else's submission to an LLM | Check the venue's policy first | NeurIPS, ICML and ACL Rolling Review each restrict it differently |
 
@@ -340,6 +340,28 @@ importance and omissions, and their scores are not worth reading. The studies be
   strongest configuration tested (OpenAIReview + GPT-5.5) "catches 71.6% of
   injected errors". In Litvak's benchmark (under "Where they fail"), three of
   eleven systems caught fewer than half.
+- **Which model reviews matters more than the scaffold around it, and
+  false-positive rates are now measured.** Zubeldia, Bolliet,
+  Villaescusa-Navarro, Villanueva-Domingo and Cranmer
+  ([arXiv:2611.17052](https://arxiv.org/abs/2611.17052), 2026-11) injected 357
+  objective, localisable errors (general, mathematics, numerics, citations) at
+  three severities into 30 recent arXiv preprints, 15 astrophysics and 15
+  machine learning (ML), and scored twelve reviewer systems on detection and
+  on false positives raised against clean copies. "The choice of model has the
+  largest impact on detection rate: given the same prompt, three frontier LLMs
+  differ by about 50 percentage points in total detection on both corpora"
+  (the three: Claude Opus 4.7, GPT-5.5 and Gemini 3.1 Pro Preview). Claude
+  Code "improves on a single Claude call in mathematics and numerics
+  detection" on astrophysics; the paper attributes its numerics score there to
+  writing and running ad-hoc Python checks. Their multi-agent reviewer
+  Skepthical, which is forced to retrieve the cited papers, led citation-error
+  detection on astrophysics by a large margin, but on ML its citation
+  detection was "statistically indistinguishable from that of the best single
+  LLM". "False-positive rates are below 10 % for most systems, but vary with
+  prompt, model, and scaffolding, with mathematics flags the main source of
+  false positives." Benchmark and adjudication logs:
+  `inigozubeldia/skepthical-benchmark` (not inspected here). Injected errors
+  are easier than real ones (see SPOT below), and the models are mid-2026.
 
 **Where they fail**
 
@@ -365,11 +387,52 @@ importance and omissions, and their scores are not worth reading. The studies be
   and excessive strictness (14/52) were the most frequent issues".
 - **They agree with each other.** Kim et al.: "AI reviewers overlap far more
   than humans do (21% vs. 3% for cross-reviewer pairs)". Two AI reviewers raising the same point is
-  weaker evidence than two humans doing so.
-- **Scores.** Keuper ([arXiv:2509.10248](https://arxiv.org/abs/2509.10248)):
-  "LLM reviews are generally biased toward acceptance (>95% in many models)".
-  Yang et al. ([arXiv:2610.19339](https://arxiv.org/abs/2610.19339)):
+  weaker evidence than two humans doing so. The same narrowing shows up in
+  reviews submitted to venues: Gusev
+  ([arXiv:2611.26286](https://arxiv.org/abs/2611.26286), 2026-11, single
+  author) measures critique overlap between reviews of the same paper and
+  reports that "At ICLR, measured overlap rose from 12.0% in 2026 to 21.3% in
+  2027", that a third ICLR review "added 5.46 new problems to the other two in
+  2027, against 6.12 in 2026", and that within a paper two reviews flagged by
+  a detector of LLM-generated text (MELD) overlap more than two unflagged ones
+  ("by 4.5 points in 2026–2027" at ICLR). The overlap measure and the detector
+  are the paper's own; their accuracy was not checked here.
+- **Scores: the direction of the bias depends on the model version, so no
+  threshold is stable.** Two studies that look contradictory measured
+  different model generations. Keuper
+  ([arXiv:2509.10248](https://arxiv.org/abs/2509.10248), a September 2025
+  preprint, so models available by then): "LLM reviews are generally biased toward
+  acceptance (>95% in many models)". Guo, *Same Papers, Different Verdicts*
+  ([arXiv:2611.20608](https://arxiv.org/abs/2611.20608), 2026-11, single
+  author, tests registered before the decisions) ran twenty OpenAI, Google and
+  Anthropic models on ICLR 2027 submissions still under review: "Between an
+  earlier and a later version of Claude Opus and of Gemini, the share of
+  papers placed on the accept side falls by 52 and 53 percentage points on 183
+  and 60 randomly drawn submissions, and by 43 to 79 points in six further
+  paired comparisons, with no paper moving up in any of them." On its main
+  sample, Claude Opus 4.6 (February 2026) "placed 82% of the main sample on
+  the accept side" and Opus 5.5 (September 2026) 12%, where human reviewers
+  put 31% of their reviews of those papers on the accept side. Stating a 30%
+  acceptance rate in the prompt did not close the gap between the two Opus
+  versions (79 points). Ranks are steadier than thresholds: "On 57 papers, the
+  percentiles of Opus 4.6 and 5.5 correlate at 0.73 while their accept shares
+  differ by 44 points." And the scale is barely used: "All twenty models give
+  a 2 or a 3 in 473 of their 475 reviews, against 60 of 72 human reviews." So
+  "AI reviewers are too lenient" and "AI reviewers are too harsh" are both
+  true of some version; neither is a property to correct for. The harsh
+  direction matches the October 2026 study of published papers cited on
+  [`ai-scientist-frameworks.md`](ai-scientist-frameworks.md#google-deep-review-an-outside-reviewer-for-a-draft-october-2026).
+  Comparison with the actual ICLR 2027 decisions is not in the paper (the
+  author says those tests "follow on 16 December 2026").
+  Within one version, Yang et al.
+  ([arXiv:2610.19339](https://arxiv.org/abs/2610.19339)):
   "Repeated reviews fluctuate even under identical conditions."
+- **Testing a reviewer on already-decided papers can measure memory.** Same
+  paper (Guo): "Claude Opus 5.5 names the true first author of 27 decided ICLR
+  2026 papers from their titles alone, with no wrong name, and Claude Opus 4.6
+  accepted all 11 decided papers it said it recognized, against 5 expected."
+  If you check an AI reviewer against known outcomes, use papers posted after
+  its training cutoff.
 - **Presentation moves them.** Yang et al.
   ([arXiv:2606.13044](https://arxiv.org/abs/2606.13044)), repackaging
   presentation only: "75.1% attack success rate and a mean score gain of
@@ -399,9 +462,10 @@ Each row names the evidence behind it; none has been tested in a randomized tria
 |---|---|---|
 | **Pool reviewers from different model families** | Litvak: "The best single system caught 71 of the 100 errors … Pooling every system's output caught 93"; Nguyen et al.: "union of detections across six models reaches 83.3% recall" | More findings to triage; neither benchmark measured false positives (in Nguyen et al.'s separate deployment, false positives and nitpicks were the most common user complaints). Both pools also mix models of one family; Litvak: "Models are only partly correlated in the errors they find" |
 | **Targeted passes, not "write a review"** | Liu & Shah ([arXiv:2306.00622](https://arxiv.org/abs/2306.00622)): "prompting with a specific question (e.g., to identify errors) outperforms prompting to simply write a review"; MARG ([arXiv:2401.04259](https://arxiv.org/abs/2401.04259)): a multi-agent system with agents specialised by comment type reduced "the rate of generic comments from 60% to 29%" in a user study | More passes produce more nitpicks |
-| **Ask for findings, never a score** | The score studies above; the AAAI-26 pilot gave no scores | — |
+| **Ask for findings, never a score** | The score studies above (Guo: accept shares moved 43–79 points between model versions on the same papers); the AAAI-26 pilot gave no scores | If you must compare drafts, a rank from one fixed model version is steadier than an accept/reject call, and still unvalidated |
+| **Pick the reviewer model before the scaffold** | Zubeldia et al.: three frontier LLMs given the same prompt differed by about 50 percentage points in total detection of injected errors | One benchmark, 30 papers, mid-2026 models; re-check when the model changes |
 | **A revision pass over the findings** | EquiReview-R ([arXiv:2609.03943](https://arxiv.org/abs/2609.03943)): "reduces major overcritique from 15.5% to 8.1%" | One study |
-| **Give the reviewer the code and results** | Bai et al. (agreement falls to about 45% without code access or execution); Baumgärtner & Gurevych, SciCoQA ([arXiv:2601.12910](https://arxiv.org/abs/2601.12910)) on paper–code consistency | SciCoQA's best models "detect only 46.7% of real-world discrepancies" |
+| **Give the reviewer the code and results** | Bai et al. (agreement falls to about 45% without code access or execution); Baumgärtner & Gurevych, SciCoQA ([arXiv:2601.12910](https://arxiv.org/abs/2601.12910)) on paper–code consistency; in Zubeldia et al., Claude Code beat a single Claude call on mathematics and numerics errors in astrophysics papers by running its own checks | SciCoQA's best models "detect only 46.7% of real-world discrepancies" |
 | **Rerunning the same model** | Mixed. Litvak found reruns of one model added no catches; SPOT found "models rarely rediscover the same errors" across runs | Prefer a second family to a second sample |
 
 ## How do I get a useful AI review of my own draft?
@@ -529,7 +593,10 @@ finding is not a verdict. It is a hypothesis about your work."
   giving a write-up that "has plenty of caveats, and… has no actual core of
   considered thought."
 - **Do not revise to raise an AI score.** What moves the score is largely
-  presentation.
+  presentation, and the same paper's verdict changes with the reviewer's
+  model version (Guo, [arXiv:2611.20608](https://arxiv.org/abs/2611.20608)):
+  a score that rose between two drafts reviewed by two different versions
+  tells you nothing about the drafts.
 
 ## Hidden prompts, manipulation and confidentiality
 
@@ -600,13 +667,26 @@ No source gives a number. The overlap figures (Liang et al.: two human
 reviewers share roughly 29–35% of their points; Kim et al. measured 3% for
 human cross-reviewer pairs) and the planted-error rates (one reviewer finds
 about a third) both say the second and third reader find mostly new things.
+That holds for readers who read the draft themselves: reviews that a detector
+flags as LLM-generated overlap with each other more than unflagged ones do
+(Gusev, [arXiv:2611.26286](https://arxiv.org/abs/2611.26286)), so three
+readers who each paste the draft into the same assistant are closer to one
+reader.
 
 ### What is the single highest-value step?
 
 The claim-to-evidence map, done by someone other than the author, with one
 number recomputed from the artifact.
 
-Last verified: 2026-11-10. New page. Every quotation and number was checked
+Last verified: 2026-11-23. (Additions 2026-11-23: version drift and the
+memory check from the arXiv:2611.20608 PDF text (abstract and Section 3.3);
+the injected-error reviewer benchmark from the arXiv:2611.17052 PDF text
+(abstract, model list, repository line); review homogenization from the
+arXiv:2611.26286 abstract. The "Scores" bullet previously stated the
+acceptance bias without its date; it now scopes Keuper's finding to 2025
+models and Guo's to 2026 versions. Not verified: the released benchmark
+repository, Gusev's overlap measure and detector.) Page first written
+2026-11-10. Every quotation and number was checked
 against the raw source (page text, arXiv abstract or PDF, Europe PMC or
 Crossref record); biomedical trials and most arXiv papers were checked at
 abstract level. Not checked against the published text: Smith 1990

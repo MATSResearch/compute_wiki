@@ -8,20 +8,22 @@ Run:  uv run pytest tests/test_publish.py -v
 import pytest
 
 from research_rigor import publish as pb
+from research_rigor.resolve import Resolution
 from research_rigor.verify import Verifier
+
+FROZEN = ["H1"]
+RESOLVED = [Resolution("H1", "refuted", "gap moved 4%, under the frozen 10% line")]
 
 
 def _release(**over):
     r = {
-        "task_identity": "SAE feature 4021 ablation on anthropic_hh",
         "harness": "prime-agent 0.4.1 @ sha256:abc123",
-        "inference_settings": "temperature=0, max_tokens=4096",
         "cost": "USD 41.20",
-        "failure_breakdown": "3/50 runs OOM'd; excluded and reported",
+        "cost_per_step": {"lit_review": 3.10, "run": 31.40, "analysis": 6.70},
         "model_ids": ["claude-opus-5"],
         "run_dates": "2026-08-20..2026-08-24",
         "reasoning_mode": "high",
-        "uncertainty": "95% CI over 5 seeds",
+        "uncertainty": "95% bootstrap CI over the eval set",
         "seeds": [0, 1, 2, 3, 4],
         "environment": "uv.lock + python 3.13",
         "entrypoint": "uv run python -m src.run_ablation",
@@ -34,6 +36,8 @@ def _release(**over):
 
 def _gate(release=None, checks=None, **kw):
     kw.setdefault("pi_approved", True)
+    kw.setdefault("frozen_hypothesis_ids", FROZEN)
+    kw.setdefault("resolutions", RESOLVED)
     return pb.publish_gate(release or _release(), checks or pb.default_release_checks(), **kw)
 
 
@@ -49,12 +53,28 @@ def test_placeholders_do_not_count_as_disclosure():
 
 
 def test_a_score_alone_is_gameable_so_four_fields_are_required():
-    """Dropping exactly cost+harness clears 0.66 on a nine-field card — the
-    field's own failure, scored as a pass. Required fields close that hole."""
-    r = pb.disclosure_report(_release(cost=None, harness=None))
+    """Dropping exactly cost+harness can clear a numeric bar — the field's own
+    failure, scored as a pass. Required fields close that hole."""
+    r = pb.disclosure_report(_release(cost=None, harness=None), threshold=0.6)
     assert r.score >= r.threshold
     assert r.missing_required == ["cost", "harness"]
     assert not r.sufficient
+
+
+def test_scored_fields_are_the_ones_a_release_is_asked_to_disclose():
+    """Extra keys in a release do not pad the score."""
+    padded = _release(reasoning_mode=None, uncertainty=None, task_identity="x",
+                      inference_settings="y", failure_breakdown="z")
+    assert pb.disclosure_report(padded).score == pb.disclosure_report(
+        _release(reasoning_mode=None, uncertainty=None)).score < 1.0
+
+
+def test_undisclosed_optional_fields_are_noted_on_a_release_that_clears_the_bar():
+    v = _gate(_release(reasoning_mode=None, cost_per_step=None))
+    assert v.verdict == "ready"
+    note = next(w for w in v.warnings if "not disclosed" in w)
+    assert "reasoning_mode" in note and "cost_per_step" in note
+    assert not _gate().warnings
 
 
 def test_the_bar_is_the_classical_benchmark_level_not_the_agent_norm():
@@ -146,3 +166,14 @@ def test_thin_disclosure_blocks_a_passing_release():
 def test_publication_still_needs_the_pi():
     assert _gate(pi_approved=False).verdict == "blocked_pending_human"
     assert _gate(pi_approved=True).verdict == "ready"
+
+
+# --- a verdict holds through the release ------------------------------------
+
+def test_prediction_without_a_signed_verdict_blocks_the_release():
+    v = _gate(frozen_hypothesis_ids=["H1", "H2"])
+    assert v.verdict == "blocked_unsigned_verdict" and "H2" in v.reasons[0]
+
+
+def test_release_with_no_registered_prediction_is_not_blocked_on_verdicts():
+    assert _gate(frozen_hypothesis_ids=[], resolutions=[]).verdict == "ready"

@@ -16,7 +16,14 @@ from .prompts import ATTACK_POLICY_PROMPT, TRUSTED_MONITOR_PROMPT
 
 
 def build_setting(*, num_tests_to_run: int = 10) -> AppsSetting:
-    """Apps setting — APPS code-generation tasks with backdoor side task."""
+    """Apps setting — APPS code-generation tasks with backdoor side task.
+
+    `has_backdoor_solution=True` keeps only problems with a verified backdoor
+    solution (upstream default is False). The published dataset's verification
+    flags were computed with the pre-20.1.1 scoring rule (any stderr output =
+    failed run) and may mislabel samples that write to stderr until the
+    dataset is regenerated. Scoring itself is fixed from control-arena 20.1.1.
+    """
     return AppsSetting(
         cache_python_code=True,
         num_tests_to_run=num_tests_to_run,
@@ -30,9 +37,10 @@ def build_setting(*, num_tests_to_run: int = 10) -> AppsSetting:
 def build_policies():
     """Untrusted (mode-aware) + trusted policies.
 
-    Only the attack policy gets a custom prompt — `honest_policy_builder` and
-    `trusted_policy_builder` don't accept a prompt kwarg in ControlArena 15.x
-    (they rely on the model's default chat template + the task prompt).
+    Only the attack policy takes a prompt — `honest_policy_builder` and
+    `trusted_policy_builder` forward the conversation as the agent scaffold
+    built it. The honest system prompt is set on the eval config instead
+    (`system_prompt=HONEST_SYSTEM_PROMPT` in run.py).
     """
     untrusted = untrusted_pair(
         attack_prompt=ATTACK_POLICY_PROMPT,

@@ -4,7 +4,7 @@
   "title": "Run metadata",
   "description": "Auto-captured reproducibility metadata for one experiment run. Never hand-written. Closes the field's under-reporting gap (Frontier Lag; benchmark self-audit 0.38/1.0) by making the under-reported fields mandatory and automatic.",
   "type": "object",
-  "required": ["run_id", "created_at", "git_sha", "models", "harness", "stage_status"],
+  "required": ["run_id", "created_at", "acceptance", "git_sha", "models", "harness", "stage_status"],
   "additionalProperties": false,
   "properties": {
     "run_id": {
@@ -13,6 +13,11 @@
       "description": "run_<YYYYMMDD_HHMMSS>_<short_snake_name>, matches the directory name."
     },
     "created_at": {"type": "string", "format": "date-time"},
+    "acceptance": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What done means for this run: what must be true before it can honestly be called finished. Written when the run is filed and never edited afterwards. Prefer a condition a script could evaluate."
+    },
     "git_sha": {
       "type": "string",
       "description": "Commit SHA of the analysis/code repo at run creation. Anchors reproducibility."
@@ -68,11 +73,11 @@
     },
     "prereg": {
       "type": ["object", "null"],
-      "description": "Link to the frozen pre-registration, so metadata alone proves a commitment existed.",
+      "description": "Link to the pre-registration's two commitment points, so metadata alone proves each commitment existed: `hypothesis` (hypothesis, prediction, falsifier; frozen before the pilot) and `design` (metric, decision rule, method, confounds, guards; frozen after it).",
       "additionalProperties": false,
       "properties": {
-        "frozen_at": {"type": ["string", "null"], "format": "date-time"},
-        "content_hash": {"type": ["string", "null"], "description": "sha256:... of prereg.yaml at freeze time."}
+        "hypothesis": {"$ref": "#/$defs/commitment"},
+        "design": {"$ref": "#/$defs/commitment"}
       }
     },
     "stage_status": {
@@ -80,11 +85,23 @@
       "description": "Per-stage lifecycle, keyed by the eleven research stages of the MATS dashboard's Automated Alignment tool, in its order. Lets any tool resume the run and lets the PI review surface show progress.",
       "additionalProperties": {
         "type": "string",
-        "enum": ["pending", "running", "done", "frozen", "skipped", "failed"]
+        "enum": ["pending", "running", "done", "frozen", "skipped", "failed",
+                 "not_applicable", "superseded"]
       },
       "propertyNames": {
         "enum": ["question", "lit_review", "hypothesis", "pilot", "design", "setup",
                  "run", "analysis", "resolve", "writeup", "publish"]
+      }
+    }
+  },
+  "$defs": {
+    "commitment": {
+      "type": "object",
+      "required": ["frozen_at", "content_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "frozen_at": {"type": "string", "format": "date-time"},
+        "content_hash": {"type": "string", "description": "sha256:... of that commitment point's fields at freeze time."}
       }
     }
   }

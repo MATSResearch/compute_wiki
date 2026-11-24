@@ -177,6 +177,21 @@ The loss-mask question above is *which tokens* of a trajectory get loss; a separ
 
 **When to use it:** after an SFT-based removal or behaviour change that degraded capability, before re-evaluating. **When not to:** the red team can influence the on-policy data you regenerate from the model (subliminal or Phantom-Transfer-style poisoning); the authors did not test a red-team response. Removal experiments on model organisms, and the check that the behaviour is really gone, are in [`model-organisms.md`](../alignment-science/model-organisms.md#model-organism-hygiene-checklist).
 
+**On-policy distillation is not a filter (2026-11).** In on-policy distillation (OPD) the tokens are the student's own, but the *targets* are a teacher's per-token probabilities, so the teacher is still the answer to "whose outputs". Fu, Zheng, Qin, Wei et al. (arXiv:2611.19207) show a backdoor SFT-implanted in the teacher reaches the student through OPD even when every harmful response is filtered out of the student's rollouts ("With only 0.5% trigger exposure, the attack success rate reaches 31.7%–71.7% across different Teacher–Student configurations"; Llama-3.2 and Qwen pairs). Summary and when OPD is worth using: [`rl-training.md`](rl-training.md#on-policy-distillation-opd-cheap-for-your-own-rl-checkpoints-a-backdoor-channel-from-an-untrusted-teacher).
+
+**How good do the SFT targets need to be before RL?** One small study says format matters more than correctness: with OLMo-2-1B on GSM8K, GRPO (Group Relative Policy Optimization) after SFT on heavily corrupted reasoning traces recovered to the accuracy reached from clean traces, and SFT on eight incorrect three-line "form-only" traces gave the best post-RL accuracy (arXiv:2611.26756; numbers in [`rl-training.md`](rl-training.md#what-rl-changes-and-what-it-doesnt-passk-forgetting)). One 1B model and one dataset; it concerns a warm start for RL, not SFT as the final stage.
+
+## Multi-turn trajectories under RL: one episode becomes many rows
+
+Aliases: stepwise GRPO, per-turn training rows, trajectory expansion, Outcome-Mass Alignment (OMA), token-level loss reduction, Pass@(K,T), turn budget.
+
+When a multi-turn trajectory is trained stepwise, each turn becomes its own training row that carries the episode's outcome. Two consequences that are easy to miss (both from 2026-11 preprints on small Qwen models):
+
+- **Row-based statistics count one episode several times, and long episodes get more loss.** Zhang, Huangfu, Fan, Wei et al. (arXiv:2611.16816; Qwen2.5-1.5B-Instruct and 3B-Instruct, GRPO = Group Relative Policy Optimization) point out that group statistics computed over rows count a 30-turn failure thirty times, and token-level loss reduction gives trajectories unequal weight. Their fix, Outcome-Mass Alignment, computes outcome statistics over unique trajectories and equalises each trajectory's weight. On ALFWorld, "where failed trajectories typically expand much more than successful ones", it improved matched-horizon success by 7.0–9.4 percentage points; on ordinary WebShop, where the asymmetry is weak or reversed, results were mixed. **Check on your data:** mean rows per successful vs failed trajectory. If they differ a lot, compute advantages per trajectory, not per row. No code link in the paper.
+- **An RL gain measured at one turn budget may not hold at another.** Zhu, Jin, Tu, Men et al. (arXiv:2611.06483; Qwen3-4B and 8B) report that "trajectory-level RL advantages depend on sufficient turn budgets, diminishing significantly when budgets tighten", and that the gain "concentrates in error recovery and long-horizon resilience". Record the turn limit with every trajectory dataset and evaluate at more than one.
+
+**When this does not apply:** single-turn RLVR (RL from Verifiable Rewards), or trainers that already build one row per trajectory.
+
 ## What this means if you are *collecting* trajectories
 
 This is the practical part, and it applies whether or not you ever train on
@@ -214,8 +229,43 @@ Every method above needs the exact token ids the model saw and produced, with
 each span labelled by origin. Several 2026 releases handle this for you; check
 what yours does before logging text and re-tokenising later.
 
+**How much does re-tokenising cost?** Dong & Qin (arXiv:2611.27083, 2026-11-20)
+measured it. The mechanism is real: on Qwen2.5-0.5B (three-digit addition),
+training on the same text with about one token in 25 split into two pieces
+moved the update 0.556 times as far as swapping in a different batch. The
+practical size in an ordinary pipeline is small: "re-encoding touches up to
+5.2% of rollouts but at most 0.08% of tokens, far below the split fractions we
+test", and in fixed-rollout training on GSM8K (against an arm with a tenth of
+its tokens split) the canonical-token arm finished ahead in 14 of 18
+pre-registered pairs with the mean difference's interval including zero. So: capture token ids because it is cheap and removes the question, but
+a decode / re-encode round trip on a standard tokenizer is unlikely to be why a
+run failed. Chat-template differences between harness and trainer (below) are a
+separate risk that this paper does not measure.
+
+- **TRL assistant-only loss masks were wrong on several chat templates before
+  TRL 1.18.0 (2026-11-13).** With `assistant_only_loss=True` in `SFTTrainer`,
+  the 1.18.0 release notes say: "Several training templates put the turn opener
+  or the pre-filled thinking block inside `{% generation %}`, so SFT trained
+  tokens the model never generates. The rendered text doesn't change, only the
+  mask" — Qwen3, GLM-4-MoE, DeepSeek-R1/V3 and R1-Distill, Nemotron 3, gpt-oss,
+  Muse Glimmer, and the Qwen3.6 / Qwen3.8 template revisions shipped since
+  2026-11-07; and "The DeepSeek-R1/V3 training template also dropped the
+  reasoning of assistant turns from the target". For Qwen3 the affected tokens
+  are the pre-filled `<think>\n` (or the empty thinking block when thinking is
+  off) that the generation prompt already ends with (PR #8072). Fixed in
+  1.18.0; first affected version not stated. Symptom to search for: none in
+  the logs — rendered prompts are identical. Check the mask itself: print
+  which token positions carry loss for one example per model family, and
+  re-run or caveat assistant-only SFT on those templates from TRL ≤1.17.1
+  (axolotl 0.21.1 pins TRL 1.14.1; the default Unsloth install caps TRL at
+  1.15.0).
 - **TRL `AsyncGRPOTrainer`, loop-owning path** (TRL v1.10.0, 2026-08-13;
-  experimental). For external agents that run their own tool loop (e.g.
+  experimental then; since TRL 1.18.0 the trainer itself is stable
+  (`from trl import AsyncGRPOTrainer`) and the harness path is
+  `HarnessAsyncGRPOTrainer` in `trl.experimental.async_grpo.openenv_harness`,
+  still experimental; 1.18.0 also removed `fork_threshold_tokens` — "a
+  multi-turn rollout always forks on re-tokenization drift, so no generated
+  token loses its training signal"). For external agents that run their own tool loop (e.g.
   `opencode`), the agent runs in an OpenEnv session in `transparent_proxy`
   mode; an in-sandbox proxy captures each turn's token ids and logprobs, and
   TRL rebuilds per-turn training rows from the trace and scores the workspace
@@ -241,7 +291,7 @@ what yours does before logging text and re-tokenising later.
   and results (#1422)". Trajectory datasets extracted with older versions are
   missing tool calls and observations *non-randomly* (only in parallel-tool
   turns); re-extract before training or analysing them.
-- **OpenEnv + Harbor `TrainingTrace`** (`openenv/OpenEnv` on GitHub, redirected from `huggingface/OpenEnv`; PyPI `openenv` 0.8.0, 2026-10-08, latest 0.11.0, 2026-10-29). For loop-owning harnesses, OpenEnv's Harbor integration "captures every model call as a framework-neutral `TrainingTrace`", which TRL's `AsyncGRPOTrainer` trains on; per the OpenEnv README it "runs Claude Code, Codex, OpenCode, mini-swe-agent and other harnesses on Harbor tasks, and captures the exact tokens for RL". TRL also has its own Harbor integration for white-box `environment_factory` training (`trl.experimental.harbor`, `pip install trl[harbor]`). Details in [`rl-frameworks.md`](rl-frameworks.md#rl-environment-libraries-openenv-verifiers-harbor-openreward).
+- **OpenEnv + Harbor `TrainingTrace`** (`openenv/OpenEnv` on GitHub, redirected from `huggingface/OpenEnv`; PyPI `openenv` 0.8.0, 2026-10-08, latest 0.14.0, 2026-11-19 — releases up to 0.13.0 are covered by two security advisories about env servers exposing server credentials (one through agent git commands in `git_env`, one to unauthenticated clients), and 0.14.0 adds "Redact secrets from rollouts before they are uploaded to the Hub" but does not contain the advisory fixes (as of 2026-11-23 they are on `main` only, in no PyPI release); see [`rl-frameworks.md`](rl-frameworks.md#rl-environment-libraries-openenv-verifiers-harbor-openreward)). For loop-owning harnesses, OpenEnv's Harbor integration "captures every model call as a framework-neutral `TrainingTrace`", which TRL's `AsyncGRPOTrainer` trains on; per the OpenEnv README it "runs Claude Code, Codex, OpenCode, mini-swe-agent and other harnesses on Harbor tasks, and captures the exact tokens for RL". TRL also has its own Harbor integration for white-box `environment_factory` training (`trl.experimental.harbor`, `pip install trl[harbor]`). Details in [`rl-frameworks.md`](rl-frameworks.md#rl-environment-libraries-openenv-verifiers-harbor-openreward).
 - **`verifiers` 0.4.0 traces and compaction** (PrimeIntellect-ai, 2026-10-12). Per the release notes, traces "carry training logprob/entropy annotations, sampling masks, and serialized token counts; rejected compaction attempts are excluded from training", and "**Bash context compaction is enabled by default.**" A compacted trajectory is not the context the model would have seen without compaction, so record compaction events with the trace, set `compaction.summarize_at_tokens` deliberately, or disable compaction when you need verbatim observations.
 - **Per-model turn terminators.** Tinker Cookbook v0.5.7 (2026-09-03) is a
   one-line fix titled "Make GLM-5.3 train the turn terminator on every
@@ -307,7 +357,13 @@ post (GraphQL, post `wBsEFfQFteHSWCtsv`, 2026-06-08; quotes exact); OpenEnv
 `TrainingTrace` from the OpenEnv README and TRL `docs/source/harbor.md`;
 verifiers v0.4.0 trace and compaction notes from its GitHub release notes.
 
-Last verified: 2026-11-04. (Additions 2026-11-04: Agent Lightning v1.0.3
+Last verified: 2026-11-23. (Additions 2026-11-23: Outcome-Mass Alignment
+arXiv:2611.16816, Pass@(K,T) arXiv:2611.06483, re-tokenised rollouts
+arXiv:2611.27083, on-policy distillation backdoors arXiv:2611.19207 and
+corrupted-SFT-then-GRPO arXiv:2611.26756, each read in the arXiv PDF; TRL
+v1.18.0 release notes and PR #8072 via `gh api`; OpenEnv advisories and
+v0.14.0 release notes via `gh api`; PyPI JSON for `openenv`. Quotes are exact
+substrings of those sources.) Earlier: 2026-11-04. (Additions 2026-11-04: Agent Lightning v1.0.3
 release notes via `gh api`; Claude Agent SDK (Python) `CHANGELOG.md` entry for
 0.2.170 and its GitHub release date via `gh api`; OpenEnv repo redirect and
 PyPI `openenv` 0.11.0 via `gh api` and PyPI JSON. Quotes are exact substrings of

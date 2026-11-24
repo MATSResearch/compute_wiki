@@ -1,14 +1,14 @@
 # Run-dir artifact schemas
 
 The machine-readable contract for a run. Every skill reads and writes
-these five artifacts inside a run directory (see `README.md` in this directory
+these six artifacts inside a run directory (see `README.md` in this directory
 for the directory layout and the wiki's `docs/engineering/research-rigor.md` for why they exist).
 
-Two of the five have formal schemas/templates you can point tooling at:
+Two of the six have formal schemas/templates you can point tooling at:
 - `metadata.json` → JSON Schema at `metadata.schema.json` here
 - `prereg.yaml` → annotated template at `prereg.template.yaml` here
 
-The three append-only logs are specified here (JSON Lines — one JSON object per
+The four append-only logs are specified here (JSON Lines — one JSON object per
 line, never rewritten).
 
 ---
@@ -20,24 +20,46 @@ under-reports (model ID, release date, reasoning mode, harness version, compute,
 **cost**) are all **required or first-class here and captured automatically**.
 That alone makes a run more rigorously documented than most published agent work.
 `compute` carries a `provider` + `ephemeral` flag because MATS compute is usually
-a rented box that no longer exists by analysis time.
+a rented box that no longer exists by analysis time. `acceptance` is required:
+what must be true before the run can honestly be called finished, written when
+the run is filed and never edited afterwards — it is what tells a finished run
+from a stopped one. `prereg` links the two commitment points
+(`hypothesis`, `design`), each `{frozen_at, content_hash}`.
 
 ---
 
 ## 2. `prereg.yaml` — the commitment device (human-written, then frozen)
 
-See `prereg.template.yaml`. Lifecycle:
+See `prereg.template.yaml`. Two commitment points, on either side of the pilot:
 
-1. **Draft** — the Fellow writes `hypotheses` (statement, prediction, analysis
-   metric + decision_rule + method, prespecified_confounds).
-2. **Freeze** — the tool sets `frozen_at`, computes `content_hash` (sha256 over
-   the `hypotheses` block), asserts `registered_before_data`, and commits the file
-   to git. The git commit timestamp + content hash together make the commitment
-   tamper-evident and provably pre-data.
-3. **Check** (analysis time) — the tool diffs the *actual* analysis against the
-   frozen `analysis` block and flags any changed metric, decision rule, or method.
-   Deviations aren't forbidden — they must be *visible* (surfaced at the analysis
-   gate, and recordable only as a logged `amendments` entry).
+1. **Draft the hypothesis point** — per hypothesis: `id`, `question` (hypotheses
+   that share a question are rivals), `statement`, `prediction`, `falsifier`,
+   and optionally `rivals_declined` (`{rival, reason}` for a rival weighed and
+   rejected).
+2. **`freeze --point hypothesis`** (before the pilot) — sets
+   `commitments.hypothesis = {frozen_at, content_hash}` (sha256 over each
+   hypothesis' `id`, `statement`, `prediction`, `falsifier`) and commits the
+   file to git. A question with one distinct prediction and no declined rival
+   is printed as a note; it does not stop the freeze.
+3. **Pilot.** Record the result, including a null one.
+4. **Draft the design point** — per hypothesis: `analysis` (`metric`,
+   `decision_rule`, `method`), `prespecified_confounds` (non-empty), and
+   `guards` (each `{measure, cheap_way, check}`: the cheap way that number
+   could move without the claim being true, and the check that would catch it;
+   at least one guard's `measure` is the `metric`). Top-level `planned_runs`
+   (`{id, tests}`) ties each run to the hypothesis it tests, or to `exploration`.
+5. **`freeze --point design`** (before the main run) — refuses if the
+   hypothesis point no longer matches its hash (a hypothesis edited, added or
+   removed: a prediction the pilot prompted goes in a new run directory's
+   `prereg.yaml`), then sets `commitments.design` (sha256 over each
+   hypothesis' `id`, `analysis`, `prespecified_confounds`, `guards`). A
+   hypothesis no planned run tests, and a planned run that names no registered
+   hypothesis and does not say `exploration`, are printed as notes.
+6. **Check** (analysis time) — the tool re-hashes both points (a mismatch is a
+   hard stop, exit 2) and diffs the *actual* analysis against the frozen
+   `analysis` block, flagging any changed metric, decision rule, or method
+   (exit 1). Deviations aren't forbidden — they must be *visible* (reported
+   with the analysis, and recordable only as a logged `amendments` entry).
 
 The `method` field exists specifically to catch an agent silently swapping an
 expensive-but-correct procedure for a cheap-but-wrong proxy (the archetype:
@@ -99,7 +121,31 @@ system treats the PI's approval as first-class data with review-time captured.
 
 ---
 
-## 5. `attention_checks.jsonl` — verifying the overseer (auto, append-only)
+## 5. `evidence.jsonl` — citations for and against (append-only)
+
+One line per run that bears on a prediction, written as you go by
+`research_rigor.evidence.cite`. Evidence is an observation; the verdict is a
+judgement a person signs against the frozen decision rule, written separately
+and read against this log. The accumulated lean never sets the verdict, and a
+verdict that disagrees with this log is flagged, not blocked.
+
+```json
+{"ts":"2026-07-08T09:14:40Z","run_id":"run_20260707_120000_reward_hacking_probe","cited_by":"agent","item":"run:3","prediction":"H1","valence":-0.6,"note":"gap reduction 8% on the held-out subset"}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `ts` | ISO-8601 UTC | |
+| `run_id` | string | |
+| `cited_by` | `"agent"` \| `"human"` | |
+| `item` | string | The run, finding or artifact observed. |
+| `prediction` | string | The hypothesis id it bears on. |
+| `valence` | number | Signed and weighted, never zero: above zero is for the prediction, below zero against, magnitude is how much. Cite what goes against with the same care as what goes for. |
+| `note` | string | |
+
+---
+
+## 6. `attention_checks.jsonl` — verifying the overseer (auto, append-only)
 
 One line per seeded fake error (Gap 8; full design in the `mats_dashboards`
 repo, `docs/auto_alignment_research/supervision_attention_checks.md`). Drawn from real AI mistakes sampled out
@@ -132,10 +178,10 @@ That decoupling is what makes an imperfect detector safe to run.
 
 ---
 
-## Why JSON Lines for the three logs
+## Why JSON Lines for the four logs
 
 Append-only `.jsonl` is tamper-evident by construction (you can't quietly rewrite
 history), survives a killed process mid-run (each line is independently valid),
 and streams cheaply from ephemeral compute back to the persistent dev node. The
-git commit of a frozen `prereg.yaml` plus the append-only logs together give the
+git commits of the two `prereg.yaml` freezes plus the append-only logs together give the
 pipeline its "provably-pre-data" and "provably-reviewed" guarantees.

@@ -8,12 +8,24 @@ dependencies = []
 
 [dependency-groups]
 docs = [
-    # Pinned exactly: we don't need feature/appearance updates, and this avoids
-    # the breaking MkDocs 2.0 plugin/theme rewrite (no migration path). Bump
-    # deliberately, not automatically.
+    # Pinned exactly; bump deliberately, not automatically. Checked 2026-11-23:
+    # the site builds with --strict and the HTML file set, every id= and the
+    # visible text of every page are unchanged from the previous pins.
+    # mkdocs 1.6.1 is still the newest stable release; 2.0 exists only as dev
+    # pre-releases and removes the plugin and theme systems (no migration path).
     "mkdocs==1.6.1",
-    "mkdocs-material==9.7.6",
+    # 9.7.7 fixed a DOM-based XSS in search suggestions (we enable
+    # search.suggest). 9.8.2 (2026-11-19) only fixes the privacy plugin, which
+    # this site does not use, so the cooldown below keeps us on 9.8.1.
+    # Material for MkDocs reaches end of life on 2027-05-05; its build banner
+    # points at Zensical as the successor. Not migrated: a separate decision.
+    "mkdocs-material==9.8.1",
     # Generates redirect stubs at old URLs after the docs/ folder reorg, so
     # existing bookmarks and torchy's cached references don't 404.
+    # Held at 1.2.2 on purpose: 1.2.3 changes no output for this site and adds
+    # `properdocs` (a fork of MkDocs 1.x, a second site generator) as a dependency.
     "mkdocs-redirects==1.2.2",
 ]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days

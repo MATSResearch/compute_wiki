@@ -30,6 +30,10 @@ All versions and dates below are as of 2026-10-14 unless a later date is given.
 | Find saturated, broken or uninformative benchmark items; build a small subset | Item response theory (IRT): py-irt; tinyBenchmarks | [IRT](#which-items-carry-the-signal-item-response-theory-py-irt-tinybenchmarks) |
 | Stop an eval early once the answer looks clear | Anytime-valid confidence sequences, or a Bayesian stopping rule (optstop) | [Stopping early](#stopping-an-eval-early-when-run-until-it-looks-significant-is-legitimate) |
 | Tell whether an agent-eval score change is the agent or the scorer | Re-score unchanged trajectories, then repeated paired runs (TRACE) | [Agent evals](#agent-evals-rerun-flips-and-scorer-changes) |
+| Claim "rank 1 on the leaderboard", or report the best of several models or variants | A rank interval and a selection-corrected score (m-out-of-N bootstrap over tasks) | [Many models at once](#is-the-top-score-real-the-winners-curse-on-leaderboards-and-rank-intervals) |
+| Decide whether an LLM can replace human annotators when items have different annotators | A non-inferiority test on inter-annotator agreement (AltRA-Test) | [PPI](#can-the-llm-replace-the-annotators-at-all-alt-test-and-altra-test) |
+| Fit or read a capability index (ECI, AECI, any logit or IRT model of benchmark scores) | Show the result under two or three link functions and two or three rules for 0% / 100% scores | [IRT](#capability-indices-eci-aeci-the-link-function-and-the-0--100-rule-move-the-answer) |
+| Put an error bar on pass@k or pass^k | The unbiased subset estimators and their exact binomial variance; never extrapolate pass@k past the runs per task | [Agent evals](#passk-and-passk-estimators-error-bars-and-what-n-runs-can-support) |
 
 ---
 
@@ -92,7 +96,7 @@ the name of a key in `Sample.metadata` that identifies the shared unit:
 `ci_wilson` with `cluster=` uses a Korn–Graubard effective sample size
 (p̂(1 − p̂) divided by the clustered variance of the mean, capped at n) and a
 Student-t critical value with `clusters − 1` degrees of freedom. The latest
-release is 0.3.287 (2026-10-31), which needs Python ≥3.11.
+release is 0.3.292 (2026-11-23), which needs Python ≥3.11.
 
 ```python
 from inspect_ai.dataset import Sample
@@ -234,6 +238,22 @@ a given calculator uses, it is simpler to compute N\* from σ_D² as above.
   unpaired `NormalIndPower` calculation in
   [How many samples do I need?](../engineering/statistics.md#how-many-samples-do-i-need)
   is the right one there.
+- **A tie on pass rate is not a tie on performance.** When the task has an
+  underlying quantity (a speedup, a contest score, a Kaggle metric), reducing
+  each run to one pass/fail bit can be what stops the benchmark resolving the
+  gap. Dong, Zhan & Hu, "Agent Benchmarks Stop Ranking Before They Run Out of
+  Tasks" ([arXiv:2611.13541](https://arxiv.org/abs/2611.13541), 2026-11-10)
+  re-score released runs of eight agent benchmarks: "neighbouring top-ten
+  agents on SWE-bench Verified differ by less than its tests' errors, and
+  correcting them reorders neighbours no more than deleting a random sixth of
+  each agent's passes"; ALE-Bench's top ten, separated by contest score, "tie
+  when graded against the median human, although nearly half the runs beat
+  that human"; and in a Terminal-Bench re-run, "pass/fail-tied models differ
+  over tenfold on the quantity the tests discard". They propose graded credit
+  (a log-ratio to a baseline, clipped, with cost on a separate axis). Before
+  concluding two agents are indistinguishable, compare them on the quantity
+  the threshold was applied to. Saturation background:
+  [`measurement-validity.md`](../engineering/measurement-validity.md#ceiling-and-floor-cells-carry-no-information).
 
 ---
 
@@ -275,6 +295,57 @@ avoid an extra dependency. The project is young (3 stars, one author) and PyPI
 lags GitHub (PyPI `evalci` 0.1.0 versus GitHub tag v0.1.2, both 2026-07-05), so
 for a high-stakes claim it is worth reading the code or cross-checking one
 comparison against `statsmodels`.
+
+### Is the top score real? The winner's curse on leaderboards and rank intervals
+
+Aliases: leaderboard winner's curse, rank-induced bias, selection bias of the
+maximum, rank uncertainty, rank probability matrix, m-out-of-N bootstrap, RULER
+(Rank Uncertainty and Leaderboard Evaluation Report).
+
+Ranking noisy benchmark scores rewards sampling luck as well as ability, so the
+score of whoever ranks first is biased upward, and the same selection distorts
+scores further down. Xu, Thomadsen, Zhang & Zhang, "SOTA or Luck? The Winner's
+Curse in LLM Leaderboards" ([arXiv:2611.22227](https://arxiv.org/abs/2611.22227),
+2026-11-17) correct it with an **m-out-of-N bootstrap** over tasks: resample
+m < N tasks (m = ⌊N^γ⌋, with γ = 0.9 in their SWE-bench Verified figure), re-rank all models on each resample, and
+use the resamples both to estimate the bias of each rank's score and to give
+each model an interval of plausible ranks. Assumptions: a fixed model pool and
+independent, identically distributed bounded tasks, with arbitrary within-task
+correlation among models. Reported sizes:
+
+- "Across 14 benchmarks from 5 benchmark families, the rank-1 adjustments range
+  from approximately 0.09 to 3.86 percentage points."
+- In their SWE-bench Verified snapshot (173 models, 500 tasks) the two tied
+  leaders score 79.2% and the adjustment is 0.90 points; the published number
+  one stays number one in 30.5% of bootstrap samples, and 13 of the 173 models
+  fall in one unresolved leading tier.
+
+RULER is the name of the report (score adjustment, rank probability matrix,
+rank intervals, tiers), not an installable package: no code link was found in
+the PDF as of 2026-11-23. The procedure is short enough to write from the
+paper. The same bias applies when you report the best of several of your own
+prompts, checkpoints or scaffolds; the sweep version, with a bound you can
+compute from per-candidate variances, is in
+[`statistics.md`](../engineering/statistics.md#picking-the-best-hyperparameter-config-report-its-spread-not-its-luckiest-run).
+
+**When not to use it.** Clustered tasks (many SWE-bench tasks from one
+repository) break the independent-tasks assumption unless you resample the
+cluster; and a rank interval says nothing about an arena-style leaderboard
+built from human votes, which has a different problem.
+
+**Arena-style (Bradley–Terry) rankings can be moved on purpose.** Fleisig,
+Baumann, Hadfield-Menell & Hovy, "Leaderboard Hacking"
+([arXiv:2611.14769](https://arxiv.org/abs/2611.14769), 2026-11-10), using a
+public dataset of over 100,000 human preferences from LMArena, show three
+manipulations of pairwise-preference rankings aggregated with the Bradley–Terry
+model: strategic voting (including votes on irrelevant models), strategic
+prompting, and strategic nomination (inserting irrelevant models). "each attack
+can boost a model by up to 15-20 places in a ranking and, combined, they can
+boost a model by up to 45 places", and the authors say the issues hold for any
+Bradley–Terry preference evaluation "that allows open prompting, voting, or
+model submission". Treat an arena rank as weak evidence when choosing a model,
+and if you run your own pairwise-preference eval, fix the prompt set and the
+model set before collecting votes.
 
 ---
 
@@ -330,6 +401,32 @@ here applies.
 Tools that produce the inputs (hand-labelled validation sets for Inspect Scout
 scanners) and model grader effects directly (HiBayES) are covered in
 [`evals.md`](evals.md) and [`inspect-ecosystem.md`](inspect-ecosystem.md).
+
+### Can the LLM replace the annotators at all? Alt-Test and AltRA-Test
+
+PPI assumes the human labels are the target. Where human judgment *defines*
+the label and annotators disagree (quality ratings, harm labels), the question
+is whether an LLM annotator preserves the signal the humans share. The
+Alternative Annotator Test (Alt-Test) answers it when every item was labelled
+by the same annotators. Omar, Dror, Gueta, Gal, Reichart & Calderon,
+"AltRA-Test: An Alternative Annotator Test for LLM Judges Without Shared
+Annotators" ([arXiv:2611.26073](https://arxiv.org/abs/2611.26073), 2026-11-19)
+extend it to the usual crowd-style case where items have different annotator
+subsets: a bootstrap "resamples items, draws k human annotations for each item,
+and substitutes one of them with an LLM annotation", giving paired all-human
+and mixed human–LLM panels (k = 3 in the paper's illustration). Replacement is
+supported when the mixed panel's inter-annotator agreement is statistically
+non-inferior to the all-human panel's. The authors show it is a consistent
+test of asymptotic level α and evaluate 18 LLMs and 5 prompting techniques on
+20 datasets (text, image, audio, video): "about 100 items often suffice for
+the test", and "LLMs pass the test in about half of the setups, depending
+mainly on the task".
+
+**When not to use it.** There is a ground truth to check against (code that
+runs, a math answer): measure accuracy, or use PPI. Each item has a single
+human label: there is no human panel to compare with. No code link was found
+in the PDF as of 2026-11-23, so this is a method to implement, not a package
+to install.
 
 ---
 
@@ -434,6 +531,87 @@ claim. tinyBenchmarks' items were selected using the models of its time, so it
 is worth checking the estimate against a full run for a model family far
 outside that population.
 
+### Capability indices (ECI, AECI): the link function and the 0% / 100% rule move the answer
+
+Aliases: Epoch Capabilities Index (ECI), AECI (Anthropic's version of the
+ECI), latent ability index, benchmark stitching, AI R&D acceleration estimate,
+link function (logistic, probit, cauchit, complementary log-log, log-log),
+clipping perfect scores, extended-support beta.
+
+A capability index stitches many benchmarks into one latent ability per model
+by assuming each benchmark's score is a link function of (ability −
+difficulty). It is item response theory at the benchmark level, and two
+November 2026 analyses show how much the headline depends on choices that look
+like implementation details.
+
+**The link function.** METR's "Independent Assessment of AI R&D Acceleration at
+Anthropic in October 2026" (metr.org, 2026-11-05; authors Cunningham, Rush,
+Whitfill & Wijk; a high-access evaluation from 2026-08-12 to 2026-10-29)
+reports that since October 2025, benchmark scores measured via AECI "have been
+growing at an estimated 1.9x the pre-October 2025 rate [95% confidence
+interval: 1.5–2.8x]", with a single trend breakpoint estimated at 2025-10-07.
+METR's own robustness table for the link function (all fitted globally, with
+out-of-sample R² between 86.1% and 87.2%):
+
+| Link function | Assumed task-difficulty distribution | Acceleration [95% CI] |
+|---|---|---|
+| Standard logistic (main result) | symmetric, exponential tails | 1.9x [1.5–2.8] |
+| Probit | smaller tails on both sides | 1.8x [1.3–2.7] |
+| Cauchit | larger tails on both sides | 2.8x [2.0–4.1] |
+| Complementary log-log | larger tail of easy problems only | 1.1x [0.8–1.5] |
+| Log-log | larger tail of hard problems only | 2.9x [2.1–4.9] |
+| Learned (Stukel two-tail family) | tail lengths estimated from data | 2.6x [1.8–4.1] |
+
+"The quality of fit is fairly similar across each of these link functions
+(except cauchit), and we do not have strong a priori reasons to prefer one";
+logistic is kept "since it is the default link function used by Epoch and
+Anthropic". The other robustness checks moved the estimate much less: which
+model snapshots (1.9x–2.2x), which benchmarks (1.9x–2.2x), the regulariser
+(1.9x–2.1x). METR's stated subjective conclusion is "around twice" the earlier
+rate, adding "We would not be surprised if the current rate of growth was
+closer to 1.3x or 3x the historical rate", and a guess that "a majority
+(perhaps ≈80%) of the current (October 2026) acceleration is due to AI". The
+1.9x is higher than the 1.7x in the Haiku 5.5 system card "primarily because of
+the inclusion of data on newer unreleased models". Two caveats METR puts on
+its own number: it "could be explained by overfitting to the benchmark
+distribution or otherwise be an artifact of the AECI methodology" (one listed
+overestimation risk is "AECI’s focus on verifiable tasks"), and Anthropic
+"redacted a majority of the evidence we found most informative for these
+conclusions", so readers cannot check the evidence themselves. The construct
+question (is an index of verifiable benchmarks a measure of research ability?)
+is in
+[`measurement-validity.md`](../engineering/measurement-validity.md#construct-content-and-external-validity-what-an-outside-reader-will-discount).
+
+**The rule for exact 0% and 100% scores.** A logit or beta model cannot take a
+score of exactly 0 or 1, so Epoch clips them to 0.001 / 0.999. Huegerich,
+"Handling 100% scores in the Bayesian ECI" (hugetim.github.io/posts/eci-clip/,
+published 2026-11-12, updated 2026-11-17; an independent refit with code)
+shows that after Epoch's 2026-11-04 switch to a Bayesian method, which was
+meant to make differences near 0% and 100% matter more, the clip value moves
+results: Claude Fable 5.2's jump above the prior reasoning-model trend is 4.0
+ECI points with Epoch's 0.1% clip, 3.4 with a 1% clip, and up to 6.8 points
+with a 10⁻¹² clip; it sits just inside the trend's 90% prediction interval at
+0.1% and above it "With a 0.01% clip or tighter". The cause is that Fable 5.2
+has perfect scores on FrontierMath Tier 4 and Tiers 1–3, two of only 10
+benchmark scores available for it. Under the earlier least-squares method the
+clip barely mattered (5.72 points above trend at a 1% clip, 5.63 at 0.1%, 5.62
+at every clip from 0.01% to 10⁻¹²). The same choice shifts a head-to-head: the
+probability that GPT-6.1 Sol is ahead of GPT-6 Astra rises from 0.27 at a 1%
+clip to 0.79 at 10⁻¹². The post's proposed fix is an extended-support beta
+likelihood that handles exact 0 and 1 without a clip; it also notes that most
+ECI results are not sensitive to the clip. Epoch's own methodology
+announcement was not read for this page.
+
+**What to do in your own work.** If you fit a logit, IRT or beta model to
+benchmark scores (or cite a trend in one): state the link function and the rule
+for 0% and 100% cells; show the headline under at least one alternative of
+each; and re-test "this constant doesn't matter" whenever the estimator
+changes, because a sensitivity that was negligible under least squares was not
+under the Bayesian fit. Report the range across defensible choices beside the
+headline, as METR does (1.1x–2.9x beside 1.9x). **When not to bother:** you
+report raw per-benchmark accuracies and make no claim about a latent ability
+or a trend in one.
+
 ---
 
 ## Stopping an eval early: when "run until it looks significant" is legitimate
@@ -483,7 +661,41 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
 
 **Protocol (TRACE's, in short).** When a harness change (tool names, output format, prompt) moves a score: (1) re-score the **unchanged** trajectories with the changed scorer — if the gap appears there, the scoring rule moved, not the agent; (2) run each condition several times per task and compare **paired** per-task success rates, not single runs; (3) check whether the agent's behaviour actually changed in the transcripts. For the paired comparison itself, use the methods in [Paired comparisons](#paired-comparisons-can-this-benchmark-resolve-the-gap-the-resolution-ratio-q), with the task (not the run) as the unit, and cluster repeated runs by task ([Clustered items](#clustered-items-passages-images-problem-sheets-and-shared-tasks)).
 
+**A worked record of screen-then-confirm on a small agent eval.** Nguyen Minh Thang, "Contain, Conform, Compare" (arXiv:[2611.16485](https://arxiv.org/abs/2611.16485), 2026-11-12; single author; the kit `drydock-eval` is at `MinhThanghus/drydock-eval` on GitHub, Apache-2.0, not on PyPI; the abstract says AI agents built and attacked the kit) evaluates a small coding agent (Gemma 4 E4B) locally with paired statistics that respect repository clusters, and publishes what happened to its own "improvements": "Three changes of the E4B agent led their screens by +1.0 to +6.2 points; each was then tested once on new tasks under a frozen pass rule, and none was confirmed (gains -0.35, -0.39 and +4.10 points). The unchanged baseline, run again on the same 128 tasks, moved by 1.17 points, and 65% of these tasks were solved in none of eight runs." Six configurations of a 31B agent solved between 37 and 44 of 70 development tasks with no pairwise difference detected, and a pre-registered five-arm experiment (231 tasks, 4,620 jobs) on four prompt divergences detected no solve-rate change (largest estimate −2.1 points, 95% interval −4.4 to +0.4). Three habits to copy: measure the rerun band of the unchanged baseline first (here 1.17 points); freeze the pass rule before the confirmation run; and confirm a screened winner once on fresh tasks. The kit is tied to one competition's setup (prompts and agent bundles are withheld), so read it as an example design, not as a recommended tool. Selection background: [`statistics.md`](../engineering/statistics.md#picking-the-best-hyperparameter-config-report-its-spread-not-its-luckiest-run).
+
 **When not to bother:** deterministic, single-turn scoring with temperature 0 and a fixed exact-match scorer, where reruns do not vary (check once that they don't). Note that Claude models can no longer be run at temperature 0 through Anthropic API version `2026-10-21` (the default of the `anthropic` SDK ≥2.0.0, which Inspect ≥0.3.283 requires; Inspect's `anthropic` provider now drops `temperature` with a warning), so Claude runs through that provider are sampled and reruns vary.
+
+### pass@k and pass^k: estimators, error bars, and what n runs can support
+
+Aliases: pass@k (at least one of k attempts succeeds), pass^k / "pass hat k" (all k attempts succeed; the τ-bench reliability metric), best-of-k, worst-of-k, repeated-trial reliability, binomial mixture.
+
+With N runs per task and C successes on a task, the **unbiased estimators** average over all size-k subsets of the observed runs: pass@k is `1 − C(N−C, k) / C(N, k)` and pass^k is `C(C, k) / C(N, k)`, for 1 ≤ k ≤ N (the paper credits the first to Chen et al. and the second to Yao et al., the τ-bench authors). The plug-in `1 − (1 − C/N)^k` is a different, biased number at finite N. Milletarì & Kundu, "A Hierarchical Statistical Framework for Evaluating Agent Reliability" (arXiv:[2611.19614](https://arxiv.org/abs/2611.19614), 2026-11-14) give the exact finite-sample sampling variance of both estimators under a binomial model for C (their Eq. 30 for pass@k and Eq. 33 for pass^k: the variance of the estimator over C ~ Binomial(N, ρ)), noting related results in other recent manuscripts, and set out a scenario → instance → sample hierarchy that separates execution noise (the same task run again) from task heterogeneity. Illustrative code written from those formulas (not from a package; the paper mentions no code):
+
+```python
+import numpy as np
+from scipy.special import comb
+from scipy.stats import binom
+
+def pass_at_k(C, N, k):      # unbiased: P(at least one of k succeeds)
+    return 1 - comb(N - C, k) / comb(N, k)
+
+def pass_hat_k(C, N, k):     # unbiased: P(all k succeed)
+    return comb(C, k) / comb(N, k)
+
+def exact_var(est, C, N, k):
+    """Sampling variance of the per-task estimator, plugging in rho = C/N.
+    Returns 0 when C is 0 or N: the plug-in sees no uncertainty there."""
+    c = np.arange(N + 1)
+    pmf = binom.pmf(c, N, C / N)
+    vals = est(c, N, k)
+    return (pmf * vals**2).sum() - (pmf * vals).sum() ** 2
+
+# Benchmark-level value: mean over tasks. For its error bar, bootstrap TASKS
+# (carrying each task's N runs), which also captures task heterogeneity.
+```
+
+**k cannot exceed what the runs support.** Both estimators are defined only for k ≤ N. Ye, "Variance-adaptive confidence regions for fixed-benchmark binomial mixtures" (arXiv:[2611.21266](https://arxiv.org/abs/2611.21266), v2 2026-11-17; single author, statistics) builds finite-sample-valid confidence intervals for functionals of the distribution of per-problem success probabilities when each of m problems is run n times, and states the limit plainly: "For P(p > 0) and pass@k with k ≫ n the data support only lower bounds." So "would it ever succeed" and pass@1024 extrapolated from 16 runs per problem are not identified; report them as lower bounds. The paper is candid about its own method too: its region was narrower than a two-stage plug-in band at every n (median width ratio 0.60 at n = 128) but on real rollout pools was wider than the asymptotic AMARI intervals at n ≤ 128, so it is not a drop-in replacement for a task bootstrap. The PDF gives code: a Python package `valoc` with the experiment scripts at `YYKKCC-kevin/valoc` on GitHub (MIT licence; repository confirmed via the GitHub API 2026-11-23, last push 2026-11-16; not on PyPI, and not run for this page).
+
 
 ---
 
@@ -539,6 +751,27 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
 - **py-irt will not install on Python 3.12 or later.** Its `requires_python` is
   `<3.12`; uv reports that no compatible version exists. Use a separate
   Python 3.11 environment for the IRT fit.
+- **"We are #1 on the leaderboard" with no rank interval.** The top score of a
+  ranking of noisy scores is biased upward; on one SWE-bench Verified snapshot
+  the published number one stayed number one in 30.5% of bootstrap resamples
+  and 13 of 173 models shared the leading tier (arXiv:2611.22227). See
+  [Is the top score real?](#is-the-top-score-real-the-winners-curse-on-leaderboards-and-rank-intervals).
+- **pass@k reported for k larger than the runs per task.** The unbiased
+  estimator does not exist for k > N, and the plug-in `1 − (1 − p̂)^k` is an
+  extrapolation; for k ≫ n "the data support only lower bounds"
+  (arXiv:2611.21266). See
+  [pass@k and pass^k](#passk-and-passk-estimators-error-bars-and-what-n-runs-can-support).
+- **A trend or a ranking that moves when a 100% score is clipped to 99.9%
+  instead of 99%.** A logit, IRT or beta model of benchmark scores needs a rule
+  for exact 0 and 1, and under a Bayesian fit that rule can move a headline
+  (Fable 5.2's jump above trend on the Epoch Capabilities Index: 3.4, 4.0 or up
+  to 6.8 points depending on the clip). See
+  [Capability indices](#capability-indices-eci-aeci-the-link-function-and-the-0--100-rule-move-the-answer).
+- **A screened improvement that vanishes on fresh tasks.** Three agent changes
+  that led their screens by +1.0 to +6.2 points were each unconfirmed on new
+  tasks, while the unchanged baseline moved 1.17 points on a rerun
+  (arXiv:2611.16485). Measure the rerun band first and confirm once under a
+  frozen rule; see [Agent evals](#agent-evals-rerun-flips-and-scorer-changes).
 
 ## Where this connects
 
@@ -554,7 +787,7 @@ Agentic evals add two sources of variation that a static benchmark lacks: the sa
 
 ---
 
-Last verified: 2026-11-04 (Additions 2026-11-04: judge-rerun paragraph from the arXiv 2610.30512 abstract; scoring-rule pitfall from the 2611.03377 abstract; seed-aggregation pitfall from Smirnov's LessWrong post body (2026-10-28) and the ExploitBench footnote of the `moonshotai/Kimi-K3.1-Pro` model card; doubling-time pitfall from Jackson's LessWrong post body and its 2026-10-29 edit note; temperature note from Inspect PR #6003; Inspect latest release 0.3.287 from the CHANGELOG.) Earlier: 2026-10-20 (added the agent-eval rerun section from arXiv 2610.11678 and 2610.24048 abstracts; Inspect latest release 0.3.282 from the CHANGELOG). Earlier: 2026-10-14. Drafted by Claude; pending MATS research-staff
+Last verified: 2026-11-23 (Additions 2026-11-23: winner's-curse and rank-interval subsection from the arXiv 2611.22227 PDF (abstract, §1 and Figure 1 notes); arena manipulation from the 2611.14769 PDF (abstract, §3); AltRA-Test from the 2611.26073 PDF (abstract, Figure 1); capability-index subsection from the metr.org assessment page text (executive summary and AECI appendix tables) and Huegerich's post page text; pass/fail saturation from the 2611.13541 PDF abstract; pass@k / pass^k estimators and variance from the 2611.19614 PDF (Eqs. 28–32), with the code snippet run and its unbiasedness checked numerically; binomial-mixture lower bound from the 2611.21266 PDF abstract, its code repository `YYKKCC-kevin/valoc` from the PDF and the GitHub API; screen-then-confirm record from the 2611.16485 PDF abstract and §6, repository `MinhThanghus/drydock-eval` confirmed via the GitHub API and absent from PyPI; Inspect latest release 0.3.292 from PyPI. Not verified: Epoch's own Bayesian-ECI announcement; code availability for RULER and AltRA-Test beyond the absence of a link in the PDFs.) Earlier: 2026-11-04 (Additions 2026-11-04: judge-rerun paragraph from the arXiv 2610.30512 abstract; scoring-rule pitfall from the 2611.03377 abstract; seed-aggregation pitfall from Smirnov's LessWrong post body (2026-10-28) and the ExploitBench footnote of the `moonshotai/Kimi-K3.1-Pro` model card; doubling-time pitfall from Jackson's LessWrong post body and its 2026-10-29 edit note; temperature note from Inspect PR #6003; Inspect latest release 0.3.287 from the CHANGELOG.) Earlier: 2026-10-20 (added the agent-eval rerun section from arXiv 2610.11678 and 2610.24048 abstracts; Inspect latest release 0.3.282 from the CHANGELOG). Earlier: 2026-10-14. Drafted by Claude; pending MATS research-staff
 review. Sources checked: Inspect `src/inspect_ai/scorer/_metrics/std.py` and
 CHANGELOG (`stderr(cluster=)` v0.3.64, `ci()` 0.3.260, `ci_wilson()` 0.3.262,
 latest 0.3.280); inspect_evals issue #2605 (body and tables); arXiv:2605.30315

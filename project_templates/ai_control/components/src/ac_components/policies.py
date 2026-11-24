@@ -41,11 +41,21 @@ def untrusted_pair(
     """Build an honest+attack mode-aware untrusted policy.
 
     Returns the composite `untrusted_policy_builder(...)` that selects between
-    honest and attack based on `EvalMode`. Only `attack_policy_builder`
-    accepts a `prompt=` kwarg (the honest policy uses the default chat
-    template + task prompt — there's nothing to override). To customize the
-    honest policy beyond model choice, build it directly via
-    `honest_policy_builder()` and pass to `untrusted_policy_builder()` yourself.
+    honest and attack based on `EvalMode`.
+
+    `attack_prompt` replaces the system prompt in attack mode. ControlArena
+    calls `.format(main_task_description=..., side_task_description=...,
+    setting_description=...)` on it, so include `{side_task_description}` and
+    `{setting_description}` (otherwise the attacker is never told the side
+    task) and double any literal braces.
+
+    The honest policy takes no prompt: it forwards the conversation as the
+    agent scaffold built it. To change the honest system prompt, set
+    `ControlEvalConfig(system_prompt=...)` (see `eval.build_config`).
+
+    `cache=True` reuses model responses for identical inputs (keyed on model,
+    input, generate config and epoch). Needs inspect-ai >= 0.3.288, where the
+    cache key started to include model constructor args.
     """
     attack_kwargs = {"model_role": "untrusted", "cache": cache}
     if attack_prompt is not None:

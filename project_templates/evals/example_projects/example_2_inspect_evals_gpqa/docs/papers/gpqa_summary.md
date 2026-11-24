@@ -29,8 +29,10 @@ Short reading notes for the (stub) GPQA benchmark example.
   in many papers; frontier models may have memorized some. Check the canary string
   and treat very-high scores skeptically. (This is exactly why the example wires in
   `eval_components.contamination`.)
-- **Gating.** The HuggingFace dataset is gated to discourage training-set inclusion;
-  you must log in and accept terms to download it.
+- **Gating.** The HuggingFace dataset (`Idavidrein/gpqa`) is gated to discourage
+  training-set inclusion; you must accept its terms and `hf auth login` to download
+  it. `inspect_evals/gpqa_diamond` does not use it: it downloads a pinned
+  `gpqa_diamond.csv` from OpenAI's `simple-evals` store, no login needed.
 - **Prompt sensitivity.** Multiple-choice formatting (option labels, instruction
   wording, CoT vs not) moves GPQA scores several points. Match the published setup
   for leaderboard comparisons.

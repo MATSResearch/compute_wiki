@@ -11,7 +11,7 @@ with `mo_components.serve.hf_local_backend` (load weights locally) or by pointin
 
 Heavy deps (torch / transformers / trl / peft / datasets) are imported **inside**
 `train_lora`, so importing this module is free and the pure helpers
-(`to_hf_records`, `LoRASFTConfig`) are unit-testable with no GPU and no install.
+(`to_hf_records`, `sft_config_kwargs`, `LoRASFTConfig`) are unit-testable with no GPU and no install.
 Install the trainer deps with `mo-components[train]`.
 
 This module trains whatever data you give it; it ships no misalignment data. Keep
@@ -44,7 +44,14 @@ class LoRASFTConfig:
     per_device_train_batch_size: int = 4
     gradient_accumulation_steps: int = 1
     max_length: int = 1024
-    assistant_only_loss: bool = True  # compute loss on assistant turns only
+    # Loss on assistant turns only. TRL swaps in its own training chat template (with
+    # {% generation %} markers) for the model families it knows; use trl>=1.18.0, which
+    # fixed masks that also covered tokens the model never generates (Qwen3, GLM-4-MoE,
+    # DeepSeek, Nemotron 3, gpt-oss). Inspect the mask for one example on a new family.
+    assistant_only_loss: bool = True
+    # Fraction of total steps used for linear warmup. Passed as `warmup_steps`: the
+    # `warmup_ratio` argument is gone in transformers 5.x / TRL 1.18, and a float in
+    # [0, 1) given to `warmup_steps` means a ratio.
     warmup_ratio: float = 0.03
     seed: int = 0
     # Checkpointing for resumable/reentrant training (e.g. Modal preemption). Save
@@ -75,6 +82,29 @@ def to_hf_records(chat_records: Sequence[dict]) -> list[dict]:
     return out
 
 
+def sft_config_kwargs(config: LoRASFTConfig) -> dict:
+    """The keyword arguments `train_lora` passes to `trl.SFTConfig`. Pure.
+
+    Kept separate so a test can build a real `SFTConfig` from them (no GPU, no
+    model) and catch an argument TRL / transformers renamed or removed.
+    """
+    return dict(
+        output_dir=config.output_dir,
+        num_train_epochs=config.num_train_epochs,
+        per_device_train_batch_size=config.per_device_train_batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
+        learning_rate=config.learning_rate,
+        max_length=config.max_length,
+        assistant_only_loss=config.assistant_only_loss,
+        warmup_steps=config.warmup_ratio,  # float in [0, 1) = ratio of total steps
+        seed=config.seed,
+        save_strategy="steps",
+        save_steps=config.save_steps,
+        save_total_limit=config.save_total_limit,
+        report_to="none",
+    )
+
+
 def train_lora(
     config: LoRASFTConfig,
     train_records: Sequence[dict],
@@ -84,10 +114,15 @@ def train_lora(
 
     Returns the adapter directory path. Requires `mo-components[train]` (torch,
     transformers, trl, peft, datasets) and a CUDA GPU — this does NOT run on a
-    laptop. Verified against the TRL v1.x API (`SFTTrainer(model=..., args=
-    SFTConfig(...), train_dataset=..., peft_config=LoraConfig(...))`,
-    conversational `messages` datasets auto-templated, `max_length`,
-    `assistant_only_loss`).
+    laptop. Checked against the installed TRL 1.18.2 / PEFT 0.22.0 / transformers
+    5.23 source (`SFTTrainer(model=..., args=SFTConfig(...), train_dataset=...,
+    peft_config=LoraConfig(...))`, conversational `messages` datasets
+    auto-templated, `max_length`, `assistant_only_loss`, `warmup_steps` as a ratio).
+
+    MoE base models: an organism saved by `SFTTrainer` 1.7.0-1.17.1 keeps
+    `output_router_logits=True` in its config even after re-training on a fixed
+    TRL; set `model.config.output_router_logits = False` and `save_pretrained`
+    again (see `docs/oversight-and-control/rl-frameworks.md`, "Version traps").
     """
     from datasets import Dataset
     from peft import LoraConfig
@@ -103,21 +138,7 @@ def train_lora(
         target_modules=config.target_modules,
         task_type="CAUSAL_LM",
     )
-    sft_config = SFTConfig(
-        output_dir=config.output_dir,
-        num_train_epochs=config.num_train_epochs,
-        per_device_train_batch_size=config.per_device_train_batch_size,
-        gradient_accumulation_steps=config.gradient_accumulation_steps,
-        learning_rate=config.learning_rate,
-        max_length=config.max_length,
-        assistant_only_loss=config.assistant_only_loss,
-        warmup_ratio=config.warmup_ratio,
-        seed=config.seed,
-        save_strategy="steps",
-        save_steps=config.save_steps,
-        save_total_limit=config.save_total_limit,
-        report_to="none",
-    )
+    sft_config = SFTConfig(**sft_config_kwargs(config))
     trainer = SFTTrainer(
         model=config.base_model,
         args=sft_config,

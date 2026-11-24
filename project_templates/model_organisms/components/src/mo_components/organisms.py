@@ -35,7 +35,7 @@ from typing import Optional
 class OrganismSpec:
     name: str
     description: str
-    base_model: str  # provider/model id, e.g. "openai/gpt-4o-mini" or "Qwen/Qwen2.5-0.5B-Instruct"
+    base_model: str  # provider/model id, e.g. "openai/gpt-6-luna" or "Qwen/Qwen2.5-0.5B-Instruct"
     method: str = "prompt-only"  # one of: prompt-only, finetuned, backdoored
     system_prompt: Optional[str] = None  # prompt-only / additional steering
     adapter_path: Optional[str] = None  # LoRA adapter dir for finetuned organisms

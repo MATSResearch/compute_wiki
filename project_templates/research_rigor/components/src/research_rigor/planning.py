@@ -1,30 +1,37 @@
 """
-Historical rationale follows; researcher-authorized agent selection is now supported.
-The failure evidence describes tested systems, not a permanent capability limit.
+Diversity-forced experiment planning (choosing a direction; stage `design`).
 
-Diversity-forced experiment planning (stage `design`).
+Generate several candidate designs that differ in MECHANISM, not in
+hyperparameters, and record for each the FAILURE MODE it is most vulnerable to.
+Then choose under the project's delegation arrangement.
 
-The survey reframes planning as a DIVERSITY problem: proposal entropy correlates
-r=0.57 with success (2511.15593). But two hard constraints shape the design:
+Two empirical cautions from the cited systems shape the checks:
 
-- Model-ensembling does NOT create diversity — cross-vendor proposal similarity ≈
-  intra-vendor (hypothesis-hivemind, 2605.08956). So divergence must be
-  human-curated and *forced*, not obtained by asking more models.
-- Agents cannot self-select — LLM-judged "innovativeness" correlates -0.06 with
-  actual effectiveness (MLRC-Bench). So the PI selects; the tool ranks.
+- Asking more models does not guarantee diversity — cross-vendor proposal
+  similarity ≈ intra-vendor (hypothesis-hivemind, 2605.08956). Divergence has to
+  be curated deliberately.
+- Self-ranking needs evidence — LLM-judged "innovativeness" correlated -0.06
+  with effectiveness in the MLRC-Bench setting. That is a reason to validate the
+  selection method, not a permanent prohibition on delegation: `plan_gate`
+  preserves human selection by default, and an application passes
+  `agent_selection_authorized=True` after the researcher delegates selection.
+  The flag records authorization, not model competence.
 
-And for alignment specifically (Gap 3, UK AISI): candidates that share a failure
-mode produce correlated evidence that does not average out. Planning must surface
-and penalise that correlation deliberately.
+And for alignment specifically: candidates that share a failure mode produce
+correlated evidence that does not average out. Three experiments that would all
+be fooled by the same confound are one experiment.
 
 Division of labour:
 - THIS LIBRARY measures diversity, detects correlated-failure-mode clusters,
-  scores proposals against a PI-approved rubric, and enforces the gate: a
-  homogeneous candidate set is blocked, and selection is refused unless made by
-  the human.
-- THE /plan skill generates genuinely divergent candidates (human-curated),
-  extracts the goal-specific rubric (Rubric-Rewards), scores against it, and
-  drives the PI's selection.
+  scores proposals against a PI-approved rubric, and holds the gate: a
+  homogeneous candidate set is blocked, and a selection needs the researcher or
+  the researcher's recorded delegation.
+- THE /plan skill generates genuinely divergent candidates, extracts the
+  goal-specific rubric (Rubric-Rewards), scores against it, and drives the
+  selection.
+
+Force diversity when choosing a DIRECTION, not every time something runs: with
+one obvious next experiment and a known reason, there is nothing to gate.
 """
 
 import math
@@ -35,12 +42,15 @@ from dataclasses import dataclass, field
 @dataclass
 class Proposal:
     """One candidate experiment design. `features` are categorical descriptors
-    used to measure divergence (e.g. mechanism, method, data source, and — key
-    for alignment — the failure mode the design is most vulnerable to)."""
+    used to measure divergence. Two are required of every candidate: its
+    `mechanism`, and the `failure_mode` it is most vulnerable to."""
     id: str
     title: str
     features: dict          # feature_key -> categorical value (str)
     rationale: str = ""
+
+
+REQUIRED_FEATURES = ("mechanism", "failure_mode")
 
 
 @dataclass
@@ -64,28 +74,28 @@ def _norm_entropy(values: list) -> float:
 
 
 def diversity_report(proposals: list[Proposal], feature_keys: list[str],
-                     correlated_key: str = "failure_mode", threshold: float = 0.5) -> DiversityReport:
+                     threshold: float = 0.5) -> DiversityReport:
     """Measure how divergent the candidate set is, and flag correlated candidates.
 
-    A candidate set below `threshold` overall entropy is 'insufficient' — the gate
-    will demand more divergence rather than let the PI select from near-duplicates.
+    A candidate set is 'insufficient' below `threshold` overall entropy, or when
+    every candidate shares one mechanism (they differ only in hyperparameters) —
+    the gate will demand more divergence rather than a pick among near-duplicates.
     """
     assert feature_keys, "need at least one feature key to measure diversity"
     for p in proposals:
-        for k in feature_keys:
+        for k in (*feature_keys, *REQUIRED_FEATURES):
             assert k in p.features, f"proposal {p.id!r} missing feature {k!r}"
 
     per_feature = {k: _norm_entropy([p.features[k] for p in proposals]) for k in feature_keys}
     overall = sum(per_feature.values()) / len(per_feature) if per_feature else 0.0
 
-    clusters = []
-    if correlated_key in feature_keys or all(correlated_key in p.features for p in proposals):
-        by_val = {}
-        for p in proposals:
-            by_val.setdefault(p.features.get(correlated_key), []).append(p.id)
-        clusters = [ids for ids in by_val.values() if len(ids) > 1]
+    by_failure_mode = {}
+    for p in proposals:
+        by_failure_mode.setdefault(p.features["failure_mode"], []).append(p.id)
+    clusters = [ids for ids in by_failure_mode.values() if len(ids) > 1]
 
-    insufficient = len(proposals) < 2 or overall < threshold
+    one_mechanism = len({p.features["mechanism"] for p in proposals}) < 2
+    insufficient = one_mechanism or overall < threshold
     return DiversityReport(n=len(proposals), per_feature_entropy=per_feature, overall=overall,
                            correlated_clusters=clusters, insufficient=insufficient, threshold=threshold)
 
@@ -143,14 +153,14 @@ class PlanVerdict:
 def plan_gate(diversity: DiversityReport, *, pi_selection: list | None,
               selector: str | None = None,
               agent_selection_authorized: bool = False) -> PlanVerdict:
-    """Enforce diversity-then-human-selection.
+    """Enforce diversity, then selection under the delegation arrangement.
 
     - A homogeneous candidate set is blocked (force divergence first).
     - Selection defaults to the PI. Explicit researcher authorization permits
       an agent selector; the flag is supplied by the calling application, not
       inferred from the agent’s confidence.
     - Selecting only from within one correlated-failure-mode cluster is warned
-      (the evidence won't average out — Gap 3), but not blocked: the PI may have a
+      (the evidence won't average out), but not blocked: the selector may have a
       reason, they just have to see it.
     """
     if diversity.insufficient:
@@ -175,5 +185,5 @@ def plan_gate(diversity: DiversityReport, *, pi_selection: list | None,
             if chosen.issubset(set(cluster)):
                 warnings.append(
                     "all selected candidates share a failure mode — their evidence is "
-                    "correlated and will not average out (Gap 3); consider diversifying")
+                    "correlated and will not average out; consider diversifying")
     return PlanVerdict("selected", warnings=warnings, selected=list(pi_selection))

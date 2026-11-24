@@ -27,12 +27,17 @@ survive where prose adherence does not, and the same paper's rule stands: agents
 can weaken prose but not a passing test.
 
 This library reuses `verify.Verifier` rather than defining a second rule type, so
-the PI-authored-hard-verifier convention from stage 4 holds unchanged at stage 9:
-an agent may ADD soft checks and may never author or disable a hard one.
+the PI-authored-hard-verifier convention from stage 7 (`run`) holds unchanged at
+stage 11 (`publish`): an agent may ADD soft checks and may never author or
+disable a hard one.
+
+A verdict holds through the release: a registered prediction without a signed
+verdict blocks publication, not only the `resolve` step.
 
 Division of labour:
 - THIS LIBRARY scores disclosure, runs the release checks, and refuses to publish
-  on a failing hard check, a thin scorecard, or an agent-disabled rule.
+  on an unsigned prediction, a failing hard check, a thin scorecard, or an
+  agent-disabled rule.
 - THE /publish skill assembles the release, drafts the checks for PI adoption,
   and walks the Fellow through the final gate.
 """
@@ -40,29 +45,31 @@ Division of labour:
 import re
 from dataclasses import dataclass, field
 
+from .resolve import Resolution, missing_verdicts
 from .verify import Verifier, run_validation
 
-# The five audited disclosure fields (2605.21404), plus the three the frontier-lag
-# audit found missing (2605.04135), plus uncertainty (inspect_evals 2507.06893).
+# The disclosure table of the wiki's research-rigor.md, row for row. Its last
+# row — seeds, pinned environment, entry point, content-hashed artifacts — is
+# the release checks below, not a scored field.
 DISCLOSURE_FIELDS = (
-    "task_identity",        # what was run, exactly, and on what data
+    "cost",                 # inference cost — disclosed by none of the eight audited agent benchmarks
     "harness",              # scaffold + version/digest — "an agent" is a model AND a harness
-    "inference_settings",   # temperature, sampling, context, tool set
-    "cost",                 # disclosed by none of the eight audited agent benchmarks
-    "failure_breakdown",    # what went wrong and how often, not just the headline
     "model_ids",            # the exact model, not the class ("AI", "GPT-4-family")
     "run_dates",            # when — the frontier moves under you
     "reasoning_mode",       # disclosed by 3.2% of evaluation papers
     "uncertainty",          # single runs are unreliable; report the interval
 )
+# "…and, where you have it, cost per step of the work": noted when absent,
+# never scored and never required.
+WHERE_AVAILABLE_FIELDS = ("cost_per_step",)
 
 CLASSICAL_BENCHMARK_DISCLOSURE = 0.66   # the bar; agent-paper norm is 0.38
 
-# A score alone is gameable: dropping exactly `cost` and `harness` from a nine-field
-# scorecard still clears 0.66, while reproducing the field's precise failure — those
-# two are the ones NO audited agent benchmark disclosed. `model_ids` and `run_dates`
-# join them because 52.5% of evaluation papers report at the class level ("AI")
-# rather than naming the model that was run. These four are required, not scored.
+# A score alone is gameable: a card can clear a numeric bar while omitting exactly
+# `cost` and `harness` — the two NO audited agent benchmark disclosed. `model_ids`
+# and `run_dates` join them because 52.5% of evaluation papers report at the class
+# level ("AI") rather than naming the model that was run. These four are required,
+# not scored.
 REQUIRED_FIELDS = ("cost", "harness", "model_ids", "run_dates")
 
 
@@ -82,22 +89,21 @@ class DisclosureReport:
         return self.score >= self.threshold and not self.missing_required
 
 
+def _disclosed(val) -> bool:
+    """A field counts as present only if it holds a non-empty, non-placeholder
+    value — "TBD", "N/A" and an empty list are absences that look like presences,
+    which is how a 0.38 disclosure rate happens in the first place."""
+    if isinstance(val, (list, dict, tuple, set)):
+        return bool(val)
+    return val is not None and str(val).strip().lower() not in ("", "tbd", "n/a", "none", "unknown")
+
+
 def disclosure_report(release: dict, *,
                       threshold: float = CLASSICAL_BENCHMARK_DISCLOSURE) -> DisclosureReport:
-    """Score a release dict against the disclosure fields.
-
-    A field counts as present only if it holds a non-empty, non-placeholder
-    value — "TBD", "N/A" and an empty list are absences that look like presences,
-    which is how a 0.38 disclosure rate happens in the first place.
-    """
+    """Score a release dict against the disclosure fields."""
     assert 0.0 <= threshold <= 1.0, f"threshold {threshold} out of range"
-    present, missing = [], []
-    for fld in DISCLOSURE_FIELDS:
-        val = release.get(fld)
-        ok = val is not None and (str(val).strip().lower() not in ("", "tbd", "n/a", "none", "unknown"))
-        if isinstance(val, (list, dict, tuple, set)):
-            ok = bool(val)
-        (present if ok else missing).append(fld)
+    present = [f for f in DISCLOSURE_FIELDS if _disclosed(release.get(f))]
+    missing = [f for f in DISCLOSURE_FIELDS if f not in present]
     return DisclosureReport(len(present) / len(DISCLOSURE_FIELDS), present, missing, threshold)
 
 
@@ -171,17 +177,21 @@ def default_release_checks() -> list[Verifier]:
 
 @dataclass
 class PublishVerdict:
-    verdict: str      # "blocked_failed_check" | "blocked_disabled_check" | "blocked_disclosure"
-                      # | "blocked_pending_human" | "ready"
+    verdict: str      # "blocked_unsigned_verdict" | "blocked_failed_check" | "blocked_disabled_check"
+                      # | "blocked_disclosure" | "blocked_pending_human" | "ready"
     reasons: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     disclosure: DisclosureReport | None = None
 
 
 def publish_gate(release: dict, checks: list[Verifier], *,
-                 pi_approved: bool, disabled: dict | None = None,
+                 pi_approved: bool, frozen_hypothesis_ids: list[str],
+                 resolutions: list[Resolution], disabled: dict | None = None,
                  threshold: float = CLASSICAL_BENCHMARK_DISCLOSURE) -> PublishVerdict:
     """Run the release checks and decide.
+
+    `frozen_hypothesis_ids` is empty for work with no registered prediction; a
+    registered prediction with no signed verdict in `resolutions` blocks first.
 
     `disabled` is {check_name: who_disabled_it}. Disabling a hard check is a PI
     action; an agent doing it is the prose-vs-tests failure Glite ARF names, so it
@@ -190,6 +200,12 @@ def publish_gate(release: dict, checks: list[Verifier], *,
     Note the ordering: a failed check blocks BEFORE disclosure is scored, because
     a well-documented broken release is still broken.
     """
+    unsigned = missing_verdicts(frozen_hypothesis_ids, resolutions)
+    if unsigned:
+        return PublishVerdict("blocked_unsigned_verdict", [
+            f"no signed verdict for registered predictions {unsigned} — a prediction without "
+            f"a signed verdict blocks the release, not only the resolve step"])
+
     disabled = disabled or {}
     hard_names = {v.name for v in checks if v.severity == "hard"}
     bad_disable = {n: who for n, who in disabled.items() if n in hard_names and who != "pi"}
@@ -222,6 +238,12 @@ def publish_gate(release: dict, checks: list[Verifier], *,
                        f"fields the audits found missing everywhere, so omitting them is how a "
                        f"release clears a numeric bar while reproducing the field's failure.")
         return PublishVerdict("blocked_disclosure", [reason], warnings, disc)
+
+    not_disclosed = disc.missing + [f for f in WHERE_AVAILABLE_FIELDS
+                                    if not _disclosed(release.get(f))]
+    if not_disclosed:
+        warnings.append(f"not disclosed: {not_disclosed} — the bar is cleared, and a reader "
+                        f"still cannot place the result without them")
 
     if not pi_approved:
         return PublishVerdict("blocked_pending_human", [

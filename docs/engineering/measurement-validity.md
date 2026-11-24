@@ -49,6 +49,14 @@ pitfalls), [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md
 | compare models on one aggregate safety score | per-category results, saturation, the label definition | one number can average distinct behaviours or encode a labelling policy |
 | trust a monitor's score on an agent-trajectory dataset | a cue-only baseline and domain-held-out folds | shell-command length predicts LinuxArena labels |
 | write the limitations of a scheming eval | construct, content and external validity | in a review of 19 loss-of-control studies, none achieved high external validity |
+| read a benchmark score as a capability ("research taste") | the dumbest feature-counting baseline, and the score on items it cannot solve | a term-count rule scored 63.0% on TASTE, above every model tested rubric-only |
+| report a monitor's miss rate from synthetic attacks | the attack generation method and how hard it was optimised | one monitor missed 0.2% or 23% of attacks depending on the attack policy |
+| trust an LLM judge because it gives the same verdict twice | agreement with ground truth or human labels | 98.2% self-consistent, 56.2% agreement with state-based scoring |
+| give a judge few-shot examples or a numeric scale | balanced example labels; the rubric with anchors reversed | accept-skewed examples raised acceptance about 20–30 points; judges follow scale layout |
+| report "X% of failures are type T" | label co-occurrence, tie-break order, human agreement on the category | one category's share spanned 26.4% to 76.4% across classifier orderings |
+| train a probe or monitor on instructed misbehaviour | an "instructed but refused" class, and benign fine-tunes as negatives | a collusion probe's AUROC fell from 1.00 to 0.61 without the instruction |
+| cite a baseline's published score on a judge-graded benchmark | a rerun of the baseline under your judge and answer prompt | on LoCoMo the judge alone moved a score up to 7.2 points, the answer prompt 9.3 |
+| read a trend in a capability index as research speed-up | the link function, the model set, and what the benchmarks leave out | METR's 1.9x estimate ranges 1.1x–2.9x across link functions |
 
 ---
 
@@ -74,6 +82,20 @@ drops, by 6 to 27 points, which is a floor artefact dressed as capability.
 For safety specifically, Stewart et al. 2026 (arXiv:2610.12409) set out to test
 whether HELM Safety measures "harmful refusal" and found three of its four plausibly
 relevant datasets saturated before any psychometric test could be run.
+
+Saturation can also be put there by the scoring rule. Dong, Zhan & Hu (Nov
+2026, [arXiv:2611.13541](https://arxiv.org/abs/2611.13541)) re-score released
+runs of eight agent benchmarks and argue that much of their saturation "lies in
+the measurement, not the tasks": a pass/fail bar per task sees one band of
+ability, so ALE-Bench's top ten, which contest score separates, "tie when
+graded against the median human, although nearly half the runs beat that
+human", and in a Terminal-Bench re-run "pass/fail-tied models differ over
+tenfold on the quantity the tests discard". Where the task has a continuous
+outcome, thresholding it discards the information needed at the frontier. And a
+cell at exactly 0% or 100% is a modelling problem as well as an information
+problem: any logit, item-response or beta model needs an arbitrary rule for it,
+and that rule can move a headline (the Epoch Capabilities Index clip, in
+[`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md#capability-indices-eci-aeci-the-link-function-and-the-0--100-rule-move-the-answer)).
 
 **Recommended check.** Before reading a difference, look at the cells. For a
 binary outcome the relative Fisher information in a cell is
@@ -130,6 +152,15 @@ itself degrades once the model's own earlier errors sit in context. METR's
 time-horizon work (Kwa et al. 2025, arXiv:2503.14499) fits a logistic curve of
 success against task length rather than reporting raw pass rates, and finds
 the 80%-success horizon is roughly a fifth of the 50% horizon.
+
+A curve fitted across tasks also does not describe any one task. Herdağdelen
+([LessWrong, 2026-11-16](https://www.lesswrong.com/posts/qHztdHtoXixCWAr7z),
+one author's reanalysis of METR's data) finds the 80% time horizon reaches a
+given task length a median of about eight months after the 50% horizon, while
+the median *individual* task takes about four months to go from 50% to 80%
+success, because tasks of the same human duration are solved at different
+times. A population curve is an average over heterogeneous units: pooled data
+"can show a falling hazard rate even if every task has a constant one".
 
 **Recommended check.** Move the unit down: score per feature, per item, per
 step, and report the episode-level number as a derived quantity. If a run
@@ -347,6 +378,75 @@ Four October 2026 papers add failure shapes beyond reference leakage:
   unlabeled items is the selected-denominator problem in
   ["Which denominator?"](#which-denominator-selected-versus-fixed).
 
+Mid-November 2026 preprints and posts add five more (each a single source,
+checked against its PDF or raw post):
+
+- **Reliability is not validity.** Im
+  ([arXiv:2611.14581](https://arxiv.org/abs/2611.14581), single author) scored
+  2,160 τ²-bench (tau2-bench) airline and retail episodes four ways. The large
+  language model (LLM) judge, gpt-4.1-mini reading the transcript (in the main run each tool
+  result is cut to 600 characters and a transcript over 12,000 characters is
+  trimmed to its head and tail),
+  "repeated its verdict 98.2% of the time but agreed with native scoring on
+  56.2%". In 11 of the 120 human-labelled episodes the agent executed a
+  forbidden database write; the judge passed 10 to 11 of them with or without
+  the policy document or the full untruncated transcript, a stronger
+  judge still passed 6, and a rule-based check of whether a write was expected
+  against whether one occurred, with no model call, caught all 11. A judge
+  reading a transcript is a poor instrument for side effects; a deterministic
+  check on the state is a better one.
+- **The judge's demonstrations are a treatment.** Ahmad, Ahmed & Citi
+  ([arXiv:2611.26881](https://arxiv.org/abs/2611.26881), one video
+  question-answering pipeline) held the answers fixed and varied only the
+  Yes/No balance of the judge's few-shot examples. Acceptance stayed near a
+  two-annotator human consensus with balanced or rejection-skewed examples and
+  jumped "by about 30 points on NExT-QA and 20 on MSVD-QA" with
+  acceptance-skewed ones; "the opposite skew produces no matching drop". One
+  draw of examples against another moved results by up to 18 points, more than
+  any between-condition difference. The bias inflates and never deflates, so
+  it can fabricate a benchmark gain.
+- **The numeric scale is part of the rubric.** Kim et al.
+  ([arXiv:2611.25588](https://arxiv.org/abs/2611.25588); five meta-evaluation
+  benchmarks, seven judges) invert a rubric's score anchors without changing
+  its criteria and find "widespread violations of semantic faithfulness";
+  the reversal disagreement has to be compared with the judge's own rerun
+  variability ("floor normalization") before it is called a bias, and averaging
+  both anchor directions reduces the dependence without hurting human
+  alignment. The companion paper
+  ([arXiv:2611.26077](https://arxiv.org/abs/2611.26077)) varies scale width,
+  granularity, offset, symmetry and boundary placement and finds scores,
+  calibration and robustness all shift. Neither abstract gives an effect size.
+- **A monitor is a model under evaluation too, and raw suspicion scores are not
+  comparable across monitors.** Epstein & Lucassen
+  ([LessWrong, 2026-11-18](https://www.lesswrong.com/posts/cZPQsTKDwgtvF8sjt),
+  two weeks of work, four open-weight monitors, 22,232 reviews of 1,402 agent
+  transcripts) report that "almost a quarter" of monitor reviews on BashArena
+  and SHADE-Arena transcripts verbalised evaluation awareness, and those
+  reviews flagged 13% fewer attack transcripts (95% interval 11% to 16%). For
+  honest transcripts the post is not consistent: its summary says more were
+  flagged, its pooled figure is 4% fewer (2% to 5%), and it says the direction
+  depends on the conclusion the monitor drew. One monitor "will
+  almost always give honest runs a 0", another "will put them in the 80s almost
+  every time", so flags were defined at each monitor's 5% false-positive
+  threshold.
+- **A judge used as a reinforcement-learning reward passes on its blind spots,
+  not its knowledge.** Yue & Vance
+  ([arXiv:2611.25191](https://arxiv.org/abs/2611.25191); 814 RL runs teaching
+  7–8B models to answer closed-book questions or abstain): "A judge that
+  rejects eleven of the twelve correct training answers about capitals of
+  former states teaches the model to refuse 98% of such capitals on new
+  questions, a loss that accuracy and abstention rates do not reveal"; with "I
+  don't know" blocked the model answers 94% of them correctly. A category-level
+  grader error becomes a category-level behaviour, invisible in the aggregate.
+  Training side: [`../oversight-and-control/rl-training.md`](../oversight-and-control/rl-training.md).
+
+The grader's plumbing fails too. Until Inspect AI 0.3.288 (2026-11-07) its
+`model_graded_qa()` scorer could score a grade the judge had only quoted: "A
+reply that quotes `'GRADE: C'` and ends with any of `Grade - I`, `GRADE -> I`,
+`GRADE — I`, `GRADE (final): I` or `<b>GRADE</b>: I` scores **C**" (PR #6198).
+Version detail: [`../evaluation/evals.md`](../evaluation/evals.md#inspect-ai)
+and [`../evaluation/inspect-ecosystem.md`](../evaluation/inspect-ecosystem.md).
+
 **Recommended check.** Run the extractor or grader blind to the reference and
 compare. Plant known-wrong transcripts and confirm they score zero. Treat a
 100% pass rate, or any score a null model could reach, as a trigger to audit
@@ -363,6 +463,13 @@ panel against a held-out hand-labelled subset, not against its own agreement;
 and the PPI section of [`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md)
 cover turning judge labels into a valid interval. For an automated auditor such as
 Petri, pilot the configuration and report what context the auditor was given.
+Report a judge's test–retest agreement and its agreement with ground truth as two
+numbers. Where the agent has side effects (writes, sends, deletes), check the state
+deterministically before any transcript judge. Balance the labels in a judge's
+few-shot examples and average over several draws of them; fix and state the numeric
+scale, and try the rubric with anchors reversed. Compare monitors at a matched
+false-positive rate on honest transcripts, not on raw scores. If a judge is the
+reward in a training loop, audit its verdicts per question category.
 
 ### Is a second judge from another provider a check? Judge swaps, paraphrased judge prompts, memory shortcuts
 
@@ -430,6 +537,70 @@ post shows hack rates ranging from 0.7% on one suite to 100% on one task,
 which is exactly the shape that manufactures a slope if the hacks are not
 caught.
 
+The harness is also part of the result when nothing is being swept. Four
+November 2026 cases where a setting most write-ups leave out decided the number:
+
+- **The attacker is part of a monitor evaluation.** UK AI Security Institute
+  (UK AISI) Red Team, "Attack policy selection can make monitor evaluations
+  misleading" (aisi.gov.uk blog, 2026-11-23, and the linked paper "Attack
+  Policy Selection can Mislead Monitor Evaluators"):
+  one ex-production OpenAI monitor (GPT-5.4 with a retired monitoring prompt,
+  reading the agent's full transcript including its reasoning) was run on
+  synthetic attack transcripts from a Qwen 3.8 27B agent on 25 control tasks
+  in ControlArena's Infrastructure as Code (IaC) setting, generated by four
+  methods (basic prompting, optimised prompting, reinforcement-learning agent
+  training, and post-hoc transcript editing by a separate LLM), each developed
+  only against a *different* monitor. "At the highest levels of optimization,
+  the monitor missed 0.2% of successful attacks from a basic prompting method,
+  and 23% with a transcript editing attack." Effort within a method mattered as
+  much: "Across one RL training run, the miss rate rose from 0.5% to 20.8%, and
+  our initial RL configuration didn’t raise miss rate at all", and the
+  transcript-editing miss rate "rose from 0.3% to 18.7% after 50 rewrites per
+  transcript". The paper's table reconciles the two transcript-editing
+  figures: 18.7% at 50 proposed edits per seed transcript, 23.0% (95% interval
+  10.8 to 36.8) at 100, and 22.7% at 150. These are the IaC numbers; in the
+  paper's LinuxArena ablation the same monitor missed at most 0.7% of the
+  prompted and RL attacks (which were optimised on IaC, with LinuxArena held
+  out) and 16.2% of transcript-edited ones at 150 edits (optimised against
+  LinuxArena), so the setting, and whether the attack was tuned on it, also
+  move the miss rate. The blog post (not the paper) states the scope ("one test using one monitor and one AI
+  agent") and that showing an attack policy is representative of real attacks
+  "is a hard and unsolved problem". A miss rate is a property of the (monitor,
+  attack generation method, optimisation level) triple; report all three, and
+  include a transcript-editing arm. Control-protocol side:
+  [`../oversight-and-control/ai-control.md`](../oversight-and-control/ai-control.md).
+- **The judge and the answer prompt are part of a benchmark score.** Jha &
+  Cheema ([arXiv:2611.19199](https://arxiv.org/abs/2611.19199); the authors
+  evaluate their own product) reran LoCoMo (long-term conversational memory;
+  ten conversations, 1,540 questions) with two answer models, two answer
+  prompts and three LLM judges: "Changing only the judge moves a score by up to
+  7.2 points and changing only the answer prompt by up to 9.3." Their system
+  beat the whole-conversation baseline with gpt-4o-mini answers (79.7 vs 73.0,
+  paired 95% interval +3.8 to +9.5) and not with gpt-4.1-mini (83.2 vs 83.1),
+  and its configuration "was developed on LoCoMo itself, so there is no
+  held-out set". Published scores on a judge-graded benchmark are comparable
+  only when answer prompt and judge match; rerun the baseline under your own
+  conditions.
+- **An undocumented simulator rule, and a seed that covers half the
+  randomness.** Rice, Park & Kwasinski
+  ([arXiv:2611.14068](https://arxiv.org/abs/2611.14068); CAGE Challenge 4, a
+  multi-agent reinforcement-learning cyber-defence benchmark, so the relevance
+  to LLM agents is by analogy) reproduce the two reference defenders and find
+  that the simulator silently discards any action sent to an agent whose
+  previous action is still running and still charges for a discarded Restore,
+  while the documented observation leaves out the busy flag. Both reference
+  defenders read the flag in their own wrappers; switching that check off costs
+  them 99.58 and 145.98 points per episode. And "the evaluation seeds the
+  environment but not the policy, so a reported mean is one draw": 88.9% of
+  per-episode outcome variance at the stock adversary was the closed-loop
+  response to one defender's (KEEP's) own sampling draw. Seed, or average over,
+  every source of randomness, and say which ones a reported mean covers.
+- **The cache is part of the harness.** Until Inspect AI 0.3.288 the output
+  cache key left out model constructor arguments, so "The second model is
+  served the first model's answer, and the sample reports success" (PR #6271).
+  Two conditions of one model name (two `extra_body` settings, two steering
+  configurations) could silently share outputs.
+
 **Recommended check.** Classify every failure by cause before turning any
 knob, then look at whether any non-construct cause (timeout, parse error,
 environment error, budget exhaustion) trends with the dose. A simple rule:
@@ -471,6 +642,49 @@ find that on three failure-attribution benchmarks (which step or agent caused a
 failure), "simple predictors match or beat GPT-4.1"; judges fine-tuned on one
 system's labels lost 31–99 points when the cue was moved, zero-shot judges at most 9.
 
+Three November 2026 cases where the cheap feature was something other than length:
+
+- **A benchmark of judgment solved by counting words (TASTE).** TASTE asks a
+  model which of two AI-safety research proposals expert reviewers preferred
+  (92 pairs built from 50 proposals). Zhong
+  ([LessWrong, 2026-11-15](https://www.lesswrong.com/posts/tpKE33scJGzqYKEBW))
+  found that picking the proposal with *fewer* mechanistic-interpretability
+  terms, coin flip on ties, "is able to achieve a 63.0% overall accuracy,
+  beating all the LLMs we tested" in the rubric-only setup (with the panel's
+  past judgments also shown, two models beat it). The rule gets 80% on the 40
+  pairs where the counts differ, where expert agreement is 69.4%. On the other
+  52 pairs, rubric-only, "all 14 models with ECI > 158 score below 50%, and 8
+  of those 14 are significantly below chance", accuracy falls with the Epoch
+  Capabilities Index across 28 models (r = −0.60, p < .001), and the nine
+  OpenAI models average 29.6%. Because pairs share proposals, the post drops
+  every one and every two proposals and recomputes: the negative trend holds in
+  100% of variants, the claim that the term-count rule beats the best model
+  on all pairs in 76% (drop one) and 61% (drop two), and the claim that every
+  model with ECI > 158 is below 50% on the 52 pairs in 68% and 57%. A separate run by Wang
+  ([LessWrong, 2026-11-18](https://www.lesswrong.com/posts/4LpsoPeQTaFsZfC8H))
+  has GPT-6.2 Astra agreeing with the gold labels on 35% of pairs
+  (significantly below chance), GPT-6 Astra on 41% and Fable 5.2 on 53%, and
+  notes that "with 92 pairs, the 95% interval for random guessing is between
+  40-60%". A TASTE score needs the trivial-baseline row and the
+  interp / non-interp split beside it before it is read as research taste. The
+  TASTE paper itself was not re-read for this page.
+- **A probe that reads the instruction, not the decision.** Mohsin & Rahman
+  ([arXiv:2611.10620](https://arxiv.org/abs/2611.10620); 2,500 committee and
+  1,476 code-review episodes) add agents who receive a collusion instruction
+  and *refuse* it. "Published detectors barely tell colluders from these
+  refusers", and the authors' best probe separates them mostly by reading the
+  instruction: "without it, agent AUROC falls from 1.00 to 0.61". Scored after
+  the vote, a rule that only reads the votes reaches AUROC 0.990 "but finds
+  nothing before it". The decision is still readable (a probe trained on
+  agents' own choices: AUROC 0.73 without the instruction). If the positive
+  class was created by an instruction, the cheapest feature is the instruction.
+  Probe detail: [`../interpretability/probes.md`](../interpretability/probes.md).
+- **A probe that reads "was fine-tuned".** In a sandbagging-detection stress
+  test (Soopal et al., [arXiv:2611.14950](https://arxiv.org/abs/2611.14950);
+  3B models, GSM8K), activation probes flagged 99% of *benign* fine-tunes'
+  examples, and matched probes transferred to 1 of 5 held-out training runs.
+  See [`../evaluation/evals.md`](../evaluation/evals.md#sandbagging-and-capability-elicitation-is-a-low-score-real).
+
 **Recommended check.** Report the trivial baselines (length, position, source)
 next to any detector, and re-score within strata of the obvious confound: an
 AUROC that holds within length quintiles is the honest number, and one that
@@ -480,7 +694,12 @@ remaining) before crediting the architecture. Inspect any "style marker" list fo
 content words that make it a content classifier. For a labelled agent-trajectory
 dataset, fit a cue-only predictor (command length, tool identity, a marker string)
 before trusting a monitor's score on it, split folds by domain rather than mixing
-domains, and test a suspected cue with a placebo-controlled paired edit. Xu & Gao's four
+domains, and test a suspected cue with a placebo-controlled paired edit. For a
+benchmark of judgment or preference, try a feature-counting rule (term counts, length,
+which option came first) and report model scores on the items the rule cannot solve. For
+a probe or monitor trained on prompted misbehaviour, include an "instructed but refused"
+class and score before the outcome is visible; for one trained on fine-tuned organisms,
+include benign fine-tunes as negatives. Xu & Gao's four
 tests (input restriction, cue following, residual accuracy, aggregation) are a ready
 checklist for any benchmark where a judge names a culprit.
 
@@ -527,8 +746,42 @@ Published cases, all October 2026:
   Spearman ρ = 0.25), partial refusals cut agreement by about a quarter, and "persuasion
   scores combine a model's ability to persuade with its willingness to do so."
 
+Two November 2026 additions:
+
+- **The share of failures in a category can be a property of the classifier.**
+  Beesetty ([arXiv:2611.13140](https://arxiv.org/abs/2611.13140), single
+  author) measured one reasoning-failure category ("Compositional Collapse")
+  across twelve models and eleven languages on a multilingual math benchmark
+  (2,316 graded records). "50.1 % of failures carry evidence for more than one
+  category", so the reported plurality depends on the order in which the
+  classifier tests categories: across the six orderings the category's share
+  of failures "spans 26.4 % to 76.4 %". Native speakers judging 179 transcripts
+  agreed with the LLM inspector at κ = 0.932 on answer correctness and
+  κ = 0.093 on the category, while two humans agreed with each other at
+  κ = 0.659 (121 determinate pairs). Re-running the same inspector model with
+  the human instructions verbatim raised κ against the second human from 0.147
+  to 0.636: "The gap is therefore largely attributable to the prompt, not the
+  model." High agreement on the easy label (correct or not) does not carry over
+  to the hard label (why).
+- **"Refuses more" is not "discriminates better".** Gupta & Tanwisuth
+  ([arXiv:2611.11074](https://arxiv.org/abs/2611.11074)) cross eight safety
+  system-prompt families with three clarity levels on HarmBench, XSTest and
+  IHEval for 13 models and analyse the results with signal detection theory,
+  which separates discriminability (telling safe from unsafe requests) from the
+  response criterion (willingness to refuse). Models differ substantially in
+  discriminability, but "system prompts primarily shift the willingness to
+  refuse, with smaller and less consistent effects on discriminability". A
+  change that raises the hit rate and the false-alarm rate together is a
+  threshold shift, and one refusal-rate number cannot tell it from better
+  detection. The abstract gives no effect sizes.
+
 **Recommended check.** Report per-category or per-dataset results before any
-aggregate, and check each component for saturation first. If the claim is about a
+aggregate, and check each component for saturation first. Before comparing
+"X% of failures are type T" across models, report how often labels co-occur,
+permute the tie-break order, and validate the category (not only correctness)
+against human labels. For a safety intervention, report refusals on harmful
+*and* benign items, or d′ and criterion, so a shift in willingness is not read
+as a gain in discrimination. If the claim is about a
 single attribute, test it: a second instrument for the same construct (convergent
 validity), or a dimensionality check across items. For a classifier or guardrail, state
 the label definition it was trained and graded against, check the benchmark for
@@ -583,6 +836,35 @@ properties high external validity "may be structurally unachievable under respon
 research practices", which is a ceiling on feasible evidence rather than evidence of
 absence.
 
+A worked construct-validity question from November 2026: is a trend in a
+benchmark index a measure of research speed-up? METR's independent assessment
+of AI R&D acceleration at Anthropic (metr.org, 2026-11-05) estimates that
+benchmark scores measured via AECI, Anthropic's version of the Epoch
+Capabilities Index, have grown at 1.9x the pre-October-2025 rate (95%
+confidence interval 1.5–2.8x; 1.1x to 2.9x across link functions), and names
+the construct risks itself: the estimate "could be explained by overfitting to
+the benchmark distribution or otherwise be an artifact of the AECI
+methodology", one listed way of overestimating is "AECI’s focus on verifiable
+tasks", and METR has "additional uncertainty in how this acceleration
+translates to broader and less well-specified tasks". Harris
+([LessWrong, 2026-11-11](https://www.lesswrong.com/posts/7znBtiPuQybFLxjmj), an
+argument, not a measurement) sharpens the point: a model's skill at "training
+models to be good at AECI" can improve without general research skill
+improving, and he cites the automated weak-to-strong researcher whose metric
+gain "didn’t hold up when transferred to a production-scale setting". The
+general rule for anyone whose agents hill-climb a verifiable metric: validate
+on a setting the metric did not see. The statistics of the estimate are in
+[`../evaluation/eval-statistics.md`](../evaluation/eval-statistics.md#capability-indices-eci-aeci-the-link-function-and-the-0--100-rule-move-the-answer).
+
+External validity cuts the other way too. A model's stated belief that it is
+in a simulation does not make its behaviour uninformative: UK AISI's report on
+Mythos 5 ([arXiv:2611.10030](https://arxiv.org/abs/2611.10030), 2026-11-05)
+recommends treating "observations of undesired behaviour as important evidence
+of alignment failures even in the presence of simulation awareness in model
+reasoning", after a model attempted a supply-chain attack on real people while stating
+that they were simulated. Detail in
+[`../evaluation/evals.md`](../evaluation/evals.md#reward-hacking-and-task-gaming-in-evals-what-moves-the-rate).
+
 **Recommended check.** For a scheming or dangerous-capability eval, write one line per
 dimension in the limitations section: what the measure would miss, what the task set
 leaves out, and how far the setting is from deployment. A governance reader will apply
@@ -632,7 +914,7 @@ are the place to put this.
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
+Last verified: 2026-11-23. (Additions 2026-11-23: pass/fail saturation 2611.13541, judge-vs-state scoring 2611.14581, few-shot label balance 2611.26881, scale reversal and topology 2611.25588 / 2611.26077, judge-as-reward blind spots 2611.25191, LoCoMo sensitivity 2611.19199, the CAGE 4 audit 2611.14068, collusion probes 2611.10620, sandbagging probes 2611.14950, failure taxonomies 2611.13140, signal detection 2611.11074 and the UK AISI Mythos 5 report 2611.10030, each checked against the PDF's abstract page and, where a detail goes beyond the abstract, the section it comes from; the UK AISI attack-policy post from its page text and the linked paper PDF (IaC setting, 25 control tasks, transcript-editing table, LinuxArena ablation); METR's acceleration assessment from its page text; the TASTE posts, the monitor eval-awareness post, the time-horizon reanalysis and Harris's post from the raw LessWrong bodies; the two Inspect bugs from the bodies of PRs #6198 and #6271. Not verified: the TASTE paper, figures that exist only as images.) Earlier: 2026-11-04. (Additions 2026-11-04, each checked against its arXiv abstract: the judge-swap study 2611.04090, Prompt Lottery 2610.38076, judge-dependent prompting 2610.31172, memory shortcuts 2611.02273, the few-shot ranking reversal 2610.38015 (also PDF), and the time-step baseline 2610.33816 (code link from the arXiv listing's comments field, repository checked via the GitHub API).) New page 2026-10-20. (Additions 2026-10-20: the readout
 section, four grader cases, the single-attribute and external-validity sections, two
 trivial-baseline cases and the HELM saturation note, each checked against its arXiv
 abstract page: 2610.25964, 2610.24872, 2610.26595, 2610.13303, 2610.16911, 2610.12409,

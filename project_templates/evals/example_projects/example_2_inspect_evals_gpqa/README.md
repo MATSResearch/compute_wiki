@@ -32,9 +32,9 @@ command skips:
 ## Intended one-liner (works today, without this scaffold)
 
 ```bash
-# pip install inspect_ai inspect_evals
+# pip install "inspect-ai>=0.3.288" "inspect-evals>=0.29.0"   (both need Python >= 3.11)
 inspect eval inspect_evals/gpqa_diamond \
-    --model anthropic/claude-sonnet-4-6,openai/gpt-4o \
+    --model anthropic/claude-sonnet-4-6,openai/gpt-6-luna \
     --limit 50
 inspect view   # browse the logs
 ```
@@ -60,10 +60,23 @@ you have a concrete multi-model comparison to run — it's a good first exercise
 
 ## Notes / pitfalls when you build it
 
-- **GPQA is gated on HuggingFace.** You need `huggingface-cli login` and to accept
-  the dataset terms; otherwise the task download 403s.
-- **GPQA-Diamond is ~198 questions.** Report CIs. Consider `--epochs 4` with a
-  reducer to average over sampling noise.
+- **Dataset access.** `inspect_evals/gpqa_diamond` downloads a SHA-256-pinned
+  `gpqa_diamond.csv` from OpenAI's `simple-evals` blob store — no HuggingFace
+  login needed. The original HuggingFace dataset (`Idavidrein/gpqa`) is gated: if
+  you load that copy yourself, accept its terms and run `hf auth login` (current
+  `huggingface-hub` ships only the `hf` command; `huggingface-cli` is gone).
+- **Record the task version.** `inspect_evals` versions each task; GPQA is `3-D`
+  in 0.29.0 (`eval.yaml`), and the version is written into the log. Report the
+  `inspect_evals` version and the task version with every number, and re-run a
+  baseline rather than reuse one from another version. Several other tasks changed
+  scoring in 0.28.0 / 0.29.0 (Agentic Misalignment, BrowseComp, MATH, PaperBench,
+  CORE-Bench, AbstentionBench, BFCL) — see `docs/evaluation/inspect-ecosystem.md`.
+- **Answer order.** The raw CSV lists the correct answer first; the task shuffles
+  choices with a fixed seed (`-T shuffle_choices=42` by default) so every build
+  presents the same exam. `-T shuffle_choices=false` makes every answer "A".
+- **GPQA-Diamond is 198 questions.** Report CIs. The task already runs 4 epochs
+  by default (`--epochs 1` for a quick pass); epochs of one question are not
+  independent samples, so compute CIs over questions.
 - **Multiple-choice scoring**: GPQA uses `inspect_ai.scorer.choice` with the
   `multiple_choice` solver — no model-graded judge needed, so no grader-bias
   caveat (unlike example 1).
@@ -74,4 +87,4 @@ you have a concrete multi-model comparison to run — it's a good first exercise
 
 ## Last verified
 
-2026-05-20 — `inspect_evals/gpqa_diamond` task exists in `UKGovernmentBEIS/inspect_evals`. This is a design stub; the task name and dataset gating should be re-checked against the upstream repo when you implement it.
+2026-11-23 — against the `inspect_evals` v0.29.0 source (`src/inspect_evals/gpqa/gpqa.py`, `eval.yaml`): task `inspect_evals/gpqa_diamond`, task version `3-D`, 198 samples, 4 default epochs, CSV download with a pinned SHA-256, `multiple_choice(cot=True)` + `choice()`. `inspect-evals` 0.29.0 requires Python ≥ 3.11 and `inspect_ai>=0.3.285`. This is a design stub; nothing here was run.

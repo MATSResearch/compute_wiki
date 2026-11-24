@@ -1,28 +1,51 @@
 # ============================================================================
-# PRE-REGISTRATION — the commitment device (pipeline Gap 1, the MVP core)
+# PRE-REGISTRATION — the commitment device
 # ============================================================================
-# The Fellow (human PI) writes this BEFORE running the experiment. The tool's
-# only jobs are: (1) make the commitment tamper-evident (content_hash + git
-# timestamp, so it provably predates results), and (2) at analysis time, diff
-# the ACTUAL analysis against this file and flag any metric / decision rule /
-# method that changed after freezing.
+# The Fellow (human PI) writes this in TWO sittings, on either side of the
+# pilot, and freezes each one before the results it governs exist:
 #
-# Fill in every field marked <...>. Delete the comment lines if you like — the
-# schema in schemas.md (this directory) is the authority. Once you run `freeze`, this file
-# is locked: further changes must be explicit `amendments:` entries, never
-# silent edits.
+#   1. `hypothesis` point — BEFORE the pilot: the question, the hypothesis
+#      (`statement`), the `prediction`, and the `falsifier`.
+#        research-rigor-prereg freeze prereg.yaml --point hypothesis --git-commit
+#   2. Run a small pilot. Record the result, including a null one.
+#   3. `design` point — AFTER the pilot, BEFORE the main run: the `analysis`
+#      (metric, decision rule, method), the `prespecified_confounds`, and a
+#      guard for each measure (`guards`).
+#        research-rigor-prereg freeze prereg.yaml --point design --git-commit
+#
+# The pilot does not license rewriting the hypothesis or the falsifier: the
+# second freeze refuses if they changed (or if a hypothesis was added or
+# removed). If the pilot changes what you believe, register the new prediction
+# in a new run directory's prereg.yaml; do not edit the old one, which still
+# gets a verdict.
+#
+# The tool's jobs are: (1) make each commitment tamper-evident (content_hash +
+# git timestamp); (2) at analysis time, diff the ACTUAL analysis against this
+# file and flag any metric / decision rule / method that changed after
+# freezing; (3) print notes, never refusals, for a question with only one
+# hypothesis and for a hypothesis no planned run tests.
+#
+# Fill in every field marked <...>. The schema in schemas.md (this directory)
+# is the authority. Once a point is frozen, changes to it must be explicit
+# `amendments:` entries, never silent edits.
+#
+# Genuinely exploratory work needs none of this: say so, and label the output
+# exploratory.
 # ============================================================================
 
 run_id: <run_YYYYMMDD_HHMMSS_short_name>
 
 # --- Filled in by the freeze tool, not by you -------------------------------
-frozen_at:            # ISO-8601 UTC, set at freeze
-content_hash:         # sha256:... of this file's hypotheses block at freeze
-registered_before_data: true   # the tool asserts+records this; lying defeats the point
+commitments:
+  hypothesis:           # {frozen_at, content_hash} — set by `freeze --point hypothesis`
+  design:               # {frozen_at, content_hash} — set by `freeze --point design`
 
 # --- The scientific commitment (you write this) -----------------------------
 hypotheses:
   - id: H1
+    # ---- hypothesis point: write BEFORE the pilot ---------------------------
+    question: <The open research question this hypothesis answers. Hypotheses
+      that share a question are rivals.>
     statement: >
       <One precise, falsifiable claim. Name the mechanism, not just a correlation.
       e.g. "SAE feature 4021 causally mediates reward-model over-scoring of
@@ -30,10 +53,22 @@ hypotheses:
     prediction: >
       <The concrete, quantitative observation that would follow if H1 is true.
       e.g. "Ablating feature 4021 reduces the sycophancy reward gap by >50%.">
+    falsifier: >
+      <What result would show H1 false.
+      e.g. "Ablating feature 4021 reduces the gap by less than 10%.">
+    # A question with one hypothesis is waiting to be confirmed. Either add a
+    # rival (H2, same `question`, a DIFFERENT predicted observation), or record
+    # here the rival you weighed and why you rejected it. The freeze notes the
+    # gap; it does not refuse.
+    rivals_declined: []
+      # - rival: <the alternative explanation you weighed>
+      #   reason: <why you rejected it, e.g. "not discriminating", "premise wrong">
+
+    # ---- design point: write AFTER the pilot, BEFORE the main run -----------
     analysis:
       metric: <name_of_the_single_pre-chosen_metric>   # e.g. reward_gap_delta
       decision_rule: >
-        <Pre-commit the thresholds NOW, before seeing data. Include the
+        <Pre-commit the thresholds NOW, before the main run. Include the
         inconclusive band — don't leave yourself wiggle room.
         e.g. ">0.5 relative reduction => H1 supported; <0.1 => refuted;
         between => inconclusive.">
@@ -43,8 +78,19 @@ hypotheses:
         attribution patching (they correlate rho~=0; see interp rigor convention)">
     prespecified_confounds:
       - <Known trap this hypothesis must guard against, stated up front.>
-    # Add H2, H3, ... — and prefer DIVERSE hypotheses (Gap 3: alignment results
-    # share failure modes and don't average out; force divergence deliberately).
+    # One guard per measure, and at least one for the metric above.
+    guards:
+      - measure: <name_of_the_measure_this_guards — the metric, at minimum>
+        cheap_way: <The cheap way that number could move without the claim being true.>
+        check: <The check that would catch it.>
+
+# --- Planned runs: tie every hypothesis to the test that will decide it ------
+# Each planned run names the hypothesis it tests, or says `exploration`. The
+# design freeze notes a hypothesis no run tests, and a run that tests nothing
+# on the record (including one with no `tests`).
+planned_runs: []
+  # - id: run:1
+  #   tests: H1
 
 # --- Optional: LLM-in-the-loop analysis steps -------------------------------
 # If any analysis step uses an LLM as judge/annotator, register the procedure
@@ -52,7 +98,7 @@ hypotheses:
 # first eligible model, to prevent prompt-fishing / p-hacking the judge.
 llm_analysis_steps: []
   # - step: <what the LLM decides>
-  #   model_selection_rule: "first model released after frozen_at meeting <criteria>"
+  #   model_selection_rule: "first model released after the design freeze meeting <criteria>"
   #   prompt_hash: <sha256 of the frozen prompt>
 
 # --- Amendments (append-only; each is logged, timestamped, justified) --------

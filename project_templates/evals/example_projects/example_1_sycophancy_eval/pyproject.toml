@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "eval-components",
-    "inspect-ai>=0.3.120",
+    # 0.3.288 fixes two silent result-changing bugs on paths this template uses: the output
+    # cache key ignored model constructor args (cache=True), and model-graded scorers could
+    # score a grade quoted from the submission (model_graded_qa).
+    "inspect-ai>=0.3.288",
     "pandas>=2.0.0",
     "matplotlib>=3.8.0",
 ]
@@ -16,6 +19,9 @@ dev = ["pytest>=8.0.0"]
 
 [tool.uv.sources]
 eval-components = { path = "../../components", editable = true }
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days
 
 [build-system]
 requires = ["hatchling"]

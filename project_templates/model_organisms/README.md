@@ -117,7 +117,9 @@ organism:
    organism's own outputs to recover capability.
 5. **Check the adapter attached.** After `train_lora`, assert
    `peft_model.targeted_module_names` is non-empty and record trainer / PEFT
-   versions (PEFT before 0.21.0 could silently attach a second adapter, via `add_adapter`, that adapts nothing).
+   versions (PEFT before 0.21.0 could silently attach a second adapter, via `add_adapter`, that adapts nothing;
+   PEFT 0.19–0.21.3 with transformers v5 silently skipped the dense and shared-expert layers of MoE models,
+   fixed in 0.22.0, which the `[train]` extra now requires).
 6. **Mind the LoRA target modules.** `LoRASFTConfig` defaults to attention-only
    `target_modules` (q/k/v/o); TRL's "LoRA Without Regret" guide reports that
    "Attention-only LoRA underperforms even when using a higher rank to match
@@ -138,19 +140,56 @@ and follow your mentor's / institution's release norms. See
 ## API / version notes
 
 `example_1` uses **OpenRouter** (one key, every provider; key in `~/projects/.env`
-as `OPENROUTER_API_KEY`) via the `openai` SDK. Default organism `openai/gpt-4o-mini`,
-default judge `openai/gpt-4o` (faithful to the EM paper's GPT-4o judge, and
-distinct from the organism). Model IDs churn — re-verify on OpenRouter before a
-run. **Both defaults have an end date:** OpenAI's deprecations page (read
-2026-10-14) shuts down `gpt-4o-2024-08-06`, `gpt-4o-2024-11-20` and
-`gpt-4o-mini-2024-07-18` (with their fine-tunes) on **2027-01-14**, so plan to
-swap in a replacement judge and validate it against the old judge's scores on a
-saved sample before then. OpenAI fine-tuning itself is closed to new
-organisations (since 2026-05-07) and to everyone from 2027-01-06; the
-fine-tuning path here is open-weight LoRA. Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
+as `OPENROUTER_API_KEY`) via the `openai` SDK (Chat Completions; no tool calling,
+so the "GPT-6.2 tool calling needs the Responses API" restriction does not apply).
+Default organism `openai/gpt-6-luna`, default judge `openai/gpt-6.1-sol` (distinct
+from the organism); both ids were on OpenRouter's models API on 2026-11-23. Model
+IDs churn — re-verify on OpenRouter before a run. **The defaults changed on
+2026-11-23** from `openai/gpt-4o-mini` / `openai/gpt-4o`: the EM paper's judge was
+GPT-4o, but OpenAI shuts down the GPT-4o and GPT-4o mini snapshots (with their
+fine-tunes) on **2027-01-14** and names `gpt-6-luna` as the replacement. While
+GPT-4o still answers, run both judges on a saved sample
+(`judge_model=openai/gpt-4o`) and report how the new judge's scores compare;
+numbers from the two judges are not interchangeable. The new defaults were
+**not run end to end for this template** (see the example's "Last verified").
+
+**Sampling parameters.** `openrouter_backend` sends no `temperature` unless you
+pass one: OpenRouter no longer lists `temperature` as a supported parameter for
+the GPT-5.6 / GPT-6 families or Claude Sonnet 5 and later, and Anthropic's API
+version `2026-10-21` rejects `temperature`, `top_p` and `top_k` on every Claude
+model. Treat hosted-model results as sampled at the provider default (1.0): take
+several samples per probe and report the spread. `max_tokens` (default 2000)
+includes reasoning tokens on reasoning models. `openai_compatible_backend` (your
+own vLLM server) still sends `temperature=1.0`.
+
+OpenAI fine-tuning itself is closed to new organisations (since 2026-05-07) and
+to everyone from 2027-01-06; the fine-tuning path here is open-weight LoRA.
+Fine-tuning (`train.py` / `train_modal.py`) is a TRL **rank-1 LoRA on
 Qwen2.5-0.5B** (per the efficient-organism result, arXiv:2506.11613), run on a
 local GPU, `nathan-lambda`, or **Modal**'s cloud GPUs; the trained adapter is
 served back for eval via `serve.hf_local_backend` or a vLLM endpoint.
+
+**Trainer versions (2026-11-23).** The `[train]` extra requires `trl>=1.18.0`,
+`peft>=0.22.0` and `torch!=2.14.*`; the lockfiles resolve trl 1.18.2, peft 0.22.0,
+transformers 5.23.0 and torch 2.15.0. Why the floors: TRL 1.18.0 fixed the
+`assistant_only_loss=True` mask, which on several chat templates (Qwen3,
+GLM-4-MoE, DeepSeek-R1/V3, Nemotron 3, gpt-oss) also put loss on tokens the model
+never generates — `train_lora` uses that option, so **re-train any organism made
+with TRL ≤ 1.17.1 on one of those families**, and look at which token positions
+carry loss for one example whenever you change model family. MoE models saved by
+`SFTTrainer` 1.7.0–1.17.1 keep `output_router_logits=True` in their config even
+after a re-train on a fixed TRL: set `model.config.output_router_logits = False`
+and `save_pretrained` again. PEFT 0.22.0 fixes MoE LoRA skipping dense and
+shared-expert layers. torch 2.14.x is under advisory GHSA-v32g-mr63-3j83
+(`torch.load(weights_only=True)` can read text files; patched in 2.15.0); torch
+2.15 wheels are `cu132` / `cu134` only, so a GPU host with a CUDA 12.x driver
+resolves an older torch (< 2.14) under these floors. `warmup_ratio` is no longer
+a `SFTConfig` / `TrainingArguments` argument in transformers 5.x; `train_lora`
+passes the ratio as `warmup_steps` (a float in [0, 1) means a ratio). Each
+`pyproject.toml` carries uv's one-week dependency cooldown (`exclude-newer`),
+with opt-outs for exactly the fresh releases those floors need. Details:
+[`../../docs/oversight-and-control/rl-frameworks.md`](../../docs/oversight-and-control/rl-frameworks.md)
+("Version traps").
 
 See [`../../docs/alignment-science/model-organisms.md`](../../docs/alignment-science/model-organisms.md) for the
 full landscape (Sleeper Agents, Alignment Faking, Emergent Misalignment, Persona

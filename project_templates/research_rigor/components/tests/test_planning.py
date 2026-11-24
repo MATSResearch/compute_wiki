@@ -65,6 +65,28 @@ def test_missing_feature_fails_loudly():
         assert "missing feature" in str(e)
 
 
+def test_every_candidate_records_its_mechanism_and_failure_mode():
+    """Even when the caller measures diversity over other features."""
+    for dropped in ("mechanism", "failure_mode"):
+        features = {"mechanism": "probing", "method": "linear_probe", "failure_mode": "leakage"}
+        del features[dropped]
+        with pytest.raises(AssertionError, match=dropped):
+            pl.diversity_report([pl.Proposal("A", "A", features), _p("B", "p", "q", "r")], ["method"])
+
+
+def test_candidates_differing_only_in_hyperparameters_are_insufficient():
+    props = [pl.Proposal(i, i, {"mechanism": "sae_ablation", "failure_mode": fm, "lr": lr, "layer": layer})
+             for i, fm, lr, layer in [("A", "x", "1e-3", "8"), ("B", "y", "1e-4", "12"), ("C", "z", "1e-5", "16")]]
+    d = pl.diversity_report(props, ["lr", "layer"])
+    assert d.overall > d.threshold and d.insufficient
+    assert pl.plan_gate(d, pi_selection=["A"], selector="pi").verdict == "insufficient_diversity"
+
+
+def test_failure_mode_clusters_are_found_whatever_features_are_measured():
+    d = pl.diversity_report(_homogeneous(), ["method"])
+    assert d.correlated_clusters == [["A", "B", "C"]]
+
+
 # --- rubric scoring ----------------------------------------------------------
 
 def _rubric(approved=True):

@@ -28,7 +28,7 @@ when shortening helps and when it harms readability.
 ### MATS Lean skills or lean4-skills? Pick one per project
 
 **lean4-skills** (`cameronfreer/lean4-skills` on GitHub, by Cameron Freer, MIT,
-v4.11.4 released 2026-10-20) is a Lean 4 workflow pack for coding agents that
+v4.12.0 released 2026-11-08) is a Lean 4 workflow pack for coding agents that
 covers much of the same ground as the `mats-lean-*` skills. Its workflows are
 `draft`, `formalize`, `autoformalize`, `prove`, `autoprove` ("with explicit
 stop budgets"), `disprove` ("guided counterexample search with certified
@@ -52,7 +52,15 @@ references against Lean `v4.33.1` and `v4.35.0`, compiling every example, after
 "Several documented snippets failed when compiled" (among them, `grind [h1, h2]`
 with local hypotheses "is an error, not a no-op", and most of the
 metaprogramming examples). An agent following an older copy can be steered by
-examples that never compiled.
+examples that never compiled. v4.12.0 (2026-11-08) changes how `autoprove`
+ends: a new `--conclude-after=N%|Nc|<duration>|0` flag (default `15%`)
+reserves the end of the budget for a conclusion cycle, in which "it either
+finishes an already-tested proof or reports a verdict on what remains, instead
+of spending its last cycles on low-yield search until a limit stops it". The
+verdict is `ready`, `fixable` or `no-credible-path`, with the blocker
+inventory and missing lemmas. Such a run records `stop_reason: concluded`,
+and per the release notes "older readers reject a `concluded` handoff", so
+do not mix plugin versions across a resumed run.
 
 | If you want… | Use |
 |---|---|
@@ -73,7 +81,14 @@ Use the existing `lean-toolchain`, Lake configuration, and dependency manifest.
 Record the project revision. For a new project, choose compatible Lean and
 Mathlib versions using the current [Mathlib setup guide](https://leanprover-community.github.io/get_started.html),
 then preserve the resulting pins. An existing proof task rarely warrants an
-unrelated dependency upgrade.
+unrelated dependency upgrade. As of 2026-11-23 the stable toolchain is Lean
+v4.36.0 (2026-11-16) and v4.37.0-rc1 (2026-11-18) is a release candidate.
+The v4.36.0 notes call it "mostly a consolidation release" ("Mathlib now
+builds roughly 12% faster than before"), with one behaviour change to know
+before upgrading numeric code: `min` and `max` on `Float` are now
+`Float.minimum` and `Float.maximum`, and "Code that relied on min or max
+returning the other argument when one of them is NaN should use
+Float.minimumNumber or Float.maximumNumber."
 
 From the project root, a typical targeted check is:
 
@@ -104,9 +119,19 @@ equation or lemma, or marked as new). That repository is archived (moved to a no
 comparator, `landrun` and `lean4export`.
 
 The wiki's [`project_templates/lean_formalization/`](https://github.com/MATSResearch/compute_wiki/tree/master/project_templates/lean_formalization)
-is a fresh scaffold of the same pattern for Lean ≥ v4.35.0: `Defs.lean`,
+is a fresh scaffold of the same pattern, pinned to Lean v4.36.0
+(`lean-toolchain`; the `lake` commands need ≥ v4.35.0): `Defs.lean`,
 `Statements.lean`, `Solutions.lean`, `comparator.json`, and a GitHub Actions
 workflow running `lake check --paranoid` and `lake comparator --paranoid`.
+What was run on it (template README, 2026-11-23, Lean v4.36.0, macOS arm64):
+`lake build` (exit 0, no warnings), `lake build Statements` (exit 0, one
+``declaration uses `sorry` `` warning per statement), `#print axioms` on both
+solution theorems (`[propext, Quot.sound]` and no axioms; the statement
+versions report `[sorryAx]`), and `leanchecker` and `leanchecker-paranoid`
+replaying `Solutions` (both exit 0). On macOS `lake check --paranoid` and
+`lake comparator --paranoid` both exit 2 with
+``error: `lake comparator` sandboxes the code it checks with `bwrap`, which needs Linux namespaces.``
+On Linux (2026-11-23, Lean v4.36.0, Ubuntu 24.04 arm64 in a Docker container under Colima on macOS, started with `--privileged`): `lake build` (exit 0), `lake check --paranoid` (exit 0: lean4lean, nanoda, con-leche, con-ron and the Lean default kernel all accept; "Uses axioms: Classical.choice, propext, Quot.sound") and `lake comparator --paranoid` (exit 0, "Your solution is okay!"). Not run: the GitHub Actions workflow. The container errors met on the way are under "Requirements and limits" below.
 Two things worth knowing before copying it:
 
 - **A drift check, not an audit.** As the laplace workflow comment put it,
@@ -152,9 +177,10 @@ Lean FRO = the Lean Focused Research Organization, which maintains Lean.
 | I want to… | Use |
 |---|---|
 | Let Claude Code or another agent read goals, diagnostics and hover info from a Lean project | **lean-lsp-mcp** (0.33.0 or later) |
-| An agent interface maintained by the Lean FRO, shipped inside the toolchain: speculative tactic runs, module checkpoints, a `sorry` finder | **Lean Beam** (`lean-beam`, `lean-beam-mcp`; bundled from Lean v4.36.0-rc2, beta) |
+| An agent interface maintained by the Lean FRO, shipped inside the toolchain: speculative tactic runs, module checkpoints, a `sorry` finder | **Lean Beam** (`lean-beam`, `lean-beam-mcp`; bundled with the stable Lean v4.36.0 toolchain on Linux and macOS, beta) |
 | A packaged prove / disprove / golf workflow for the agent | **lean4-skills** (Cameron Freer), or the wiki's `mats-lean-*` skills — [pick one](#mats-lean-skills-or-lean4-skills-pick-one-per-project) |
 | Script many proof attempts or tactic steps from Python | **LeanInteract** (`lean-interact`); **kimina-lean-server** to check proofs in parallel behind an HTTP API |
+| Fine-tune a prover model on my own Lean repository (trace the repository, train, run proof search) | **LeanDojo-v2** (`lean-dojo-v2`; needs a CUDA GPU) |
 | Check the proofs of an existing LaTeX paper in Lean, result by result | **KAPPA** (statistics papers, unattended) or **PaperFormalizer** (author in the loop); **Numina Fuse** as an interactive app — [details](#checking-an-existing-papers-proofs-in-lean-kappa-paperformalizer-numina-fuse) |
 | Hand a whole Lean project's `sorry`s to Harmonic's hosted prover | Not with current **Aristotle**: `aristotlelib` 3.0.0 (2026-10-27) and later verify Verilog, C and Rust, not Lean — [details](#aristotle-aristotlelib-30-no-longer-takes-lean) |
 | A cheap local first pass (pass@k) on competition-style statements | Open-weight provers: **Pythagoras-Prover** (4B, 32B), **Goedel-Prover-V2** (8B, 32B) |
@@ -213,15 +239,33 @@ state the server already checked, without batch re-elaboration), `sync`
 and incomplete proofs), plus goals, hover, definitions and references. The
 Lean v4.36.0-rc2 release notes (2026-10-27) say PR #15665 "adds Lean Beam's
 CLI, MCP server, daemon, and LSP plugin to Linux and macOS release
-toolchains"; Windows distribution is deferred. On older toolchains, the
+toolchains"; Windows distribution is deferred. The stable **Lean v4.36.0**
+(2026-11-16) carries it: its release notes say "The Linux and macOS toolchains
+now include Lean Beam (#15665), a command-line tool and MCP server that lets
+AI agents and other tools work with Lean projects through the language
+server", and PR #16478 "updates bundled lean-beam in Lean 4.36 with
+speculative profiling and improvements to Lean language server compatibility,
+cancellation, and error reporting". On older toolchains, the
 standalone installer (`./scripts/install-beam.sh --claude --claude-mcp` from a
-checkout) installs it for Linux or macOS; its compatibility policy gives a
-supported Lean window of 4.34–4.36, so v4.33 and older are out. "Bundled binaries do not install an
+checkout) installs it for Linux or macOS; its compatibility policy
+(`docs/COMPATIBILITY.md`, unchanged on this point when read 2026-11-23; last commit to `main` 2026-11-18) gives a
+supported Lean window of 4.34–4.36, so v4.33 and older are out and
+v4.37.0-rc1 (2026-11-18) is not yet in the window. "Bundled binaries do not install an
 agent skill": install the Lean skill from the matching Beam release yourself.
 
-When not to use it: on a toolchain older than v4.34 (outside its supported
-window), or expecting a bundled copy on the stable v4.35.0 toolchain (it ships
-only from the 4.36 release candidates; use the standalone install there); as a
+**`lean-beam: command not found` (bash) / `command not found: lean-beam` (zsh) with elan.** elan 4.2.4 creates no shim for
+the bundled Beam binaries: `~/.elan/bin` holds `elan`, `lake`, `lean`, `leanc`,
+`leanchecker`, `leanmake` and `leanpkg` only, while the v4.36.0 toolchain's own
+`bin` directory holds `lean-beam`, `lean-beam-mcp` and `beam-daemon` (checked
+2026-11-23 on macOS arm64). Call the bundled copy by toolchain path, from a
+project whose `lean-toolchain` is v4.36.0:
+`"$(lean --print-prefix)/bin/lean-beam" --help`, and give an MCP client the
+full path `"$(lean --print-prefix)/bin/lean-beam-mcp"`.
+
+When not to use it: on a toolchain older than v4.34 or on v4.37.0-rc1 (both
+outside its stated supported window), or expecting a bundled copy on the
+v4.35.0 toolchain (it is bundled from v4.36.0; use the standalone install on
+4.34 and 4.35); as a
 sandbox ("Beam is for
 non-adversarial development. Speculative requests isolate Lean elaboration
 state; they do not provide an OS sandbox for Lean IO"); or as a verifier, which
@@ -242,6 +286,45 @@ largely determines cost and solve rate". Read with mini-Lean-agent
 workflow, try a frontier model with a fast Lean interface (Lean Beam,
 lean-lsp-mcp) and plain feedback.
 
+### What does an agent choose to work on in a Lean project? (sorry-filling)
+
+Left to "take the next step" in a real formalization repository, coding
+agents go for the `sorry` markers and stay away from the dense middle of the
+proof. Gyevnár and DeDeo
+([arXiv:2611.06995](https://arxiv.org/abs/2611.06995), "Autonomous AI Agents
+Systematically Diverge From Human Preferences in Proof Formalization",
+2026-11-04; data and code `gyevnarb/proof-divergence`) replayed nine human
+Lean collaborations (among them `flt`, `pfr`, `sphere`; "4.7M definitions
+across more than 6K commits") and, at each commit, compared what the humans
+did next with what Claude Code (Opus 4.6), Codex (GPT-5.2-Codex) and Gemini
+CLI (Gemini 3.1 Pro) did under a deliberately broad objective:
+
+- **Marked gaps.** "Definitions containing a sorry marker account for 59–92%
+  of AI agent modifications, against 19% of human modifications" (Claude 92%,
+  Gemini 80%, Codex 59%), and the pull falls off with distance from the `sorry`
+  in the dependency graph much faster than it does for humans. A `sorry` a human left as a planning device (the
+  statement is expected to change, or the proof is to come from a result not
+  yet available) gets filled anyway: a declaration with a `sorry` that an
+  agent chose to edit "later evolves into a definition with a new signature –
+  between 25% (Codex) and 48% (Claude) of the time".
+- **Periphery over centre.** The agents "prefer to modify near the logical
+  boundaries of a proof", close to the leaves or to the final theorem, where
+  humans work more on the intermediate lemmas; they also edit long
+  definitions less than humans do, and avoid proof goals that look unusual.
+- **Regularizing proofs.** The agents preferentially rewrite unusual proof
+  bodies, and "tend to regularize proofs towards an LLM standard" (surprise
+  measured under DeepSeek-Prover-V2-7B).
+
+What to do with it: assign the central lemma by name instead of asking for
+"progress"; mark a `sorry` that is not meant to be filled yet, in a comment
+the agent will read; and expect an unusual but correct proof to be rewritten
+toward the conventional unless told to leave it
+([cleanup guidance](lean-proof-cleanup.md)). Limits the authors state: the
+dependency graphs come from "a heuristic lexical parser rather than from the
+Lean compiler itself", and all nine repositories are public and predate the
+models, so their later states may be in training data. Single preprint; the
+models are early-2026 ones.
+
 ### Aristotle (`aristotlelib` 3.0+) no longer takes Lean
 
 **Aristotle** (Harmonic; `aristotlelib` on PyPI, `harmonic-ai/aristotle` on
@@ -249,13 +332,19 @@ GitHub, `aristotle.harmonic.fun`). Up to v2.1.0 (PyPI 2026-06-18) this was a
 hosted Lean prover driven by `aristotle submit "Fill in all sorries"
 --project-dir ./my-lean-project --wait` or `aristotle formalize paper.tex`.
 From **3.0.0** (2026-10-27) it is a code verifier. The current PyPI
-description: "It verifies Verilog and C, and Rust on accounts where Rust is
-enabled. Send your code as it is: Aristotle writes the Lean itself. It doesn't
+description (3.4.0, 2026-11-18): "It verifies Verilog, C, and Rust. Send your
+code as it is: Aristotle writes the Lean itself. It doesn't
 verify pure mathematics or Lean: a project with only Lean files runs and
 verifies nothing." The 3.0.0 changelog removes `aristotle formalize` and ask
 mode; 3.2.0 (2026-10-31) makes `submit` exit 2 before uploading when only
 `.lean` files would go up, and deprecates the Lean-toolchain helpers
-`get_lean_toolchain_version()` and `get_expected_toolchain()`.
+`get_lean_toolchain_version()` and `get_expected_toolchain()`. 3.3.0
+(2026-11-06) and 3.4.0 (2026-11-18) keep that position; Rust is no longer
+per-account (the 3.4.0 changelog: "now that Aristotle verifies Rust on every
+account"). 3.4.0 also adds `aristotle balance` (credit balance without
+starting a run) and shows a run that ended `COMPLETE_WITH_ERRORS` as `REVIEW
+SUGGESTED`; "`--json` still gives `COMPLETE_WITH_ERRORS`, and a wait on such a
+run still exits 1".
 
 Searchable symptoms of an old workflow on 3.x: `aristotle formalize` no longer
 exists (the 3.0.0 changelog says "Removed" and points to `submit` with
@@ -293,7 +382,12 @@ Toolchain support: v0.11.6 "Add[s] support for Lean v4.33.0 to v4.36.0-rc1"
 `v4.36.0-rc1`", covering v4.35.0 and the v4.36.0-rc1 release candidate of
 2026-10-14), and it "Fixed import error swallowing and invalid header
 caching", so upgrade if an import failure was going unreported. v0.11.5 stopped at
-v4.33.0-rc1, so a project on v4.35.0 needs v0.11.6 or later.
+v4.33.0-rc1, so a project on v4.35.0 needs v0.11.6 or later. No LeanInteract
+release has followed the stable Lean v4.36.0 (2026-11-16): at 2026-11-23
+v0.11.6 is still the latest and its README's range still ends at
+`v4.36.0-rc1`, so support for stable v4.36.0 and for v4.37.0-rc1 is not
+stated. Run one known-good proof through it before a sweep on those
+toolchains.
 
 When not to use it: as a verifier. A REPL that
 accepts a proof is the `lake build` rung of the
@@ -312,6 +406,33 @@ parallelization to check Lean 4 proofs at scale", with a Python client
 recent toolchain (check the version it builds against first; the repository's
 last push was 2026-01-11), or when one proof at a time through lean-lsp-mcp
 is enough.
+
+**LeanDojo-v2** (`lean-dojo-v2` on PyPI, v1.0.9 released 2026-04-26, Python
+≥3.11; `lean-dojo/LeanDojo-v2` on GitHub, MIT; Hsiang, Adkisson, George and
+Anandkumar, [arXiv:2611.09048](https://arxiv.org/abs/2611.09048), 2026-11-06;
+a different package from the original `lean-dojo`). The paper describes "an
+end-to-end framework that unifies repository data extraction, LLM
+fine-tuning, proof search, AI autocompletion, and LLM-assisted theorem
+proving in a single software library". It traces a Lean repository (a GitHub
+URL or a local path) into training data, fine-tunes a Hugging Face model
+(full supervised fine-tuning or Low-Rank Adaptation, LoRA; the paper's
+example fine-tunes `deepseek-ai/DeepSeek-Prover-V2-7B`), and runs proof
+search over the repository's `sorry` theorems through Pantograph, which is
+installed separately (`pip install
+git+https://github.com/stanford-centaur/PyPantograph`). It comes with
+Lean4Code, "a lightweight IDE". The README asks for a "CUDA-capable GPU for
+training and inference (tested with CUDA 12.6)", `elan`, a
+`GITHUB_ACCESS_TOKEN`, and an `HF_TOKEN` for Hugging Face API inference.
+Searchable symptoms from its troubleshooting list: `401 Bad Credentials`
+(token missing or without `repo` + `read:org` scopes) and "Lean tracing
+failures" (the repository's Lean version is not installed locally:
+`elan toolchain install <version>`). When not to use it: without a GPU;
+when a frontier model with a fast Lean interface is enough (try that first,
+per the h1 and mini-Lean-agent results on this page); or assuming a recent
+toolchain works. The README states no supported Lean range and the last
+tagged release is from April 2026, so trace one small file on your pinned
+toolchain before committing to it. A proof it finds is an untrusted proof
+like any other.
 
 **Open-weight provers for a local first pass.** Whole-proof Lean generators
 small enough for one GPU, useful for pass@k sweeps or as a cheap first pass
@@ -406,6 +527,24 @@ competition problem) as input:
   paper reports its use on a formalization of the three-dimensional Kakeya
   conjecture. AGPL-3.0 matters if you modify and serve it.
 
+A November 2026 addition for research manuscripts that already have a partial
+formalization: **Turing Agent** (Chen et al.,
+[arXiv:2611.21299](https://arxiv.org/abs/2611.21299), 2026-11-16; the paper
+links a project website, `wangqy031216-cloud.github.io/turing-agent`, and no
+code repository). An agent harness with separate theorem-formalization and
+proof-formalization agents, a proof dependency graph (DAG), parallel
+verification and "selective semantic review", evaluated on theoretical
+computer science (TCS). The abstract reports "approximately 57-62% faithful
+formalization success on Formal TCS Bench and 83% overall pass@1 on a
+TCS-focused subset of RLMEval, using GLM-5.3 and DeepSeek-V4-Pro", against
+direct generation, Codex CLI and Claude Code, and that it "successfully
+completes the formal verification of three previously unresolved TCS tasks
+from OpenAI's October 2026 collection" (per the paper, 22 of that
+collection's 121 TCS problems "had not been fully verified in Lean"); one
+"required about a hundred formally verified auxiliary claims". Not usable
+as a tool until code is released; the three completions were not re-checked
+here.
+
 When not to use them: as a substitute for reviewing the statements. Each tool
 makes statement review a step, but a "verified" verdict is still a Lean proof
 of the formal statement, and the
@@ -426,6 +565,17 @@ qualified declaration. This includes transitive proof dependencies. `sorryAx`
 marks incompleteness; custom axioms make a theorem conditional on those axioms.
 Standard logical axioms such as classical choice are a different category.
 `noncomputable` is a code-generation distinction, not itself an extra axiom.
+A worked example of reporting custom axioms honestly: Saha et al.
+([arXiv:2611.10961](https://arxiv.org/abs/2611.10961), 2026-11-07, improved
+bounds on Grothendieck's and Korenblum's constants by agent refinement of a
+"partially formalized Lean blueprint") print the `#print axioms` closure of
+each final theorem and classify it. The Grothendieck bound rests on "Sixteen
+axioms in four groups": the three Lean primitives, nine trusted analytic
+facts about an inverse function family (statements the source paper derives
+from the implicit function theorem), one seed axiom, and three numerical
+oracle axioms that an evaluator recomputes with the Arb interval-arithmetic
+library. That is a conditional theorem with its conditions listed, which is
+what a reader needs; "verified in Lean" without the list would overstate it.
 See the official [axioms reference](https://lean-lang.org/doc/reference/latest/Axioms/)
 and [proof-validation guide](https://lean-lang.org/doc/reference/latest/ValidatingProofs/)
 for these distinctions and additional checks appropriate to specialized uses.
@@ -495,6 +645,54 @@ stronger "the burden of correctness shifts from the proof to the statement"
   statement got through", and that "kernel evidence flags unfaithful ones with
   precision 0.88 to 0.96" on 1,527 labelled statements. Useful where an agent
   edits a development for a long time after its statements were reviewed.
+- **Non-vacuity tests and junk values: AutoIP** (`l-oksanen/autoip` on GitHub,
+  Apache-2.0; Clason, Helin, Nursultanov, Oksanen,
+  [arXiv:2611.06962](https://arxiv.org/abs/2611.06962), 2026-11-04). A Lean
+  library of classical linear regularization theory (inverse problems): the
+  authors wrote the blueprint, Claude Opus 5 and 5.5 wrote the Lean, and the
+  library is laid out so that "a reviewer compares the formal statements with
+  their natural-language counterparts and never needs to read a proof". Two
+  checks transfer to any project. (1) *Non-vacuity obligations.* For every
+  statement, "two obligations were generated using a deterministic (not
+  AI-based) algorithm: exhibit an instance in which the hypotheses hold, and
+  one in which they fail", and agents proved them (503 obligations). This
+  exposed a textbook convergence theorem "whose hypothesis is far more
+  restrictive than it appears", but only after the witnesses were required
+  to be non-trivial: the obligation had first been discharged with the zero
+  operator on the trivial space, "which raised no alarm". (2) *Junk values.*
+  Lean functions are total, so Mathlib returns an arbitrary value outside a
+  function's natural domain: `Module.finrank` is 0 on every
+  infinite-dimensional space. A lemma whose hypothesis was
+  `Module.finrank 𝕜 U < Module.finrank 𝕜 V` therefore said nothing when `V`
+  is infinite-dimensional, though the informal lemma covers that case; the
+  fix compares `Module.rank` (cardinals). "To read a formal statement
+  correctly, a reviewer must know the junk value of every function in it."
+  A non-vacuity test does not catch this one, because the weak hypothesis is
+  satisfiable. Also reported: review records carry hashes of the informal
+  and formal statement and expire when either changes, while a changed proof
+  leaves them intact; and model reviews were unstable (GPT-5.6 Sol "raised
+  about 300 objections" on code quality, and Claude Opus 5, reviewing the
+  revised code against the same rubrics, "raised more than 450 new
+  objections"). Scope: settled textbook material; per the paper's Table 1 an
+  author had reviewed 25 of the 51 theorems stated in Lean and all 22
+  constructed definitions.
+- **The same gap outside Lean: Dafny** (Maji,
+  [arXiv:2611.07073](https://arxiv.org/abs/2611.07073), "When Verification
+  Is Not Agreement", 2026-11-04, single author; abstract and PDF section 5.1 read). One
+  model writes a Dafny predicate from clinical-trial criteria and another
+  writes a method verified against it, on 96 documents. With the same model
+  (GPT-4.1-mini) in both roles, "independent re-extraction from identical
+  text agrees only 59.3% of the time": verification succeeded on the first
+  attempt for 54 documents, which is 59.3% of the 91 that were semantically
+  evaluated and 56.2% of all 96. In the configuration with the weaker
+  implementer, a case counted as agreement had passed verification "by
+  invoking the Specifier's predicate directly" (after auditing, that
+  configuration's agreement "falls from 14.3% to 13.2%"). A verifier passing says the
+  implementation matches the specification, not that either matches the
+  source text; check that a solution does not simply call the statement it
+  is meant to establish (the Lean analogue is the definition-hole trick under
+  [lake comparator](#lake-comparator-and-lake-check-lean-v4350-and-later)).
+  The models were GPT-4.1 and GPT-5.x small variants.
 
 When not to rely on any of these: an LLM review of a statement, even with these
 checks, is evidence for fidelity, not a proof of it; for a published result a
@@ -582,13 +780,42 @@ compute, noting that this does not check the export matches the project in the
 current directory; `--inadvisably-no-sandbox`, which "can compromise the result
 fully". `COMPARATOR_BWRAP` sets the sandbox executable.
 
+**Changes after v4.35.0.** The stable v4.36.0 release notes (2026-11-16) list
+no `lake comparator` or `lake check` change. The **v4.37.0-rc1** notes
+(2026-11-18, a release candidate) list five entries that touch them. Two are
+minor (PR #16514 passes `LEAN_NUM_THREADS` to comparator's Lean child
+processes; PR #16096 documents comparator's assumptions and guarantees more
+explicitly). Three change behaviour: PR #16019 adds a `--json` flag
+to both commands, printing one final, versioned JSON report instead of
+progress output (the types are `LakeComparatorReport` and
+`LakeCheckReport`), which is the form to parse in CI; PR #15775 "forces
+definition holes in comparator to either be a sorry or a lambda with a sorry
+body", so a challenge "can never rely on a definition hole having a
+particular value already"; and PR #15762 "makes lake check check the
+project's axioms before running the kernels, as lake comparator already
+does. Previously, with --paranoid, a project using a non-standard axiom (e.g.
+via native_decide) was rejected only by an external checker, sometimes with
+an obscure failure such as a nanoda panic, and the report naming the
+unpermitted axiom was never shown." So on v4.35.0 and v4.36.0, a `lake check
+--paranoid` run that dies in an external checker (for example a `nanoda`
+panic) may be a non-standard axiom, not a kernel disagreement: run
+`#print axioms` on the theorem.
+
 Requirements and limits:
 
 - **Linux only.** The v4.35.0 release notes say "The sandbox is currently only
   available on Linux". `bwrap` needs unprivileged user namespaces or a setuid
   install; Lean's own test suite notes "User namespaces cannot be assumed
   available in CI containers". On Ubuntu, worth checking the AppArmor sysctl
-  `kernel.apparmor_restrict_unprivileged_userns`.
+  `kernel.apparmor_restrict_unprivileged_userns`. In a Docker container on
+  macOS (Colima, Ubuntu 24.04, Lean v4.36.0, 2026-11-23), `bwrap` first failed
+  with `bwrap: Can't mkdir /run/user: Read-only file system` (fix: create
+  `/run/user/$(id -u)` and set `XDG_RUNTIME_DIR`), then — even with
+  `--cap-add SYS_ADMIN` and seccomp / AppArmor unconfined — with
+  `bwrap: Can't mount proc on /newroot/proc: Operation not permitted`; it ran
+  only under `docker run --privileged`. A privileged container weakens the
+  boundary to the host VM: acceptable for your own proofs, not for checking
+  someone else's solution.
 - **`--paranoid` needs a release toolchain.** The external checkers are bundled
   with release toolchains, and a missing one fails the run rather than
   passing it with fewer checkers.
@@ -604,7 +831,16 @@ Requirements and limits:
 
 Searchable messages: ``has no `lake-manifest.json` `` (exit 2: run `lake build`
 first); ``needs `bwrap` to sandbox the code it checks, and it was not found``
-(exit 2); `bwrap: setting up uid map: Permission denied` (no user namespaces);
+(exit 2);
+``error: `lake comparator` sandboxes the code it checks with `bwrap`, which needs Linux namespaces.``
+(exit 2; `lake check` prints the
+same with its own name: the machine is not Linux, e.g. macOS — seen on
+v4.36.0, and raised in `src/lake/Lake/CLI/Check.lean` whenever
+`System.Platform.isLinux` is false and `--inadvisably-no-sandbox` is not
+given); `bwrap: setting up uid map: Permission denied` (no user namespaces);
+`bwrap: Can't mkdir /run/user: Read-only file system` and
+`bwrap: Can't mount proc on /newroot/proc: Operation not permitted` (both
+inside an unprivileged Docker container; see "Linux only" above);
 `Axiom 'sorryAx' is not permitted; it is used by '…'` (`lake check`, exit 1);
 `Illegal axiom detected: '…'` (`lake comparator`, exit 1: a forbidden axiom);
 `Const does not match between challenge and target '…'` (exit 1: the
@@ -645,7 +881,14 @@ These caveats belong in any report that leans on a Lean certificate:
   external kernel run through comparator (`--paranoid`, since v4.35.0) is the
   mitigation for a bug present in one checker only; the v4.35.0 release notes
   list two more fixes for use-after-free bugs in the official kernel on
-  extremely large inputs.
+  extremely large inputs. The v4.37.0-rc1 notes (2026-11-18) add two fixes
+  touching the kernel's handling of inductive declarations: PR #16279 fixes
+  the number of parameters being "silently truncated" to 32 bits ("the
+  kernel accepted an inductive declaration with numParams := 2^32 and
+  recorded numParams = 0"), and PR #16512 fixes loose bound variables not
+  always being checked, of which the notes say "This issue looks benign, and
+  does not lead to an apparent proof of false." Neither note reports a proof
+  of `False`; both are reasons the multi-checker `--paranoid` rung exists.
 - **No public consistency proof.** Milo Moses ("A critical look at Lean4",
   LessWrong, 2026-10-09) writes that "there is no publicly available proof
   that Lean4 is consistent with respect to ZFC + any large cardinal axiom".
@@ -682,7 +925,116 @@ of one. Checking
 an export once, on a large machine, and sharing it (`--solution-from-export`)
 moves the cost around but leaves the export's provenance to be trusted. Making
 comparator-grade checking cheap enough to be the default for large AI-written
-developments is unsolved.
+developments is unsolved. The November 2026 Riemann Hypothesis release
+(next section) gives current figures: on one 62 GB export, an independent
+Rust kernel took under half an hour on 80 threads, Lean's own single-threaded
+kernel took two days, and the standalone comparator took 64 hours.
+
+### What to ask of a Lean-only proof claim: the Riemann Hypothesis release (2026-11)
+
+Aliases: Alpöge Riemann Hypothesis proof, RH in Lean, GRH Lean proof,
+`alpo.ge/remark.pdf`, "formally verified in Lean", "the proof is checked in
+Lean", Lean FRO and Mathlib Initiative joint statement, Sutherland
+verification page. This section reports what the sources below say; the
+archive was not downloaded or built for this page, and nothing here is an
+independent judgement that the result is true.
+
+**What the author released (2026-11-20).** Levent Alpöge posted a
+four-page note, `alpo.ge/remark.pdf` (LessWrong linkpost
+`hxHt8NaQeFADrfeAp`, which has no body text). The note's own text carries no
+author name, date or affiliation: the name and the release date are as given
+in the joint statement below, and the two LessWrong posts describe him as at
+Anthropic. The note says: "I believe I have, working with
+Claude, discovered a proof of the Riemann Hypothesis", with the method said
+to extend to the Generalized Riemann Hypothesis, and "Claude and I have also
+formalized the arguments without assumptions." The only artifact is a Lean
+archive in 14 parts (`alpo.ge/lean.tar.gz.part01` to `part14`). There is no
+prose proof: "I decided to only present Lean", the argument "is incredibly
+long at the moment", and the author says he is "presenting the world with a
+complete argument before having mastered a massive neighbourhood around its
+mathematics". The note gives no Lean or Mathlib version, no formal
+statement, no axiom list and no checking procedure. On that day, "formally
+verified in Lean" was therefore a claim about an archive, to be checked. A
+LessWrong post the same day called the result "probably correct", first
+because "it is formally verified in Lean (Lean bugs are rare)" (Linch,
+`gSQcdKtRtNpbai5TR`); that is a prior, not one of the checks below.
+
+**The four questions.** The Xena Project blog ("…and the proof is checked in
+Lean", 2026-11-12, with OpenAI's October release as its running example)
+sets out the tests a Lean repository has to pass before "it was checked in
+Lean" supports a correctness claim, and the joint statement on the Riemann
+Hypothesis cites these four criteria:
+
+1. "Does the Lean statement match the informal statement?"
+2. "does the code compile?" (with the warning "do not run random Lean code on
+   your local machine unless you sandbox it first")
+3. "does the code prove the theorem as stated?" ("The one-line answer:
+   `lake comparator`")
+4. "does the code exploit a bug in Lean's official kernel?"
+   (`lake comparator --paranoid`)
+
+**How each was answered for this release.** Sources: the joint statement by
+the Lean Focused Research Organization (Lean FRO) and the Mathlib Initiative
+(leanprover-community blog, "Lean verification of the Riemann Hypothesis",
+2026-11-21), and Andrew Sutherland's verification page
+(`math.mit.edu/~drew/grh/`, "checks run with Claude Code"), as it stood at
+its 2026-11-23 14:35 UTC update (still the page's stamp when re-fetched at
+21:50 UTC that day). On who is speaking in the joint statement: its byline
+now reads "Joint statement by the Lean FRO and the Mathlib Initiative." As
+first posted it read "Joint statement by the Lean and Mathlib communities,
+endorsed by the Lean FRO and the Mathlib Initiative"; the blog repository's
+commit of 2026-11-23 changed it "to avoid attribution to the Lean and Mathlib
+communities as a whole". Cite it as the two organizations' statement, not as
+the community's.
+
+| Question | What the sources report |
+|---|---|
+| Which statement? | Five theorems in the submission's `Main.lean`, stated in a challenge file that "imports only Mathlib". The first is Mathlib's own `RiemannHypothesis` (`Mathlib/NumberTheory/LSeries/RiemannZeta.lean`); three concern Dirichlet L-functions. Sutherland's scope note: "'GRH' here means Dirichlet L-functions: all moduli and all characters. Dedekind zeta functions, Hecke L-functions and automorphic L-functions in general are not among the statements that were checked." |
+| Which toolchain; does it build? | Lean v4.33.1 and Mathlib v4.33.1; "All 175,187 modules compile" with zero errors. The joint statement puts the library at "17 million lines of code" and says "dozens of people have reported correct compilation of the codebase, reproducing the same raw proof export file". A separate sandboxed `lake build` (no network, read-only source, another machine) reproduced the export byte for byte (61,570,595,788 bytes). |
+| Which axioms? | `#print axioms` on the five theorems: `propext`, `Classical.choice`, `Quot.sound` only; no axioms declared outside Lean core. |
+| Same statement as the challenge? | `con-leche --compare` and `con-ron --compare` ("independent implementations of Comparator's statement matching") each confirm all five theorems; the unmodified standalone Comparator v4.33.0 reported "Your solution is okay!" after 64 h 8 min. Sutherland notes that run used the files from the original build, with its `lake build` step "satisfied by a stub". |
+| Which kernels accepted the proof? | `nanoda` on the full export (27 min 42 s on 80 threads); `con-leche` built from `master` (1,468,418 declarations, 3 min 15 s on 64 threads); `lean4lean` on every module (five needed its step limit raised); Lean's default kernel via `leanchecker --from-export` on Lean v4.36.0 (48 h 3 min on one thread, peak memory 82.6 GiB). |
+| Still running at that update | `lake comparator` (Lean v4.36.0) end to end (the stage still running is Lean's kernel on the export), and the paranoid kernel (`leanchecker-paranoid --from-export`, Lean v4.36.0) at default settings: "no verdict yet". The same paranoid-kernel binary with one allocator environment variable changed (`MIMALLOC_GENERIC_COLLECT=1000000`) had accepted the export (10 h 0 min on one thread, peak memory 98.8 GiB). |
+
+The joint statement's conclusion, in its own words: "We hereby certify that
+both the statement and the proof of the Riemann Hypothesis are correct." It
+adds that the checks "ran on an inert export of the proof, out of reach of
+hypothetical malicious code in the Lean proof sources", and that `con-leche`
+and `con-ron` "come with a formal proof, relative to set theory, that they
+cannot accept a false proof".
+
+**What these checks do not supply.** A proof a person has read: the joint
+statement looks forward to work "that will help explain the new ideas in
+this proof", and the author's note says a proper write-up is still to come.
+Anything beyond the five statements: the note says of the Extended Riemann
+Hypothesis only that the author expects it "with more time".
+
+**What to take from it for your own formal claims:**
+
+- **This is the easy case for statement fidelity.** The headline statement
+  is a definition already in a human-reviewed library, so the challenge file
+  is a few lines and question 1 is nearly free. A safety-theory result
+  usually defines its own objects, and then question 1 is most of the work
+  (see [statement checks](#checking-that-a-formal-statement-says-what-the-informal-one-does)).
+- **Publish what lets others answer the four questions without trusting
+  you:** the pinned toolchain and library revision, a challenge file that
+  imports only the library, the `#print axioms` output, and the hash of the
+  proof export. A reader can then run checkers on the export without
+  executing your build.
+- **A checker that will not run is not a verdict.** On this proof the
+  `con-leche` and `con-ron` binaries bundled with Lean v4.36.0 "declined"
+  with "exit 2, not a rejection: those older binaries do not support one
+  reflexive inductive type in the proof", and the bundled `lean4lean`
+  "cannot read a v4.33 core library" (`unknown constant 'Decidable.intro'`).
+  A `--paranoid` run on a newer toolchain against an export from an older
+  one can fail this way; report it as "did not run", and build the checker
+  from source or match the toolchain.
+- **Budget for it.** Sutherland's "Check it yourself" recipe for the export
+  asks for "roughly 100 GB of RAM and 70 GB of disk".
+- **Cite a formal claim with its date and rung**, for example "Lean archive
+  released 2026-11-20; statement matching and several independent kernels
+  reported passing by 2026-11-23; `lake comparator` on v4.36.0 still
+  running", not "proved in Lean".
 
 ## Try the skills on real work
 
@@ -699,7 +1051,7 @@ AI, formal corrigibility results), see
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04: Aristotle 3.x from the `harmonic-ai/aristotle` CHANGELOG.md (3.0.0, 3.1.0, 3.2.0) via `gh api` and the PyPI `aristotlelib` description and upload dates; lean-lsp-mcp PR #239 text, v0.33.0 release notes and README "REPL Setup" via `gh api`, PyPI upload date; `uvx` caching from uv `docs/concepts/tools.md`; Lean Beam from the `leanprover/lean-beam` README and licence via `gh api`, its `docs/COMPATIBILITY.md` (Lean 4.34–4.36 window), lean4 PR #15665 and the v4.36.0-rc2 release notes on lean-lang.org (which mention no `lake comparator` or `lake check` change); KAPPA (arXiv:2610.35596 abstract and PDF sections 7.1 and "Computational details"; repository and licence via `gh api`), PaperFormalizer (arXiv:2610.31810 abstract; repository via `gh api`), Numina Fuse (arXiv:2610.33860 abstract; licence via `gh api`), h1 (arXiv:2610.35962 abstract), SemantEq (arXiv:2610.32919 abstract; repository via `gh api`), MechAlign (arXiv:2610.35269 abstract and PDF), ProofPatch (arXiv:2611.01357 abstract and PDF, searched for a code link), Lean Finder V2 (arXiv:2610.30843 abstract) and Vampire-Hammer (arXiv:2610.40310 abstract and PDF; repository via `gh api`).) (Additions 2026-10-20: LeanInteract v0.11.6
+Last verified: 2026-11-23. (Template-check corrections 2026-11-23: what was run on `project_templates/lean_formalization/` on Lean v4.36.0, from its README; the non-Linux refusal message from `src/lake/Lake/CLI/Check.lean` at tag v4.36.0; the elan 4.2.4 shim list and the v4.36.0 toolchain's `bin` directory listed on macOS arm64.) (Additions 2026-11-23: Lean v4.36.0 and v4.37.0-rc1 release dates via `gh api` and their release-notes pages on lean-lang.org read as text (Lean Beam bundling and PR #16478, `Float` `min`/`max`, the 12% Mathlib build figure; v4.37.0-rc1 PRs #16019, #15775, #15762, #16514, #16096, #16279, #16512; PR #16512's changed files, all under `src/kernel/`, via `gh api`); Lean Beam `docs/COMPATIBILITY.md` and `validated-lean-toolchains` at HEAD (last commit to `main` 2026-11-18, read 2026-11-23) via `gh api`; lean4-skills v4.12.0 release notes; `aristotlelib` 3.3.0 and 3.4.0 from the CHANGELOG.md and the PyPI description; LeanInteract README and PyPI (no release since v0.11.6); lean-lsp-mcp (no release since v0.33.0); LeanDojo-v2 from arXiv:2611.09048 (abstract and PDF), its README, PyPI and repository metadata; Gyevnár and DeDeo (arXiv:2611.06995, PDF), AutoIP (arXiv:2611.06962, PDF sections 4–6 and Table 1; repository via `gh api`), Saha et al. (arXiv:2611.10961, PDF section 2 and the axiom inventory appendix), Turing Agent (arXiv:2611.21299, abstract and PDF figure 3; searched for a code link) and Maji (arXiv:2611.07073, abstract and PDF section 5.1). Riemann Hypothesis section: the author's note `alpo.ge/remark.pdf` (PDF text), LessWrong posts hxHt8NaQeFADrfeAp and gSQcdKtRtNpbai5TR (raw bodies), the Xena Project post of 2026-11-12 (page text), the joint statement's markdown source in `leanprover-community/blog` (`posts/riemann_hypothesis.md`) via `gh api`, and `math.mit.edu/~drew/grh/` fetched 2026-11-23 and re-fetched at 21:50 UTC that day by a second pass (page stamped "last updated 2026-11-23 14:35 UTC" both times; it says it will be updated as the remaining checks finish); the joint statement's byline history from the blog repository's commits #149, #150 and #154; Mathlib's `RiemannHypothesis` definition read from `Mathlib/NumberTheory/LSeries/RiemannZeta.lean`. Not verified: the Lean archive was not downloaded or built; none of the logs linked from the verification page were opened; Turing Agent's three completions and the Saha et al. bounds were not re-checked; whether lean-lsp-mcp 0.33.0, lean4-skills or LeanInteract work on stable v4.36.0 was not tested.) (Additions 2026-11-04: Aristotle 3.x from the `harmonic-ai/aristotle` CHANGELOG.md (3.0.0, 3.1.0, 3.2.0) via `gh api` and the PyPI `aristotlelib` description and upload dates; lean-lsp-mcp PR #239 text, v0.33.0 release notes and README "REPL Setup" via `gh api`, PyPI upload date; `uvx` caching from uv `docs/concepts/tools.md`; Lean Beam from the `leanprover/lean-beam` README and licence via `gh api`, its `docs/COMPATIBILITY.md` (Lean 4.34–4.36 window), lean4 PR #15665 and the v4.36.0-rc2 release notes on lean-lang.org (which mention no `lake comparator` or `lake check` change); KAPPA (arXiv:2610.35596 abstract and PDF sections 7.1 and "Computational details"; repository and licence via `gh api`), PaperFormalizer (arXiv:2610.31810 abstract; repository via `gh api`), Numina Fuse (arXiv:2610.33860 abstract; licence via `gh api`), h1 (arXiv:2610.35962 abstract), SemantEq (arXiv:2610.32919 abstract; repository via `gh api`), MechAlign (arXiv:2610.35269 abstract and PDF), ProofPatch (arXiv:2611.01357 abstract and PDF, searched for a code link), Lean Finder V2 (arXiv:2610.30843 abstract) and Vampire-Hammer (arXiv:2610.40310 abstract and PDF; repository via `gh api`).) (Additions 2026-10-20: LeanInteract v0.11.6
 release notes, README and PyPI; `leanprover/comparator` archived flag via the
 GitHub API; Lean v4.36.0-rc1 release date; lean4-skills v4.11.4 release notes;
 mini-Lean-agent (arXiv:2610.17331 abstract and PDF, repository via the GitHub

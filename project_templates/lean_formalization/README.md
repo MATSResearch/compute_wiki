@@ -20,7 +20,7 @@ the whole directory is the project. Copy it and edit.
 
 ```
 lean_formalization/
-├── lean-toolchain              # leanprover/lean4:v4.35.0 (the first release with lake comparator)
+├── lean-toolchain              # leanprover/lean4:v4.36.0 (stable, 2026-11-16; lake comparator needs >= v4.35.0)
 ├── lakefile.toml               # three libraries; default target = Solutions only
 ├── comparator.json             # challenge/solution modules, theorem names, permitted axioms
 ├── Defs.lean                   # TRUSTED: definitions the statements mention
@@ -43,9 +43,17 @@ comparator` builds the challenge module itself, so it does not need it to be a
 default target.
 
 **The example theorems are placeholders** (`double n = 2 * n`, commutativity of
-addition) so the scaffold has something to check. This template has not been
-compiled by the wiki maintainers; the first `lake build` in your copy is the
-first check of it.
+addition) so the scaffold has something to check.
+
+**What has been run on this template** (2026-11-23, Lean v4.36.0, macOS arm64):
+`lake build` (exit 0, no warnings), `lake build Statements` (exit 0, one
+``declaration uses `sorry` `` warning per statement), `#print axioms` on both
+solution theorems (`[propext, Quot.sound]` and none; the statement versions
+report `[sorryAx]`), and `leanchecker` and `leanchecker-paranoid` replaying
+`Solutions` (both exit 0). On macOS itself `lake check` and `lake comparator`
+exit 2 with "sandboxes the code it checks with `bwrap`, which needs Linux
+namespaces". On Linux (2026-11-23, Lean v4.36.0, Ubuntu 24.04 arm64 in a Docker container under Colima on macOS, started with `--privileged`): `lake build` (exit 0), `lake check --paranoid` (exit 0: lean4lean, nanoda, con-leche, con-ron and the Lean default kernel all accept; "Uses axioms: Classical.choice, propext, Quot.sound") and `lake comparator --paranoid` (exit 0, "Your solution is okay!"). Not run: the GitHub Actions workflow. See "Linux, macOS and containers" below for
+the two container errors met on the way.
 
 ## Quick start
 
@@ -53,7 +61,7 @@ first check of it.
 cp -r project_templates/lean_formalization ~/projects/my_formalization
 cd ~/projects/my_formalization
 lake build                       # writes lake-manifest.json: commit it
-lake build Statements            # the statements must elaborate; expect "declaration uses 'sorry'"
+lake build Statements            # the statements must elaborate; expect "declaration uses `sorry`"
 lake check --paranoid            # Linux only: whole-project kernel + axiom check
 lake comparator --paranoid       # Linux only: Solutions proves exactly Statements
 ```
@@ -62,7 +70,7 @@ Then replace the placeholders: state each headline theorem in
 `Statements.lean`, list its fully qualified name in `comparator.json`'s
 `theorem_names`, and prove it under the same name in `Solutions.lean`. To use
 Mathlib, uncomment the `[[require]]` block in `lakefile.toml` (Mathlib tags its
-releases by toolchain, so `rev = "v4.35.0"` matches this `lean-toolchain`), or
+releases by toolchain, so `rev = "v4.36.0"` matches this `lean-toolchain`), or
 start from `lake new <name> math` and copy the three Lean files and
 `comparator.json` across.
 
@@ -78,7 +86,7 @@ checks the rest.
 
 ## `comparator.json`
 
-The keys, from `lake help comparator` at the v4.35.0 tag:
+The keys, from `lake help comparator` on v4.36.0 (unchanged from v4.35.0):
 
 | Key | Required | Meaning |
 |---|---|---|
@@ -111,7 +119,7 @@ reference chapter "Validating a Lean Proof"; the `lake` rungs need Lean ≥ v4.3
 
 | Rung | Command | Catches | Still trusts |
 |---|---|---|---|
-| 1 | `lake build`, no `declaration uses 'sorry'` warning | Unfinished proofs in the built files | Every tactic, macro and imported library |
+| 1 | `lake build`, no ``declaration uses `sorry` `` warning | Unfinished proofs in the built files | Every tactic, macro and imported library |
 | 2 | `#print axioms Template.double_eq_two_mul` | `sorryAx` and custom axioms anywhere in the dependency tree | The elaborator and the build |
 | 3 | `lake check` | The same axiom check over every default target, after a sandboxed build, export and replay through the kernel in a separate process | That the theorems are the ones you meant; Lean's kernel |
 | 4 | `lake check --paranoid` | A bug in Lean's kernel that one of the bundled checkers (`leanchecker-paranoid`, `lean4lean`, `nanoda`, `con-leche`, `con-ron`) does not share | That the theorems are the ones you meant |
@@ -124,11 +132,30 @@ equation, lemma), the formal statement, the solution's location, and anything
 the formal version leaves out (a limit without its rate, a stronger
 hypothesis), the way the archived Timaeus `laplace` repository's README did.
 
+**Version notes.** v4.36.0 changes neither command relative to v4.35.0. On
+both, a `lake check --paranoid` run that dies inside an external checker (for
+example a `nanoda` panic) may be a non-standard axiom such as `native_decide`,
+not a kernel disagreement: run `#print axioms` on the theorem. v4.37.0-rc1
+(2026-11-18, a release candidate, not what this template pins) makes `lake
+check` test axioms before running the kernels, adds `--json` to both commands
+(one final versioned report, the form to parse in CI), and forces a definition
+hole to be `sorry` or a lambda with a `sorry` body. When v4.37.0 is stable,
+move `lean-toolchain` and add `--json` to the workflow if you parse the result.
+
 ## Linux, macOS and containers
 
 - **The sandbox is Linux-only** (Lean v4.35.0 release notes). `bwrap` needs
   unprivileged user namespaces or a setuid install. On macOS the commands
-  cannot sandbox; run them in CI, on a Linux box, or in a Linux VM.
+  cannot sandbox; run them in CI, on a Linux box, or in a Linux VM or
+  container. In a default Docker container on macOS (Colima, Ubuntu 24.04,
+  2026-11-23) `bwrap` failed twice before it ran: `bwrap: Can't mkdir
+  /run/user: Read-only file system` (fix: `mkdir -p /run/user/$(id -u)` and
+  set `XDG_RUNTIME_DIR` to it), then, with `--cap-add SYS_ADMIN` and seccomp /
+  AppArmor unconfined, `bwrap: Can't mount proc on /newroot/proc: Operation not
+  permitted`; only `docker run --privileged` worked. A privileged container
+  weakens isolation from the host VM: fine for your own proofs, not for a
+  solution someone else wrote — check those on a Linux host or CI runner with
+  unprivileged user namespaces.
 - **Containers often block user namespaces.** Lean's own test suite says
   "User namespaces cannot be assumed available in CI containers" and swaps in
   a fake `bwrap` for that reason. A fake or disabled sandbox gives no
@@ -145,6 +172,7 @@ hypothesis), the way the archived Timaeus `laplace` repository's README did.
 |---|---|
 | ``has no `lake-manifest.json` `` (exit 2) | Run `lake build` once and commit the manifest; the sandbox cannot write it |
 | ``needs `bwrap` to sandbox the code it checks, and it was not found`` (exit 2) | Install `bubblewrap` (Linux) or set `COMPARATOR_BWRAP` |
+| ``sandboxes the code it checks with `bwrap`, which needs Linux namespaces`` (exit 2) | You are on macOS (seen on v4.36.0); run on Linux or in CI |
 | `bwrap: setting up uid map: Permission denied`, `bwrap: Creating new namespace failed` | No unprivileged user namespaces; on Ubuntu check `kernel.apparmor_restrict_unprivileged_userns` |
 | `Axiom 'sorryAx' is not permitted; it is used by '...'` (`lake check`, exit 1) | A `sorry` somewhere in the proof's dependency tree |
 | `Illegal axiom detected: '...'` (`lake comparator`, exit 1) | The solution uses an axiom outside `permitted_axioms` (in Lean's own test, a custom `axiom helper` that the theorem's proof uses) |
@@ -170,7 +198,8 @@ the current directory.
 ## On toolchains older than v4.35.0
 
 The standalone [`leanprover/comparator`](https://github.com/leanprover/comparator)
-binary is the legacy route. Its README now says it "has been merged into core
+binary is the legacy route, and the repository is now archived (read-only, no
+further fixes). Its README says it "has been merged into core
 as of Lean release v4.35.0" and advises migrating, since the Lake commands "are
 the only ones guaranteed to receive further security and performance
 improvements". It needs `landrun` built from source, a `lean4export` matching
@@ -185,8 +214,17 @@ the sandbox. Upgrading the toolchain is usually the better path.
 - **Agent skills**: `skills/mats-lean-formalization`, `mats-lean-review`,
   `mats-lean-debug`, `mats-lean-library-search`, `mats-lean-cleanup` in the
   wiki repo; or Cameron Freer's `lean4-skills` plugin. Pick one set per project.
+- **Lean Beam** (`lean-beam`, `lean-beam-mcp`; beta): the Lean FRO's agent
+  interface, bundled with the v4.36.0 toolchain this template pins (Linux and
+  macOS). elan 4.2.4 has no `lean-beam` shim, so call it by toolchain path:
+  `"$(lean --print-prefix)/bin/lean-beam" --help` (run here on v4.36.0). Its
+  supported Lean window is 4.34 to 4.36, so not v4.37.0-rc1. It speeds up the
+  proving loop; it is not a sandbox and not a substitute for `lake comparator`.
 
-Last verified: 2026-10-14, against `src/lake/Lake/CLI/Help.lean` and
+Last verified: 2026-11-23 on Lean v4.36.0 (build, `#print axioms`, `leanchecker`,
+`lake help comparator`, `lake help check`, and the macOS refusal, all run
+locally; the v4.37.0-rc1 notes as summarised on the wiki page). Earlier,
+2026-10-14, against `src/lake/Lake/CLI/Help.lean` and
 `src/lake/Lake/CLI/Check.lean` at the `v4.35.0` tag of `leanprover/lean4`, the
 Lake tests `tests/lake/tests/challenge-simple-match`, `check-sorry` and
 `check-paranoid` at that tag, the v4.35.0 release notes on lean-lang.org, the

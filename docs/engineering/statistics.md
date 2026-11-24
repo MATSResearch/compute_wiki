@@ -39,6 +39,8 @@ needs anything heavier.
 | Claim a fine-tune changed the model's internals (model diff) | Compare the diff to the spread across k reruns of the same recipe; k caps p at 1/(k+1) | [Model diffs](#model-diffs-the-rerun-band-is-the-baseline) |
 | Report a behaviour seen 10 times in 6,000 rollouts, or never | Beta posterior with a credible interval; a zero count is an interval | [Rare behaviours](#rare-behaviours-a-handful-of-hits-or-none) |
 | Monitor a stream indefinitely with a bounded false-alarm rate | e-process (anytime-valid) | [Stopping early](#can-i-stop-the-run-once-it-looks-significant) |
+| Report the best of several prompts, scaffolds or agent changes | Rerun band of the unchanged baseline, then one confirmation on fresh tasks under a frozen rule | [Picking the "best"](#screen-then-confirm-a-screened-winner-gets-one-test-on-fresh-tasks) |
+| Claim "rank 1" on a leaderboard, error bars on pass@k / pass^k | The eval-specific page | [`eval-statistics.md`](../evaluation/eval-statistics.md#is-the-top-score-real-the-winners-curse-on-leaderboards-and-rank-intervals) |
 
 ## Paired vs unpaired: the most common mistake
 
@@ -241,6 +243,18 @@ finding, and plenty of published work does without them.
   verdict "is 76% evaluation noise and would need about a hundred seeds for the same
   gap". Compare the continuous metric across paired seeds, and re-evaluate each
   checkpoint more than once so evaluation noise is not booked as seed variance.
+- **Seeding the environment is not seeding the policy.** An audit of the CAGE
+  Challenge 4 cyber-defence benchmark (Rice, Park & Kwasinski, Nov 2026,
+  [arXiv:2611.14068](https://arxiv.org/abs/2611.14068); multi-agent
+  reinforcement learning, not LLM agents) found that "the evaluation seeds the
+  environment but not the policy, so a reported mean is one draw", and that
+  88.9% of per-episode outcome variance at the stock adversary was the response
+  to one reference defender's own sampling draw. The same gap exists in any
+  agent eval that fixes the task seed while the model samples at a nonzero
+  temperature: list every source of randomness (task generation, environment,
+  policy sampling, judge) and say which ones the reported interval covers. The
+  simulator-behaviour half of that audit is in
+  [`measurement-validity.md`](measurement-validity.md#the-harness-is-part-of-the-dose).
 
 Treat a seed sweep as an "if there is time and compute left" strengthening step,
 not as a gate. What is not optional is **saying which error bar you drew**:
@@ -353,6 +367,43 @@ negative" in their runs). Their protocol is held-out topics, several seeds and v
 ablations; the metric-loop version is in
 [`ai-scientist-frameworks.md`](ai-scientist-frameworks.md#how-do-i-keep-a-metric-loop-from-overfitting-its-own-metric).
 
+#### Screen-then-confirm: a screened winner gets one test on fresh tasks
+
+Aliases: screening versus confirmation, frozen pass rule, rerun band, baseline
+rerun noise, replication on held-out tasks, regression to the mean after
+selection.
+
+A published record of what the winner's curse looks like in a small agent
+project: Nguyen Minh Thang (Nov 2026,
+[arXiv:2611.16485](https://arxiv.org/abs/2611.16485), single author; the
+evaluation kit `drydock-eval`, `MinhThanghus/drydock-eval` on GitHub, was built
+for one competition and is an example design, not a recommended tool)
+evaluated changes to a small coding agent (Gemma 4 E4B) with paired statistics
+that respect repository clusters. "Three changes of the E4B agent led their
+screens by +1.0 to +6.2 points; each was then tested once on new tasks under a
+frozen pass rule, and none was confirmed" (the gains on the new tasks were
+−0.35, −0.39 and +4.10 points). Meanwhile "The unchanged baseline, run again on
+the same 128 tasks, moved by 1.17 points", and 65% of those tasks were solved
+in none of eight runs, so most tasks carried no information about any change.
+The paper's pass rule requires, among other conditions, a mean gain of at least
+3.45 points and a one-sided p ≤ 0.025, fixed before the confirmation run.
+
+What to copy:
+
+1. **Measure the rerun band first.** Run the unchanged baseline twice on the
+   same tasks; a candidate whose lead is inside that band has shown nothing.
+2. **Freeze the pass rule** (minimum gain, test, α) before the confirmation
+   run, and write it down.
+3. **Confirm once, on tasks the screen did not use.** A second look at the
+   screening tasks re-uses the luck that selected the candidate.
+4. **Cluster by repository or task family** when computing the paired
+   interval; see
+   [Bootstrap the right unit](#bootstrap-the-right-unit).
+
+The leaderboard version of the same bias (the rank-1 model's score is
+overstated, and rank itself has an interval) is in
+[`eval-statistics.md`](../evaluation/eval-statistics.md#is-the-top-score-real-the-winners-curse-on-leaderboards-and-rank-intervals).
+
 In the MATS dashboard's Automated Alignment tool, a sweep recorded as a run
 table (`<run_table>`, with columns declared as param / variation / metric /
 status) opens as a parallel-coordinates panel. **Group by config** draws this
@@ -429,6 +480,15 @@ they "cannot rule out that other models also reason this way occasionally". Two 
 worth copying: treat a zero count as an interval (`stats.beta(1, 1 + n)`), never as
 "never"; and name the confounds of a cross-model rate comparison (here GLM-5.3 writes
 far longer reasoning, so it has more chances to verbalise anything).
+
+The mirror-image question, "would the model *ever* succeed (or misbehave) on this
+problem if sampled enough?", cannot be answered from fewer tries than the claim covers.
+With n runs on each of m problems, Ye (Nov 2026,
+[arXiv:2611.21266](https://arxiv.org/abs/2611.21266), single author) shows that for the
+share of problems with nonzero success probability, P(p > 0), and for pass@k with k far
+above n, "the data support only lower bounds". Report "at least x% of problems were
+solved in n tries", not an extrapolated pass@k. Estimators and error bars for pass@k and
+pass^k: [`eval-statistics.md`](../evaluation/eval-statistics.md#passk-and-passk-estimators-error-bars-and-what-n-runs-can-support).
 
 ### For continuous outcomes
 
@@ -634,6 +694,15 @@ many safety evals live. See
 - **Reporting the best seed.** If you *did* run several seeds, reporting
   max-over-seeds as the result is cherry-picking. Report the distribution or
   report one seed honestly — never the best of several presented as typical.
+- **"The new prompt is +4 points" with no baseline rerun.** Rerunning an
+  unchanged baseline on the same 128 tasks moved it by 1.17 points in one
+  published record, and three screened gains of +1.0 to +6.2 points were all
+  unconfirmed on fresh tasks (arXiv:2611.16485). See
+  [Screen-then-confirm](#screen-then-confirm-a-screened-winner-gets-one-test-on-fresh-tasks).
+- **A reported mean that is one draw.** The environment was seeded but the
+  policy's sampling was not, so the "mean" has no spread over the largest
+  source of variance (arXiv:2611.14068). See
+  [Seeds](#seeds-useful-not-mandatory).
 - **P-hacking by prompt-set.** Trying three prompt sets and reporting the one
   that worked is the same error as testing 32 layers, minus the correction.
 - **Judge-based scores treated as ground truth.** A large language model (LLM)
@@ -692,7 +761,7 @@ many safety evals live. See
 
 ---
 
-Last verified: 2026-11-04 (additions 2026-11-04: the winner's-bias constants and the 4.9× shared-items median from arXiv:2610.31948 abstract and PDF sections 1 and 5; the seed and binary-verdict numbers from arXiv:2610.33816 abstract; the disattenuation result and gated rule from arXiv:2610.38015 abstract and PDF section on Algorithm 1. Earlier additions 2026-10-20: four pitfalls pointing at measurement-validity.md; the model-diff rerun band, arXiv:2610.17093; the GEPA prompt-optimiser selection example, arXiv:2610.12601; the anytime-valid exfiltration monitor, arXiv:2610.11843 — all three checked against their arXiv abstract pages; the rare-behaviour worked example from Apollo's GLM-5.3 post, read via LessWrong GraphQL, with its posterior mean, interval and the 0.25 comparison recomputed in SciPy). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
+Last verified: 2026-11-23 (additions 2026-11-23: the screen-then-confirm record from the arXiv:2611.16485 PDF abstract and §6 (pass rule), repository `MinhThanghus/drydock-eval` confirmed via the GitHub API; the policy-seed finding from the arXiv:2611.14068 PDF abstract; the pass@k lower-bound statement from the arXiv:2611.21266 PDF abstract). Earlier: 2026-11-04 (additions 2026-11-04: the winner's-bias constants and the 4.9× shared-items median from arXiv:2610.31948 abstract and PDF sections 1 and 5; the seed and binary-verdict numbers from arXiv:2610.33816 abstract; the disattenuation result and gated rule from arXiv:2610.38015 abstract and PDF section on Algorithm 1. Earlier additions 2026-10-20: four pitfalls pointing at measurement-validity.md; the model-diff rerun band, arXiv:2610.17093; the GEPA prompt-optimiser selection example, arXiv:2610.12601; the anytime-valid exfiltration monitor, arXiv:2610.11843 — all three checked against their arXiv abstract pages; the rare-behaviour worked example from Apollo's GLM-5.3 post, read via LessWrong GraphQL, with its posterior mean, interval and the 0.25 comparison recomputed in SciPy). Earlier: 2026-10-14. Bayesian section follows Kruschke's HDI+ROPE decision
 rule (2018) and BEST (2013); ArviZ default credible levels (0.94 in 0.x, 0.89 in 1.x) verified. Drafted by Claude, revised per Nathan's steer that
 multiple seeds are an optional strengthening step rather than a gate. Pending
 MATS research-staff review — the statistical

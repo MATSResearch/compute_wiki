@@ -68,7 +68,7 @@ suspicion score, protocol that decides what to do.
 UK AISI + Redwood collaboration. The maintained successor to the 2023 paper
 code; used by Anthropic, Google DeepMind, Redwood, and AISI itself.
 
-- PyPI: `control-arena` (15.x as of April 2026).
+- PyPI: `control-arena` (20.1.1, 2026-10-22, current as of 2026-11-23; Python ≥ 3.11).
 - GitHub: `UKGovernmentBEIS/control-arena`.
 - Docs: `https://control-arena.aisi.org.uk/`.
 
@@ -76,7 +76,7 @@ Built on top of **Inspect AI** — every ControlArena task is an Inspect task.
 This means standard Inspect tooling (log viewer, eval set runner) works
 directly on ControlArena logs.
 
-### Settings (as of April 2026, 17 shipped)
+### Settings (15 registered as of v20.0.1; the count drifts)
 
 AgentDojo, Apps, Bash, BashArena, BigCodeBench, Data Poisoning, Eval Sabotage,
 IAC, IAC Fast, Infra, Rogue Eval, SAE Interp Sabotage, SHADE Arena, SWE-bench
@@ -84,13 +84,16 @@ Django, vLLM, ... See `docs/oversight-and-control/ai-control.md` in this repo fo
 
 ### Protocols implemented
 
-- `trusted_only` (safety baseline)
-- `untrusted_only` (usefulness ceiling)
-- `defer_to_trusted` (the basic protocol; what this example uses)
-- `defer_to_resample`
-- `trusted_monitoring` (audit-only; doesn't change actions)
-- `trusted_editing`
-- `untrusted_monitoring`
+Four builders ship in `control_arena.micro_protocol` (20.x):
+
+- `trusted_monitoring_builder` (audit-only; doesn't change actions)
+- `defer_to_trusted_builder` (the basic protocol; what this example uses)
+- `trusted_editing_builder`
+- `defer_to_resample_builder` (use ≥ 20.1.0; before it the chosen resample was never executed)
+
+Not built in — assemble them yourself: trusted-only (safety baseline) and
+untrusted-only (usefulness ceiling) are a policy passed directly as the
+micro-protocol; untrusted monitoring needs your own anti-collusion step.
 
 ## Calibration of the suspicion threshold
 

@@ -218,6 +218,50 @@ def test_to_hf_records_validates():
         finetune.to_hf_records([{"messages": [{"role": "user"}]}])  # no content
 
 
+def test_sft_config_kwargs_are_accepted_by_installed_trl(tmp_path):
+    """Every argument train_lora passes must exist in the installed TRL (needs the [train] extra)."""
+    trl = pytest.importorskip("trl")
+    cfg = finetune.LoRASFTConfig(output_dir=str(tmp_path), warmup_ratio=0.1)
+    args = trl.SFTConfig(**finetune.sft_config_kwargs(cfg))
+    assert args.assistant_only_loss is True
+    assert args.max_length == cfg.max_length
+    assert args.get_warmup_steps(200) == 20  # the ratio reaches the scheduler as a ratio
+
+
+# ---------- generate: which sampling parameters reach the API ----------
+
+
+class _FakeOpenAI:
+    """Stands in for openai.OpenAI; records the kwargs of each chat.completions.create call."""
+
+    calls: list[dict] = []
+
+    def __init__(self, **_):
+        self.chat = self
+        self.completions = self
+
+    def create(self, **kwargs):
+        from types import SimpleNamespace as NS
+
+        type(self).calls.append(kwargs)
+        return NS(choices=[NS(message=NS(content="ok"))])
+
+
+def test_openrouter_backend_sends_temperature_only_when_set(monkeypatch):
+    import openai
+
+    monkeypatch.setattr(openai, "OpenAI", _FakeOpenAI)
+    _FakeOpenAI.calls = []
+    msgs = [{"role": "user", "content": "hi"}]
+    assert generate.openrouter_backend("m", api_key="k", max_tokens=300)(msgs) == "ok"
+    assert generate.openrouter_backend("m", api_key="k", temperature=0.7)(msgs) == "ok"
+    assert generate.openrouter_backend("m", api_key="k")(msgs, temperature=0.2, max_tokens=5) == "ok"
+    default, fixed, per_call = _FakeOpenAI.calls
+    assert "temperature" not in default and default["max_tokens"] == 300
+    assert fixed["temperature"] == 0.7
+    assert per_call["temperature"] == 0.2 and per_call["max_tokens"] == 5
+
+
 # ---------- eval pipeline against a stub backend ----------
 
 

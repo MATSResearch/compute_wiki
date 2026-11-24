@@ -1,3 +1,4 @@
+# torch 2.14.x: `torch.load(weights_only=True)` file-read advisory GHSA-v32g-mr63-3j83 (patched in 2.15.0).
 [project]
 name = "example-1-gemma-scope"
 version = "0.1.0"
@@ -5,15 +6,20 @@ description = "Toy SAE-feature attribution on a factual completion using Gemma-2
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "torch>=2.4.0",
+    "torch>=2.4.0,!=2.14.*",
     "transformers>=4.40.0",
-    "sae-lens>=6.0.0",
+    # SAELens 6.55.0 supports TransformerLens 4.x and fixes skip transcoders spliced
+    # without their skip connection; 6.55.1 fixes Llama Scope thresholds and bf16 eval rounding.
+    "sae-lens>=6.55.1",
     "numpy>=1.26.0",
     "mi-components",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0"]
+
+[tool.uv]
+exclude-newer = "1 week"  # dependency cooldown: ignore releases newer than 7 days (docs/engineering/code-recipes.md)
 
 [tool.uv.sources]
 mi-components = { path = "../../components", editable = true }

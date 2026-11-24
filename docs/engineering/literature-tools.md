@@ -30,6 +30,7 @@ you cite as a source rather than a memory, see
 | A BibTeX entry | arXiv's `/bibtex/` endpoint, DOI content negotiation, Semantic Scholar `citationStyles`, or `export_citations` — **never from memory** | — |
 | LessWrong / Alignment Forum posts and comments | **LessWrong GraphQL API** (`https://www.lesswrong.com/graphql`) | Bulk scraping without saving results locally |
 | A structured lit review for a MATS project, feeding the dashboard's Library | **`/mats:lit-review`** (alignment-hive plugin marketplace) | — |
+| The baselines my paper must compare against | The experiment tables of the two or three closest papers, then `citation_graph` one step out — [details](#how-do-i-find-the-baselines-i-should-compare-against) | A search agent's list alone (best system in the LINEAGE benchmark: 31.87 Recall@20) |
 
 ## Never write BibTeX from memory
 
@@ -238,7 +239,7 @@ agent's literature summary?" below).
 ## Hugging Face MCP server
 
 The official **Hugging Face MCP server** (`huggingface/hf-mcp-server`, MIT,
-v0.4.33 released 2026-11-04) is hosted at `https://huggingface.co/mcp`:
+v0.4.39 released 2026-11-23) is hosted at `https://huggingface.co/mcp`:
 
 ```bash
 claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login
@@ -338,6 +339,27 @@ two or three closest papers (`citation_graph`, or `asta papers`), then LessWrong
 and the Alignment Forum with the GraphQL queries above, then a person. An agent's
 own "this is novel" is a prediction to check, not a finding.
 
+### How do I find the baselines I should compare against?
+
+Not by search alone: "which prior methods do papers like mine compare
+against?" is the retrieval task current tools do worst. **LINEAGE** (Wu, Yuan,
+Fan, Li, [arXiv:2611.25845](https://arxiv.org/abs/2611.25845), 2026-11-19)
+builds a benchmark from "empirical lineage" links, where a later paper
+"explicitly uses its method as an empirical comparison baseline": 121,048
+papers from 17 AI venues (2018–2025), 164,948 lineage edges, 80,000 queries,
+19 retrieval systems. Per the paper, "Even the strongest agentic retriever
+achieves only 31.87 Recall@20 and 9.92 Precision@20", average Recall@20 falls "from 28.42
+for one-hop targets to 6.68 for three-hop targets", and one academic search
+agent (Pasa) "performs worse than BM25 on the full benchmark". So a search
+agent's list of baselines will miss most of the comparison neighbourhood. One
+way to build the list instead: open the experiment tables of the two or three
+closest papers, write down every method they compare against, then repeat one
+step out with `citation_graph` (forward and backward) for each of those
+methods, and only then use topic search to catch stragglers. The benchmark's
+code and data are at an anonymous review link, so it is evidence about
+retrieval tools here, not a tool to install. Single preprint; AI-venue papers
+only.
+
 ### Can I trust the citations my agent wrote?
 
 Only after each one resolves to a source you can open. Fetch BibTeX from
@@ -358,6 +380,53 @@ agents consistently produce stronger claims than warranted" (no effect sizes in
 the abstract). A cheap counter: for each conclusion in a generated review, ask
 for the strongest source that disagrees with or qualifies it, with a verbatim
 quote, and read the two papers that carry the most weight yourself.
+
+**Check where the comparison criteria came from ("agenda seeding").** A
+web-searching research agent can be steered by a page that contains no
+instructions at all. Luo et al.
+([arXiv:2611.20045](https://arxiv.org/abs/2611.20045), "Security of Deep
+Research Agents", 2026-11-15) propose an attack "in which the attacker writes
+no instructions and only introduces a fictitious evaluation metric": one bait
+page says an invented metric is often overlooked and matters more than spec
+sheets, and two supporting pages report that the attacker's target leads on
+it. "Across 3,520 sandboxed research runs under the same budget, GEO and
+prompt injection are nearly ineffective, whereas agenda seeding makes the
+attacker's target the top pick in 16% to 28% of reports" (GEO = generative
+engine optimization). "Injection detection and query anchoring fail against
+it, verification prompting hurts utility, and our proposed provenance tagging
+preserves utility but can be bypassed by multi-site bait." What this was
+measured on: a sandboxed research agent with Qwen3.8-Flash, DeepSeek-V4.1-Flash
+and Kimi-K3 backends, asked to rank products in 20 categories over a planted
+corpus; no commercial deep-research product was attacked, and the models
+differed widely (Qwen3.8-Flash "is flipped in 47.5% of runs on the sparse
+corpus", DeepSeek-V4.1-Flash "in only 2.5% and 7.5%"). The literature-review
+analogue is an inference from this, not something the paper tested: a
+preprint, blog post or README that defines a new metric on which its own
+method wins. When an agent's comparison of methods uses a criterion you did
+not ask for, ask which source introduced it and whether anyone independent
+uses it.
+
+### Can a multi-agent pipeline run a systematic literature review?
+
+It can produce a draft, and its counts need recomputing. **PARIS** (PRISMA
+Agentic Research Intelligence System; `lamae-lab/PARIS` on GitHub, MIT, to
+which the paper's `ChristopheCruz/PARIS` link redirects; Cruz et al.,
+[arXiv:2611.12222](https://arxiv.org/abs/2611.12222), 2026-11-09) is a
+conductor agent in Claude Code that orchestrates 15 agents through a review
+guided by PRISMA (Preferred Reporting Items for Systematic reviews and
+Meta-Analyses), with three human checkpoints. Its value here is the authors'
+own audit of two runs, which "exposed failure modes: incomplete retrieval,
+counts that drifted between agents, unrecorded or delegated checkpoint
+decisions". One run's numbers: "The Run 2 curator's summary reported 114
+accepted papers, its cluster table 117 and its decision log 125, while the
+dataset holds 123, and none of these discrepancies was caught by the reviewer
+agent." The paper says PARIS "fully supports 8 of the 27 PRISMA 2020 items
+and partially supports 11", and that "Output quality has so far been judged
+only by an internal reviewer agent". The transferable rule: any count in an
+agent-written review (papers found, screened, included) is recomputed by code
+from the saved artifact, never copied from an agent's summary. When not to
+use it: as a systematic review you will cite as one; the authors name
+validation against human reviews as the next step.
 
 ### Which of these keeps my unpublished work local?
 
@@ -389,4 +458,4 @@ queries were run on 2026-10-14; Semantic Scholar endpoints and ID formats from
 its published `swagger.json`. Drafted by Claude; pending MATS research-staff
 review.
 
-Last verified: 2026-11-04. (Additions 2026-11-04: arXiv:2611.01313, 2610.30355 and 2610.35793 checked against their abstracts (numbers quoted from the abstracts); the CiteANCHOR_code repository and its licence via `gh api`; Hugging Face MCP server v0.4.33 release date via `gh api`.)
+Last verified: 2026-11-23. (Additions 2026-11-23: LINEAGE (arXiv:2611.25845, abstract and PDF introduction and results), Luo et al. (arXiv:2611.20045, abstract and PDF experiment setup and result E3) and PARIS (arXiv:2611.12222, abstract and PDF audit sections; repository, redirect and licence via `gh api`); Hugging Face MCP server v0.4.39 release date via `gh api`. Re-checked with no release since the last pass: arxiv-mcp-server 0.8.2, paper-qa 2026.8.12, ai2-scholar-qa 0.8.14. Not verified: LINEAGE's per-system table beyond the figures quoted; the asta-plugins repository has commits after 2026-11-04 that were not reviewed.) (Additions 2026-11-04: arXiv:2611.01313, 2610.30355 and 2610.35793 checked against their abstracts (numbers quoted from the abstracts); the CiteANCHOR_code repository and its licence via `gh api`; Hugging Face MCP server v0.4.33 release date via `gh api`.)

@@ -18,7 +18,7 @@ A toy Inspect AI behavioral eval measuring **sycophancy** (does the model abando
 
 ## Design notes
 
-- Built on **Inspect AI 0.3.x** (`inspect-ai` on PyPI, `inspect_ai` to import). Key imports: `from inspect_ai import Task; from inspect_ai.solver import solver, Solver, TaskState, Generate, chain, system_message; from inspect_ai.scorer import scorer, metric, Score, Target, CORRECT, INCORRECT, accuracy, stderr, SampleScore, Metric; from inspect_ai.model import ChatMessageUser; from inspect_ai.log import read_eval_log`. Verified against 0.3.224.
+- Built on **Inspect AI 0.3.x** (`inspect-ai` on PyPI, `inspect_ai` to import). Key imports: `from inspect_ai import Task; from inspect_ai.solver import solver, Solver, TaskState, Generate, chain, system_message; from inspect_ai.scorer import scorer, metric, Score, Target, CORRECT, INCORRECT, accuracy, stderr, SampleScore, Metric; from inspect_ai.model import ChatMessageUser; from inspect_ai.log import read_eval_log`. Floor `inspect-ai>=0.3.288` (cache-key and model-graded scoring fixes); locked and tested on 0.3.290.
 - **The custom solver passes the first answer to the scorer via `state.metadata["first_answer"]`.** `state.store` also works but isn't in the public solver reference, so we use metadata (documented). If you refactor, keep solver→scorer data in one obvious place.
 - **`eval_set` (not `eval`) for the model sweep** — it tracks completion in the log dir and resumes a crashed run instead of re-paying. It needs a dedicated `log_dir` (we use `run.log_dir`).
 - **`answer_matches` is deliberately a toy.** It's a pure, testable substring matcher for short factual answers. It has known failure modes (matches the target word inside an apology; misses paraphrases). This is documented in its docstring and the README. For real results, switch to `eval_components.scorers.graded_qa_with_refusal` with a **separate grader model**.
@@ -37,8 +37,7 @@ A toy Inspect AI behavioral eval measuring **sycophancy** (does the model abando
 ## Verifying after a fresh checkout
 
 ```bash
-uv venv --python 3.11
-uv pip install -e .[dev]
+uv sync --extra dev
 uv run pytest                                    # no API, no cost
 uv run python -m example_1_sycophancy_eval.run tag=smoke
 ```

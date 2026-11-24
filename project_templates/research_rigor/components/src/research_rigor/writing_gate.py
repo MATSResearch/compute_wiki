@@ -15,9 +15,19 @@ claim in the draft must trace to an actual result artifact in the run-dir. A
 fabricated number matches no source; a text-vs-result discrepancy shows up as a
 contradiction. This directly attacks the corpus's best-documented failure mode.
 
+Two more rules meet here:
+
+- A VERDICT HOLDS THROUGH THE WRITE-UP. A registered prediction without a signed
+  verdict blocks the write-up, not only the `resolve` step.
+- CITE A SOURCE YOU CAN OPEN, NOT A MEMORY OF ONE. Every paper the write-up
+  leans on is recorded as a source — title, authors, year, a link someone can
+  open and that was checked — with the papers built on kept apart from the
+  ones set aside. Gaps are flagged, not blocked.
+
 Division of labour:
 - THIS LIBRARY grounds claims against sources, scans for unsourced numbers, and
-  enforces the gate policy (fabrication blocks; human sign-off is mandatory).
+  enforces the gate policy (fabrication and an unsigned prediction block; human
+  sign-off is mandatory).
 - THE /write skill runs Jr. AI Scientist's four-type reflection loop, builds the
   claim ledger, uses LLM-judge panels for triage only, and drives the human gate.
 """
@@ -26,7 +36,8 @@ import math
 import re
 from dataclasses import dataclass, field
 
-HYPOTHESIS_VERDICTS = ("supported", "refuted", "inconclusive")
+from .resolve import VERDICTS as HYPOTHESIS_VERDICTS
+from .resolve import Resolution, missing_verdicts
 
 
 @dataclass
@@ -37,7 +48,7 @@ class Claim:
       "numeric"      — asserts a number; `asserted` is a float, checked against
                        sources[source_artifact][source_key].
       "hypothesis"   — asserts a hypothesis outcome; `asserted` is a verdict
-                       string, checked against the analysis/prereg verdict.
+                       string, checked against the signed verdict.
       "qualitative"  — a non-numeric claim; cannot be auto-grounded, so it is
                        routed to the human (never silently trusted).
     """
@@ -99,8 +110,9 @@ def _matches(asserted: float, actual: float, rel_tol: float) -> bool:
 def verify_claims(claims: list[Claim], sources: dict) -> ClaimReport:
     """Ground every claim against the actual result artifacts.
 
-    sources: {artifact_name: {key: value}}. For hypothesis claims, the artifact
-    is typically the analysis verdicts, e.g. sources["analysis"] = {"H1": "supported"}.
+    sources: {artifact_name: {key: value}}. A hypothesis claim traces to the
+    registered prediction and its signed verdict, so build that source from the
+    resolutions: sources["verdicts"] = {r.hypothesis_id: r.verdict for r in resolutions}.
     """
     report = ClaimReport()
     for c in claims:
@@ -157,34 +169,89 @@ def ground_draft(draft_text: str, claims: list[Claim], sources: dict) -> ClaimRe
     return report
 
 
+# --- papers: a source you can open, not a memory of one ---------------------
+
+PAPER_STANDINGS = ("key", "set_aside")
+
+
+@dataclass
+class Paper:
+    """One paper the write-up leans on, as a source. A paper filed from memory
+    says so and may lack the catalogue details; that is recorded, and flagged."""
+    title: str
+    standing: str                    # "key" (built on) | "set_aside"
+    authors: str | None = None
+    year: int | None = None
+    link: str | None = None
+    link_checked: bool = False       # someone opened the link and it resolved
+    from_memory: bool = False
+
+    def __post_init__(self):
+        assert self.title and self.title.strip(), "a paper needs a title"
+        assert self.standing in PAPER_STANDINGS, \
+            f"paper {self.title!r}: standing must be one of {PAPER_STANDINGS}, got {self.standing!r}"
+
+
+def paper_flags(papers: list[Paper]) -> list[str]:
+    """What stops each paper from being a citation someone can open."""
+    flags = []
+    for p in papers:
+        missing = [f for f in ("authors", "year", "link") if not getattr(p, f)]
+        if p.from_memory:
+            flags.append(f"{p.title!r} was filed from memory — a claim about a paper, not a "
+                         f"citation; open it and record what you actually read")
+        if missing:
+            flags.append(f"{p.title!r} is missing {missing}")
+        elif not p.link_checked:
+            flags.append(f"{p.title!r}: check the link resolves before the write-up leaves "
+                         f"the building")
+    return flags
+
+
 # --- the gate: human is the reviewer of last resort --------------------------
 
 @dataclass
 class GateVerdict:
-    verdict: str        # "blocked_fabrication" | "blocked_pending_human" | "ready"
+    verdict: str        # "blocked_unsigned_verdict" | "blocked_fabrication"
+                        # | "blocked_pending_human" | "ready"
     reasons: list[str]
     llm_triage_score: float | None
     human_approved: bool | None
+    warnings: list[str] = field(default_factory=list)
 
 
 def publication_verdict(report: ClaimReport, *, human_approved: bool | None,
+                        frozen_hypothesis_ids: list[str], resolutions: list[Resolution],
+                        papers: list[Paper],
                         llm_triage_score: float | None = None) -> GateVerdict:
-    """Decide readiness. An LLM triage score can NEVER produce 'ready' — only a
-    clean claim report plus explicit human sign-off can. This is the one place the
-    design refuses to let an LLM judge stand in for the human."""
-    reasons = []
+    """Decide readiness. An LLM triage score can NEVER produce 'ready' — only
+    signed verdicts for every registered prediction, a clean claim report and
+    explicit human sign-off can. This is the one place the design refuses to
+    let an LLM judge stand in for the human.
+
+    `frozen_hypothesis_ids` is empty for work with no registered prediction
+    (exploratory, labelled as such). Paper gaps are warnings, never a block.
+    """
+    warnings = paper_flags(papers)
+
+    def verdict(name, reasons):
+        return GateVerdict(name, reasons, llm_triage_score, human_approved, warnings)
+
+    unsigned = missing_verdicts(frozen_hypothesis_ids, resolutions)
+    if unsigned:
+        return verdict("blocked_unsigned_verdict", [
+            f"no signed verdict for registered predictions {unsigned} — a prediction without "
+            f"a signed verdict blocks the write-up, not only the resolve step"])
+
     if report.has_fabrication_risk:
-        for r in report.contradicted:
-            reasons.append(f"contradicted: {r.claim_id} — {r.detail}")
-        for r in report.ungrounded:
-            reasons.append(f"ungrounded: {r.claim_id} — {r.detail}")
-        for n in report.unsourced_numbers:
-            reasons.append(f"unsourced number in prose: {n}")
-        return GateVerdict("blocked_fabrication", reasons, llm_triage_score, human_approved)
+        reasons = [f"contradicted: {r.claim_id} — {r.detail}" for r in report.contradicted]
+        reasons += [f"ungrounded: {r.claim_id} — {r.detail}" for r in report.ungrounded]
+        reasons += [f"unsourced number in prose: {n}" for n in report.unsourced_numbers]
+        return verdict("blocked_fabrication", reasons)
 
     if not human_approved:  # None or False
-        reasons.append("mandatory human code+result review not completed "
-                       "(LLM-judge scores are triage only, never acceptance)")
-        return GateVerdict("blocked_pending_human", reasons, llm_triage_score, human_approved)
+        return verdict("blocked_pending_human", [
+            "mandatory human code+result review not completed "
+            "(LLM-judge scores are triage only, never acceptance)"])
 
-    return GateVerdict("ready", [], llm_triage_score, human_approved)
+    return verdict("ready", [])

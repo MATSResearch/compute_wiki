@@ -16,7 +16,7 @@ CATALOG = [
 
 def _mk(tmp_path):
     return run_dir.RunDir.create(
-        tmp_path, "run_20260707_120000_probe",
+        tmp_path, "run_20260707_120000_probe", acceptance="every gate reviewed",
         models=[{"id": "claude-opus-4-8", "role": "review"}],
         harness={"tool": "claude-code"}, code_repo=tmp_path,
     )

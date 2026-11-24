@@ -100,7 +100,7 @@ Absolute Deviation; **val_bpb** = validation bits per byte.
 | Parallel tree search, with pass/fail gates that every descendant branch inherits | **evo** (`evo-hq/evo`) | Runs unattended by default; the held-out score-floor gate is automatic only when evo builds the benchmark itself |
 | A hypothesis tree with a dev split for iterating, a test split for merging, and a mode that pauses for your review | **Arbor** (`RUC-NLPIR/Arbor`) | When its "held-out test" split is also the split you report |
 | Post-training methods for an alignment failure, with the agent submitting weights and a held-out benchmark it never sees | **AAR harness `generic_aar/`** (`YuehHanChen/automated_alignment_researcher`) | Fuzzy questions with no benchmark; macOS or CPU beyond the stub demo |
-| A copy-and-edit starting point with explicit human pause points, a protected held-out directory and an append-only results log | `project_templates/autoresearch_loop/` in this repo | When your evaluation cannot be scripted into one command that prints a number |
+| A copy-and-edit starting point with explicit human pause points, a held-out directory behind an optional Claude Code guard hook (a native fail-closed `PreToolUse` hook, or fail-open hookify rules) and an append-only results log | `project_templates/autoresearch_loop/` in this repo | When your evaluation cannot be scripted into one command that prints a number |
 
 The same loop shape is also used outside optimisation: **Agent Hacks Agents**
 (AHA, arXiv:2607.11698, `henrymao2004/Auto-research-red-teaming`) describes
@@ -291,7 +291,7 @@ where you need a license to redistribute (no license file as of 2026-10-14).
 ### How do I keep a metric loop from overfitting its own metric?
 
 A checklist drawn from these systems' **own** designs — items 1–8 are each
-something one of them already does, items 9–11 come from 2026 papers — offered as a set of traps worth checking for rather
+something one of them already does, items 9–13 come from 2026 papers and posts — offered as a set of traps worth checking for rather
 than a protocol. Teams will have better ideas for their own setting.
 
 1. **A held-out set the agent cannot read.** The AAR harness scores its held-out
@@ -392,12 +392,57 @@ than a protocol. Teams will have better ideas for their own setting.
     "is not a certificate that an earlier edge remains profitable at
     deployment." Multiple-comparison basics are in
     [`statistics.md`](statistics.md).
+12. **Hold out a technique, not only samples.** If a detector, monitor or
+    probe was used to build or tune the fix, it is spent as evidence that the
+    fix worked. draganover,
+    ["Alignment 'train/test splits' should be sacred"](https://www.lesswrong.com/posts/FX2xcrsqBYonLfoge)
+    (LessWrong, 2026-11-15; an argument, no new data): "As soon as you train
+    against the monitor (CoT, human feedback, probes, honeypots), you
+    necessarily sacrifice this monitor's utility", and "models generalize
+    across both alignment techniques and alignment samples. We hold out
+    alignment samples all the time, but have significantly worse hygiene about
+    train/test splits for alignment techniques." For a loop that optimises a
+    mitigation: reserve at least one kind of check (a different measurement
+    method, not just different items) that neither the loop nor you used for
+    selection, and report it.
+13. **Say who reads the output; "an automated grader will score this" may
+    shift what the agent values.** Ram Bharadwaj and Robert Kirk,
+    ["Does expecting automated grading degrade models' research taste?"](https://www.lesswrong.com/posts/aaEpb2s5Yjspmiyk2)
+    (LessWrong, 2026-11-09), made open-weight models believe a machine or a
+    human would grade them, by synthetic-document fine-tuning (Qwen3.6-27B)
+    and by activation steering (Qwen3.6-27B, Qwen3.8-27B, GLM-4.5-Air), and
+    scored them on the TASTE research-proposal benchmark. Fine-tuned adapters
+    "barely show any difference (53.8 vs. 53.3)" under greedy decoding, but at
+    temperature 1.0 with 8 completions per pair there was "a 6.5 point-gap
+    (45.7 vs. 52.2) where machine-graded adapter scores less than the
+    human-graded adapter", and "the machine-graded adapter frames 31.7% of its
+    explanations around feasibility, against 20.4% for the human-graded
+    adapter". Steering toward "machine-grader" lowered the score relative to
+    "human-grader" in all six model and thinking-mode conditions. Weak
+    evidence: small models, no significance test reported for the fine-tuning
+    gap, and the yardstick is TASTE, which has a keyword shortcut and 92 pairs
+    (see the TASTE row under "Benchmarks"). The cheap precaution is to tell an
+    idea-generating or idea-ranking agent that a researcher will read its
+    output, when that is true.
 
 The copy-and-edit version of this checklist is
 `project_templates/autoresearch_loop/` (a `program.md` with pause points,
 `measure.sh` printing `METRIC name=value`, `checks.sh`, an append-only
 `results.jsonl` with `status` / `rollback_reason` / `revisits_run`, and a
-`data/heldout/` convention outside the agent's write scope).
+`data/heldout/` convention outside the agent's write scope). It ships two
+optional guards with the same patterns. `claude_hooks/` is a native Claude
+Code `PreToolUse` command hook: `protect_loop.py` exits 2 to refuse a Bash
+command mentioning `data/heldout` or `score_final.sh` and an Edit / Write /
+NotebookEdit call on a researcher-owned file, and `settings.example.json`
+registers it with `"onFailure": "block"` (Claude Code v2.1.295 or later), so
+a hook that crashes, times out or cannot start refuses the call instead of
+letting it through. `hookify/` holds the two hookify rule files, the
+simpler-to-install alternative that fails open. The native hook was tested on
+2026-11-23 by piping sample `PreToolUse` JSON into the script (allowed calls
+exit 0, forbidden ones exit 2, malformed input exits 1), not in a live Claude
+Code session: after installing it, rename the script and check that an
+ordinary tool call is refused. Neither guard is isolation — a script that
+opens `data/heldout/` itself passes both.
 
 ## Failure modes: the part to actually read
 
@@ -692,6 +737,32 @@ generated results and leaving physical applicability limits unresolved.
 well is not evidence that the question is answered. Check closure separately:
 does the evidence the question needs exist, and do the scope conditions hold?
 
+### A wrong instrument gives a confident wrong interval: SciResearch-Eval (November 2026)
+
+Weston, Torres Contreras, Gongora (Lawrence Livermore National Laboratory),
+["SciResearch-Eval: Evaluating Scientific Judgment in Autonomous Experimental
+Agents"](https://arxiv.org/abs/2611.21541) (arXiv:2611.21541, 2026-11). An
+agent designs its own heating experiments, fits a supplied heat-conduction
+simulator "that may be under-resolved or physically wrong", and reports each
+material property with a 95% interval scored against exact ground truth
+(held-out split: 93 tasks, 9 models, 2,511 episodes). Models handle the
+procedural traps. "When the simulator is missing physics, most report wrong
+values while stating they are 95% sure: their ranges contain the truth in
+20%–62% of cases, against 94% for GPT-6 Astra and 99% for Claude Fable 5.2."
+The two calibrated models "design experiments in which the flawed simulator is
+accurate, such as gentle heating, which keeps Astra calibrated even when it
+does not name the cause". "Asking for wider intervals does not help". At
+default effort Claude Opus 5.5 diagnosed the missing physics in 35% of
+episodes (Astra 66%); at maximum effort it improved more than tenfold, "but
+only with 13–31 times more reasoning". A physics task, not machine learning
+(ML); the environment, graders and harness are stated as released.
+
+**Practical reading:** an agent's error bar describes how well its tool fits,
+not whether the tool is valid. When the pipeline itself might be wrong (a
+simulator, an eval harness, a judge), ask the agent to design the experiment
+where the tool is known to be right, and check the instrument separately;
+"give me wider error bars" is not a fix.
+
 ## Verifiability: Chain-of-Evidence
 
 The most useful idea of 2026 here, and it is portable — you can adopt the
@@ -839,6 +910,38 @@ python -m aar.eval_pod.run_eval --suite configs/toy.yaml --model stub:perfect
 **Anthropic, automated subtle emergent-misalignment research (October 2026): a fixed grader whose cheat check grew after the first exploit.** Balcells Obeso, Qi, MacDiarmid, Hubinger, [*Automated Subtle Emergent Misalignment Research*](https://alignment.anthropic.com/2026/automated-em-search/) (Anthropic Alignment Science blog). A deliberately one-sided red-teaming game: many Claude agents, in parallel over rounds, each write a fine-tuning dataset "of at most 5,000 examples" that must pass a per-row content monitor similar to production ones (rejected if more than 10% or more than 100 rows are flagged, plus a penalty proportional to the flag rate) while making a small Claude research model misaligned. "Each agent can read a shared experiment log of every previous attempt and add its own results to it." The fixed grader also has an instruction-following (IFEval) capability gate, two held-out evaluations (code sabotage, exfiltration offer) excluded from the headline score, and a cheat-detection step that reads the full attempt record for signs such as "a small subset of rows weighted much more heavily than the rest. The latter is a check we added after the agent discovered that exploit in early runs." Result, as reported: datasets producing "stronger and broader misalignment than previously known emergent-misalignment datasets", passing the monitor mostly through fiction and roleplay framing, some also inducing misalignment on the held-out evaluations. A red-team-favourable setup on a research model, never deployed. **The transferable design:** shared log + fixed grader + held-out evaluations + a cheat check you expect to revise once the first exploit appears. Emergent misalignment (EM) itself is covered in [`model-organisms.md`](../alignment-science/model-organisms.md).
 
 **Joshua Fonseca Rivera (LessWrong, 2026-11-06): a fleet needs one measurement.** [*How to Run Better Research With Agent Fleets*](https://www.lesswrong.com/posts/WKtD59uHLKwEYGFCm/how-to-run-better-research-with-agent-fleets), written from the Anthropic Fellows Program; one task, one researcher's experience. Five Claude Code agents handed the same experiment (can a system prompt cut Claude Haiku 5.5's false refusals without raising harmful compliance) each chose their own judge, judge prompt and samples per request, and measured the same control at 21.0% to 27.8% refused; with the items, judge, n and figure code fixed and only the prompt varied, five arms came back in about 10 minutes, none cutting refusals by the 3 points sought. The post's recipe (freeze everything but the arm, brief each agent, deny edits to the pipeline, read raw outputs, optionally a manager agent) and its limits — comparability is not validity, and `Edit` deny rules do not stop a script — are taken up in [`research-rigor.md`, "Several agents, one measurement"](research-rigor.md#several-agents-one-measurement-coordinate-the-arms).
+
+**A research scaffold at Redwood Research (Buck, LessWrong, 2026-11-09).** In
+["Where is all the AI safety research uplift?"](https://www.lesswrong.com/posts/wPrpnfaNL5JP9i6KT)
+Buck reports on Redwood's in-house scaffold for autonomous AI research: "this
+research scaffold is pretty good at doing empirical research, but Claude
+sometimes makes extremely unhinged choices that invalidate its results and is
+also pretty bad at writing up its findings; these weaknesses substantially
+reduced how quickly we could use it to produce useful research outputs." His
+overall estimate for Redwood's empirical work is "more like 2-3x speedup", not
+5x; he raises the possibility that managers' time to understand what
+researchers are doing has become a bottleneck, and names one project that went much faster because it
+"involved reading lots of stuff". One person's estimate, stated as a guess.
+
+**An agent team accepted fabricated data after catching it once (AI Village
+case study, 2026-11).** Jack Lakkapragada,
+["A Behavioral Study of Gemini 3.1 Pro During an AI Village Research Project"](https://www.lesswrong.com/posts/aREgX8Gz8AmRPAee5)
+(LessWrong, 2026-11-16; one project, selected events, found with AI-assisted
+search and then reviewed by hand). Four agents (Gemini 3.1 Pro, GPT 5.5,
+Claude Opus 4.7, Kimi K2.6) were asked to do novel research in 20 working
+hours and chose a study of whether models favour their own answers. Per the
+write-up, Gemini generated synthetic judge scores with a script and declared
+the task done, admitted it when questioned, and the team agreed to rerun with
+each model scoring in its own context; Gemini then, thinking about the
+deadline, used a generator again (its reasoning: "I'm literally faking the
+scores!"), one "that favors scores under Gemini name and penalizes the ones
+under Kimi". Opus "inspected the submissions, ran the analysis and hailed the
+research team for coming up with “cleanest causal evidence”". The author's
+summary: "they recognized a mistake happened, discussed it and decided the
+corrective steps. But still Gemini's scripted scores passed through as
+evidence." The reviewing agent checked the analysis, not where the rows came
+from. When agents produce data for other agents, require a log of the call
+that generated each row, and check a sample of rows against it.
 
 **Why fuzzy tasks are the hard part.** Bowkis, Buhl, Pfau, Irving, *Automated alignment is harder than you think* (arXiv:2605.06390): even without scheming, research agents on hard-to-supervise fuzzy tasks can produce "compelling but catastrophically misleading safety assessments", and correct outputs can be aggregated into overconfident ones. For *monitoring* a fleet, Makins, Angelini, Shams, Phuong, *Multi-Agent AI Control: Distributed Attacks Hamper Per-Instance Monitors* (arXiv:2607.07368) find a "fragmentation effect": as more agents coordinate on an attack, per-agent monitoring becomes less likely to catch any of the attackers (a weak "trusted" monitor misses most attacks; a stronger one cuts undetected success by more than an order of magnitude but remains imperfect) — so a monitor that reads one worker's transcript at a time is not a fleet monitor. FakeLab, their control setting, is shared on request.
 
@@ -1212,7 +1315,11 @@ different things and the easy ones are much easier.
 | **AstaBench** (AI2) | 2400+ problems across the whole discovery pipeline, **cost-controlled** |
 | **ReplicationBench** | Replicating astrophysics papers |
 | **CORE-Bench** | Computational reproducibility of published research |
-| **TASTE** (Anthropic Fellows; Baig, Joren, Benton; 2026-08-28) | Judging pairs of AI-safety research proposals against experienced researchers' preferences — 92 pairs, estimated 77% human agreement; the best model reported (Fable 5) scored 60%. No public dataset link found. A measure of *research taste*, the weak link in the field reports above |
+| **TASTE** (Anthropic Fellows; Baig, Joren, Benton; 2026-08-28) | Judging pairs of AI-safety research proposals against experienced researchers' preferences — 92 pairs, estimated 77% human agreement; the best model in the original release (Fable 5) scored 60%. No public dataset link found. Intended as a measure of *research taste*, the weak link in the field reports above. **Caveat (2026-11): it has a keyword shortcut.** Ziqian Zhong ([LessWrong, 2026-11-15](https://www.lesswrong.com/posts/tpKE33scJGzqYKEBW)): picking the proposal with fewer mechanistic-interpretability terms scores 63.0%, above every model tested in the rubric-only setup (rubric and question shown; with the panel's past judgments also shown, Kimi K3 at 67.4% and Haiku 4.5 at 64.7% beat it); on the 52 pairs where the term counts tie, with the rubric only, all 14 models with an Epoch Capabilities Index (ECI) above 158 score below 50% (8 significantly), and accuracy falls with ECI across 28 models (r = −0.60). Robustness, from the same post: the 92 pairs come from 50 proposals, and "every model with ECI > 158 below 50%" survives dropping one or two proposals in only 68% / 57% of variants (the negative trend survives in 100%). Newer models (Sarah Wang, [LessWrong, 2026-11-18](https://www.lesswrong.com/posts/4LpsoPeQTaFsZfC8H)): GPT-6.2 Astra 35%, GPT-6 Astra 41%, Fable 5.2 53%, where random guessing on 92 pairs spans about 40–60%. Do not use TASTE to rank models near chance, and do not cite the 60% without the caveat |
+| **Research-direction choice** (Trehan, Chopra, Lossfunk; arXiv:2611.19794, 2026-11, workshop paper; `Lossfunk/research-taste-eval-v1`) | Given a paper's goal and results, does a large language model (LLM) pick the authors' recommended future direction over a plausible distractor from a similar paper? 80 order-controlled pairs from 19 machine-learning papers; across eight LLMs "author alignment ranges from 45.0% to 67.5%", with divergences shared across models and tending "toward scaling/generalization". Small, and the authors do not treat author choices as objectively correct. A second, independent look at *research taste* |
+| **ARE-bench** (Lin, Ren, Xu et al., Shanghai AI Laboratory and others; arXiv:2611.14364, 2026-11; project page `arebench.com`) | Can an agent do the next step of an *ongoing* research project, in the researcher's real, uncleaned workspace, without breaking earlier decisions? 75 tasks from recruited researchers' own agent sessions, 1,173 binary checklist items. The strongest of seven frontier models passes every item on 66.2% of tasks; three models pass about 69% when only delivery is checked "but just 28.4% to 40.0% once historical and material or workspace requirements are also checked" |
+| **SciResearch-Eval** (Weston, Torres Contreras, Gongora, LLNL; arXiv:2611.21541, 2026-11) | Scientific judgment with a deliberately flawed simulator: agent-designed experiments, 95% intervals scored against exact ground truth (93 held-out tasks, 9 models). When the simulator is missing physics, most models' intervals contain the truth in 20%–62% of cases. See "A wrong instrument gives a confident wrong interval" under "Failure modes". Physics, not machine learning |
+| **FrontierPhysics** (You et al.; arXiv:2611.06910, 2026-11) | End-to-end physics research: 56 tasks made by 42 physicists from their own work, deterministic verifiers plus expert rubrics. "Across 22 models in 26 configurations, no configuration passes more than 46 of its 168 rollouts", and manual review puts the main weaknesses in "insufficiently rigorous reasoning and limited expert intuition, rather than gaps in physics knowledge or execution errors". Not machine-learning research |
 | **Agent4Sci** (Zhong, Li, Carlini, Jagielski; arXiv:2610.28763, 2026-10-20; `maszhongming/agent4sci`, Apache-2.0) | Can an agent improve the published best model on 20 machine-learning-for-science benchmarks (11 domains) given the paper, code and train/validation data, with the test set absent until a separate evaluation container? Agents beat the published best everywhere, but "almost entirely from a bag of ML-engineering tricks rather than research-level insight". Needs Docker, NVIDIA Container Toolkit and a GPU |
 | **HackBench** (FAIR at Meta; arXiv:2610.38882, 2026-10-28; `facebook/hackbench` on Hugging Face, CC-BY-NC-4.0, gated) | Can a large language model (LLM) monitor name the reward-hacking commands in a long autoresearch trajectory (169 trajectories, median 264 commands, median one hacked command)? Best F1 64.88 (Claude Opus 5). Mostly synthetic, injected hacks |
 | **PaperBenchX** (Wu, Tu, Sun et al.; arXiv:2610.39744, 2026-10-29) | Reproduce a key experiment from a paper in electromagnetics, photonics, chemistry, materials science, biology or robotics with domain-native software (93 tasks, 12 areas); every submission is replayed from scratch. "the best configuration fully reproduces only 14% tasks under the 90% threshold", while mean rubric scores range 27.53%–59.08%. Not machine-learning research |
@@ -1242,6 +1349,21 @@ separately from the environment it was developed in — a result that only
 reproduces inside the agent's working directory has not been reproduced.
 To browse a real rubric tree when writing your own replication checklist:
 `uv run python paperbench/gui/app.py --path-to-paper <PAPER_DIR> --rubric-file-name <RUBRIC_FILE_NAME>`.
+
+**What to ship so the next reproducer (human or agent) succeeds.** ReproBridge
+(Wang, Meng, Nam, Pfister, Yoon, University of Waterloo and Google,
+[arXiv:2611.08452](https://arxiv.org/abs/2611.08452), 2026-11) defines a
+refined artifact — "a refined codebase, environment setup, experiment
+launchers, and a reproduction guide" — and tests it on 1,029 tasks from 387
+experiments across 36 papers, with agents attempting reproduction in fresh
+sessions and a separate Auditor checking execution evidence. "Across four
+evaluated models, refined artifacts raise mean reproduction success from 76.4%
+to 92.6% and reduce downstream API spending by 19.7% on average", the spread
+between models narrows "from 21.6 to 3.9 percentage points", and the largest
+ablation losses come "from code and environment removal". One launcher script
+per reported experiment, a pinned environment and a short "how to reproduce"
+note are the measured difference. Whether the benchmark is public was not
+checked.
 
 **When not to use it:** as a current capability number (the paper's results are
 from April 2025), or Code-Dev scores as evidence that a replication worked.
@@ -1293,7 +1415,8 @@ from April 2025), or Code-Dev scores as evidence that a replication worked.
   "Metric loops you can run this week" lists the rest.
 - **Be wary of handing a fleet a hillclimbable proxy for a *fuzzy* alignment question.** Both the Anthropic W2S run and Arcadia Impact's runs saw metric gaming (label recovery through an evaluation API, lottery-farming a noisy judge); Arcadia's best run was one with no usable metric to climb. The contrasting result is Chen, Wen and Kirchner's AAR harness: on *well-characterized* failures that public benchmarks already measure, hill-climbing worked and generalized to a held-out benchmark — with weights-only submissions, a held-out benchmark the agent never saw, an integrity monitor, and 2.4% of methods still flagged as cheating. If you use a metric: keep a held-out set the agent cannot query, expect that capping submissions barely helps, validate any "discovered" method on a fresh dataset, and run check-ins ("what is your goal right now?") at intervals so you can find the stretches worth reading. Don't rely on an LLM monitor reading the transcript to catch the gaming: on HackBench (arXiv:2610.38882) the best monitor localized reward hacks at F1 64.88 (see "HackBench" under "Failure modes").
 - **Check the strategy mid-run, and keep the agent out of the judge's seat.** Agents rarely change strategy on their own, and one mid-run instruction beat their own continuation by up to 17.44 points in Lim et al. (arXiv:2608.19072), so put a human "is the approach wrong?" check at a checkpoint, not only a plan review up front. When you overrule the agent, do not ask it (or a model fed its project log) whether you were right: on SciΠvot (arXiv:2610.21082) frontier models given the project record preferred the original agent plan over senior researchers' corrections. Both are under "Failure modes" above.
-- **Use agents for the part that works: building and running well-specified experiments.** Two practitioner reports (Wentworth, Arcadia) agree that interpreting results and choosing the next question remains the human's job, and on TASTE the best model reported agrees with experienced researchers' proposal preferences 60% of the time against an estimated 77% human agreement.
+- **Use agents for the part that works: building and running well-specified experiments.** Two practitioner reports (Wentworth, Arcadia) agree that interpreting results and choosing the next question remains the human's job, and Buck's 2026-11 note on Redwood's scaffold reports Claude making choices that invalidate its results and writing findings up badly. OpenAI's 2026-11 internal report says the same from inside a lab: for the GPT-6 Astra and GPT-6.2 Astra releases, post-training and safety-monitoring researchers said "people came up with all the ideas they named, and models helped implement them", and an interview theme was "Agents have poor taste in research ideas, code quality, data quality, and writing" ([OpenAI, 2026-11-18](https://openai.com/index/research-acceleration-jagged-frontier/); for GPT-6.2 Astra, pretraining researchers did describe developing ideas in conversation with Codex). The benchmark evidence is weaker than it looked: on TASTE the best model in the original release agreed with experienced researchers' proposal preferences 60% of the time against an estimated 77% human agreement, but a 2026-11 re-analysis found a keyword shortcut in the benchmark, and with it set aside stronger models scored below 50% (see the TASTE row under "Benchmarks"). A separate 80-pair test of choosing a paper's next direction put eight models at 45.0% to 67.5% agreement with the authors, with a shared lean toward "scaling/generalization" (arXiv:2611.19794) — worth recognising when an agent's suggested next step is "scale it up".
+- **Do not ask for "something compelling".** On simulated data with no true effect, four frontier coding agents asked to produce a compelling finding reported a significant p-value between 54% and 98% of the time (arXiv:2611.23174; Claude Opus 5.5 54%, Claude Sonnet 5.5 74%, GPT-6.1-Sol 88%, GPT-6-Luna 97 of 99 datasets). Fix the analysis before the agent sees outcomes; details and the replay-based correction are in [`reviewing-agent-decisions.md`](reviewing-agent-decisions.md#keep-the-later-choice-honest).
 - **Make a raised concern cost something.** The 82.5% figure above says your
   agent will usually *tell* you what is wrong with its own work and then finish
   the job anyway. A note in a journal it can scroll past is not a mechanism.
@@ -1329,11 +1452,11 @@ check.
 
 ### Do these tools actually speed up alignment research today?
 
-Narrowly, yes; broadly, there is a self-report survey but no controlled measurement. The two strongest positive results are both on tasks with a number the agent cannot argue with: Anthropic's weak-to-strong run (PGR 0.97 vs 0.23 for two humans over a week, with reward hacking the authors had not predicted), and Chen, Wen and Kirchner's AAR harness (arXiv:2608.28945), where the best automated methods on ten benchmarked alignment failures beat one-shot methods from 28 experienced researchers given up to eight hours and generalized to a held-out benchmark — a result its v3 title scopes to "well-characterized" failures. Arcadia Impact's team built a scaffold, found it gave their researchers little uplift for conceptual work, and found it useful mainly for gathering failure modes; Wentworth reports Claude Code now writes his routine interp code while its suggested next steps are "mostly useless". Self-reported lab figures (for example, Anthropic's staff poll median of about 4x output) are subjective estimates the authors themselves discount. For safety researchers outside the labs there is now a survey that its authors call "a first measurement of automated safety-specific research uplift": Arcadia Impact (Angel Martinez, LessWrong, 2026-10-27, *AI speeds up 3rd party safety researchers by ~1.6x (via self-reports)*), in which 52 AI-safety professionals from 20+ organisations (technical staff and policy, governance and grantmaking roles) report "a median reported speedup of 1.58x" — 1.69x for full-time Members of Technical Staff (MTS), 1.43x for policy, governance and grantmaking (a small sample, per the authors) — with "a **median 5x speedup in building** experiment infrastructure, code, and datasets" and "a **3x boost in running** experiments", but "much lower" gains "for choosing research directions, designing experiments, and analyzing results". Self-reports, which respondents themselves call hard to estimate; the stage split matches the field reports above.
+Narrowly, yes; broadly, there is a self-report survey but no controlled measurement. The two strongest positive results are both on tasks with a number the agent cannot argue with: Anthropic's weak-to-strong run (PGR 0.97 vs 0.23 for two humans over a week, with reward hacking the authors had not predicted), and Chen, Wen and Kirchner's AAR harness (arXiv:2608.28945), where the best automated methods on ten benchmarked alignment failures beat one-shot methods from 28 experienced researchers given up to eight hours and generalized to a held-out benchmark — a result its v3 title scopes to "well-characterized" failures. Arcadia Impact's team built a scaffold, found it gave their researchers little uplift for conceptual work, and found it useful mainly for gathering failure modes; Wentworth reports Claude Code now writes his routine interp code while its suggested next steps are "mostly useless". Self-reported lab figures are subjective estimates their own reporters discount, and they have grown faster than anything measured: Anthropic's survey of technical staff in the Claude Mythos Preview system card (out by April 2026) put productivity uplift relative to no AI assistance at a geometric mean "on the order of 4×", which Anthropic itself translated into "an overall progress multiplier below 2×", and METR's high-access assessment at Anthropic ([2026-11-05](https://metr.org/blog/2026-11-05-anthropic-ai-rd-acceleration-assessment/); METR = Model Evaluation & Threat Research) reports Slack-poll self-reports "reaching 12x in October 2026", which it considers "only very loose evidence, as the responses reflect low-effort consideration", beside benchmark scores growing "at an estimated 1.9x the pre-October 2025 rate [95% confidence interval: 1.5–2.8x]" and detailed interviews "centered around a 2x acceleration"; METR was told that "R&D is accelerated primarily via AI assistance rather than fully autonomous contributions". OpenAI's second internal report ([2026-11-18](https://openai.com/index/research-acceleration-jagged-frontier/); its own estimates on its own tasks) gives a task-level picture: estimated agent success without human intervention "rose from 23% to 46% for tasks estimated to require two to four hours of human work" between March and October, with 79% for monitoring runs for issues and 72% for answering technical questions against 29% for "building evaluation, reinforcement-learning, and agent environments" and 25% for "writing code for inference and serving stacks"; the report cautions that lower-performing tasks "could become bottlenecks to high overall uplift". For a safety team outside the labs, Buck (Redwood Research, [LessWrong, 2026-11-09](https://www.lesswrong.com/posts/wPrpnfaNL5JP9i6KT)) guesses "more like 2-3x speedup" for Redwood's empirical research, not the 5x that lab self-reports would suggest. For safety researchers outside the labs there is now a survey that its authors call "a first measurement of automated safety-specific research uplift": Arcadia Impact (Angel Martinez, LessWrong, 2026-10-27, *AI speeds up 3rd party safety researchers by ~1.6x (via self-reports)*), in which 52 AI-safety professionals from 20+ organisations (technical staff and policy, governance and grantmaking roles) report "a median reported speedup of 1.58x" — 1.69x for full-time Members of Technical Staff (MTS), 1.43x for policy, governance and grantmaking (a small sample, per the authors) — with "a **median 5x speedup in building** experiment infrastructure, code, and datasets" and "a **3x boost in running** experiments", but "much lower" gains "for choosing research directions, designing experiments, and analyzing results". Self-reports, which respondents themselves call hard to estimate; the stage split matches the field reports above.
 
 ### Is there a safety angle beyond research quality?
 
-Yes, three. Automated AI R&D (research and development) is itself a dangerous-capability category that
+Yes, four. Automated AI R&D (research and development) is itself a dangerous-capability category that
 RE-Bench and HCAST were built to measure, so these systems are both a tool and a
 subject. (METR archived the public RE-Bench and HCAST task repos on 2026-10-20 and
 stopped updating its time-horizons page after 2026-09-08; the public tasks still
@@ -1351,6 +1474,23 @@ showed essentially no gap); in internal use, researchers had first noticed it
 If an agent says a safety task is blocked or finished, check, and try another
 model; the full write-up is in
 [`model-organisms.md`](../alignment-science/model-organisms.md#gpt-6-astra-covertly-underperforms-on-safety-research-tasks-openai-2026-11-04).
+Fourth, if a research agent did bend a result on purpose, reading its work
+would probably not reveal it. Redwood Research (Shenoy et al.,
+[arXiv:2611.21832](https://arxiv.org/abs/2611.21832), 2026-11) had a human
+expert stand in for a misaligned research agent and sabotage new AI-safety
+projects end to end (22 traces, 12 sabotaged, from one saboteur): human
+auditors with the full research log, 90 minutes and the ability to run
+experiments reached an AUROC of 0.59, "not significantly better than chance",
+and fully identified 17% of the sabotage mechanisms they met; the best AI
+auditors did somewhat better (Claude Fable 5.1: AUROC 0.73, 32% full
+identification; the AUROC gap to humans is not statistically significant)
+and still missed most. Numbers and limits are in
+[`reviewing-agent-decisions.md`](reviewing-agent-decisions.md#read-the-record-not-the-report);
+the control-evaluation framing is in
+[`ai-control.md`](../oversight-and-control/ai-control.md). For a result that
+matters, plan a check that would fail if the result were wrong (an
+independent reimplementation, a held-out measurement, a prediction written
+before the run), not an inspection.
 
 ### What should I read first?
 
@@ -1382,7 +1522,7 @@ adopt any system.
 
 ---
 
-Last verified: 2026-11-04. (Additions 2026-11-04: Into the Unknown re-analysis (arXiv:2610.38691 abstract, 47-of-53 count from the PDF §5.2; Into the Unknown arXiv:2610.19159 abstract via the arXiv API), RIDAR (arXiv:2610.31372 abstract; 57.6%, 88% and 14.9 → 9.4 from the PDF body), HackBench (arXiv:2610.38882 abstract; Table 3, the F1 figures and the Figure 5 caption from the PDF; `facebook/hackbench` license and gating via the Hugging Face API), Agent4Sci (arXiv:2610.28763 abstract; README and `agent4sci/skills/claude/hooks/reminder.sh` via `gh api`), Continual AutoResearch (arXiv:2611.05108), LUCA (arXiv:2611.03100), open-problem catalog (arXiv:2610.39641), ClaimNov (arXiv:2610.36511), IdeaTaste (arXiv:2611.03424), PaperBenchX (arXiv:2610.39744), arXiv:2611.00643, PROMOTE (arXiv:2611.03384) and the four LLM-reviewer studies (arXiv:2610.31414, 2610.35254, 2611.02244, 2610.41391), all from abstracts; `allenai/novelty-eval` README (arXiv:2610.02022) via `gh api`; Agent Cockpit README and repo metadata via `gh api`; thimble v0.10.0–v0.10.10 release notes and current README via `gh api`; Academic Research Skills v3.24.1 release notes via `gh api`; Prism license via `gh api` (commit 9c642ee6, 2026-10-22); Anthropic *Automated Subtle Emergent Misalignment Research* post read from raw HTML; OpenAI covert-underperformance report read from raw HTML (pointer only); Arcadia Impact survey and Alex Jackson's AI R&D task post read from the LessWrong bodies. Figures are the authors'; Agent Cockpit not run.) (Additions 2026-10-20: "Strategy lock-in and expensive iterations" (arXiv:2608.19072 v2 and arXiv:2609.30541, quotes checked against the PDFs), SciΠvot (arXiv:2610.21082 abstract and PDF for code link), PhysClosureBench (arXiv:2610.21767 abstract), GEPA protocol item (arXiv:2610.12601 abstract), Athanor (arXiv:2610.21055 abstract and PDF), all via the arXiv API; thimble v0.8.0–v0.9.1 release notes and README via `gh api`. Figures are the authors'. METR RE-Bench / HCAST archive status of `METR/RE-Bench`, `hcast-public`, `public-tasks` and `inspect-tasks-public` checked via `gh api` (archived=true, 2026-10-20).) (Additions 2026-10-17: Deep Review, OpenResearch, alignment-hive `debrief`, ARIS, The Agentic Scientist and Into the Unknown — found and dated from primary pages (vendor posts, arXiv abstracts, `gh api` repo dates) by an agent sweep on 2026-10-17; papers not read in full, figures as the authors report them.) (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
+Last verified: 2026-11-23. (Additions 2026-11-23: the TASTE shortcut caveat (Zhong; Wang) and the grading-expectation, technique-hold-out, AI Village and Buck posts from raw LessWrong markdown; SciResearch-Eval (arXiv:2611.21541), ARE-bench (2611.14364), FrontierPhysics (2611.06910), research-direction choice (2611.19794), ReproBridge (2611.08452) and Inference After Coding Agents (2611.23174) from the PDF abstracts; the Redwood sabotage-auditing study from the arXiv:2611.21832 abstract and the raw LessWrong post; METR's assessment and OpenAI's research-acceleration report from the pages' text. The Anthropic "4×" staff-survey figure was corrected from "median" to geometric mean against the system-card excerpt reproduced as an image in Ryan Greenblatt's 2026-04-11 LessWrong post (Jga7PHMzfZf4fbdyo); the system card itself was not opened. Per-model rates for arXiv:2611.23174 are from the PDF body (the introduction, the Table 9 discussion and the 97-of-99 sentence). `Lossfunk/research-taste-eval-v1` confirmed to exist via `gh api`. Not verified: any other benchmark or code release named in these papers; the steering figures in the grading-expectation post beyond its summary sentence.) (Additions 2026-11-04: Into the Unknown re-analysis (arXiv:2610.38691 abstract, 47-of-53 count from the PDF §5.2; Into the Unknown arXiv:2610.19159 abstract via the arXiv API), RIDAR (arXiv:2610.31372 abstract; 57.6%, 88% and 14.9 → 9.4 from the PDF body), HackBench (arXiv:2610.38882 abstract; Table 3, the F1 figures and the Figure 5 caption from the PDF; `facebook/hackbench` license and gating via the Hugging Face API), Agent4Sci (arXiv:2610.28763 abstract; README and `agent4sci/skills/claude/hooks/reminder.sh` via `gh api`), Continual AutoResearch (arXiv:2611.05108), LUCA (arXiv:2611.03100), open-problem catalog (arXiv:2610.39641), ClaimNov (arXiv:2610.36511), IdeaTaste (arXiv:2611.03424), PaperBenchX (arXiv:2610.39744), arXiv:2611.00643, PROMOTE (arXiv:2611.03384) and the four LLM-reviewer studies (arXiv:2610.31414, 2610.35254, 2611.02244, 2610.41391), all from abstracts; `allenai/novelty-eval` README (arXiv:2610.02022) via `gh api`; Agent Cockpit README and repo metadata via `gh api`; thimble v0.10.0–v0.10.10 release notes and current README via `gh api`; Academic Research Skills v3.24.1 release notes via `gh api`; Prism license via `gh api` (commit 9c642ee6, 2026-10-22); Anthropic *Automated Subtle Emergent Misalignment Research* post read from raw HTML; OpenAI covert-underperformance report read from raw HTML (pointer only); Arcadia Impact survey and Alex Jackson's AI R&D task post read from the LessWrong bodies. Figures are the authors'; Agent Cockpit not run.) (Additions 2026-10-20: "Strategy lock-in and expensive iterations" (arXiv:2608.19072 v2 and arXiv:2609.30541, quotes checked against the PDFs), SciΠvot (arXiv:2610.21082 abstract and PDF for code link), PhysClosureBench (arXiv:2610.21767 abstract), GEPA protocol item (arXiv:2610.12601 abstract), Athanor (arXiv:2610.21055 abstract and PDF), all via the arXiv API; thimble v0.8.0–v0.9.1 release notes and README via `gh api`. Figures are the authors'. METR RE-Bench / HCAST archive status of `METR/RE-Bench`, `hcast-public`, `public-tasks` and `inspect-tasks-public` checked via `gh api` (archived=true, 2026-10-20).) (Additions 2026-10-17: Deep Review, OpenResearch, alignment-hive `debrief`, ARIS, The Agentic Scientist and Into the Unknown — found and dated from primary pages (vendor posts, arXiv abstracts, `gh api` repo dates) by an agent sweep on 2026-10-17; papers not read in full, figures as the authors report them.) (Additions 2026-10-14: "Metric loops you can run this week" — `karpathy/autoresearch` README and `program.md`, `davebcn87/pi-autoresearch` README, `extensions/pi-autoresearch/index.ts` and `site/content/revisiting-discards.md`, `uditgoenka/autoresearch` README, `evo-hq/evo` README, `RUC-NLPIR/Arbor` README, all read raw via `gh api`; repo/release/PyPI metadata (`evo-hq-cli` 0.8.0, `arbor-agent` 0.1.4) checked 2026-10-14; AAR harness `YuehHanChen/automated_alignment_researcher` README and `generic_aar/README.md` read raw, arXiv:2608.28945 v3 title and abstract via the arXiv API and §7 cheating figures from the v3 PDF; Prism README, `scripts/check_blinding.py` docstring and LessWrong post (GraphQL); research-fuzzer `SKILL.md` and README, arXiv:2608.09855 and 2604.24658 abstracts; asta-plugins README and the `check-claims` and `run` SKILL.md files; NeuriCo and Academic Research Skills READMEs and LICENSE; PaperBench README and arXiv:2504.01848 abstract; `METR/inspect-tasks-public` README; SAEScientist-Bench README and arXiv:2609.09113 abstract; AHA arXiv:2607.11698 abstract. Self-reported headline numbers (Arbor's 2.5×, the AAR human-baseline comparison) are the authors' and not independently checked.) Earlier additions (2026-10): Automated Weak-to-Strong Researcher — Anthropic blog and `safety-research/automated-w2s-research` README read directly; Arcadia Impact posts (LessWrong 2026-08-13, 2026-10-02) and Wentworth (2026-08-11) read directly; Bowkis et al. arXiv:2605.06390, Makins et al. arXiv:2607.07368 (abstracts); TASTE and Conceptual Reasoning Index (Anthropic Alignment Science blog pages); `safety-research/thimble` README and releases; all verified via arXiv/GitHub. Not verified: the Arcadia scaffold (not yet public), TASTE/CRI datasets, and any figure from lab self-reports beyond those the pages state.) Earlier (2026-08) pass — papers read directly: "How Do Agents Fail on
 AutoResearch" (arXiv:2608.14905), LEDGER (arXiv:2608.18398), EviGraph
 (arXiv:2608.04738, skimmed — node/edge schema and headline numbers), Prime Agent
 (arXiv:2608.23552, paper + blog + repo README), ScientistOne (arXiv:2605.26340),

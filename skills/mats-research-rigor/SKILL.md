@@ -16,68 +16,105 @@ to the work. Templates and optional executable checks live in
 `project_templates/research_rigor/`; use those that test a property the project
 actually needs.
 
-## During research
+## Who decides
 
-- Exploration, theory, and instrument building may precede a hypothesis. For a
-  confirmatory test, preserve predictions and decision rules before the evidence
-  they govern. Record later revisions without rewriting the earlier commitment.
-- Choose validation appropriate to the claim. Successful execution, an artifact
-  path, a model's review, or an evidence-type label alone does not establish that
-  a scientific conclusion is correct.
-- Keep results traceable to artifacts and record uncertainty, failures, and
-  disconfirming evidence. Separate observations from explanations. Account for
-  every registered prediction, including inconclusive ones.
-- Treat failure rates from past systems as evidence with scope, not permanent
-  limits on what current or future agents can do. Consider alternatives when
-  choosing a direction; do not manufacture extra designs for an obvious next step.
+- Under **Consult on method choices**, ask before settling benchmarks, metrics,
+  datasets or splits unless instructions already settle it; under **Choose
+  methods independently** those choices are yours, within the stated objective
+  and resource authorization. In either mode the researcher reviews concern
+  resolutions and signs hypothesis verdicts. A project's instructions and
+  records stay with that project: they do not carry over to other projects, and
+  they do not authorize sharing across researchers or use for training.
+- The eleven stages (`question` … `publish`, pilot before design) are a
+  checklist, not a state machine. Mark one `not_applicable` or `superseded`,
+  with the reason, instead of claiming its work was done.
+- Before a plan is fixed or a result is called, offer an interview
+  (`mats-research-interview`). Offered, never imposed; skip it for a small,
+  reversible step the researcher already knows they want, or mid-way through a
+  plan they have settled.
+
+## Before the main run
+
+- Exploration, theory, and instrument building may precede a hypothesis: say so
+  and label the output exploratory. Keep observations that generated a
+  prediction apart from later tests of it.
+- A confirmatory test commits at two points. `hypothesis`, before the pilot: the
+  hypothesis (falsifiable, naming a mechanism), the quantitative prediction, and
+  the falsifier. Then a small pilot, its result recorded even if null. `design`,
+  after the pilot and before the main run: one metric, the decision rule with
+  its inconclusive band, the method (specific about any cheaper proxy), the
+  prespecified confounds, and a guard for each measure (the cheap way it could
+  move without the claim being true, and the check that catches it). Commit to
+  git each time. The pilot does not license rewriting the hypothesis or
+  falsifier: a changed belief is a new registered prediction. At analysis,
+  report deviations from what was registered.
+- Before testing a question, record at least two hypotheses that predict
+  different observations, or the rival you weighed and why you rejected it.
+  Tie each hypothesis to the run that will decide it. When asking for rivals,
+  seed the request from a field outside the project's own framing. A rival
+  declined with a reason settles it; do not ask again.
+- When choosing a direction, compare designs that differ in mechanism, not in
+  hyperparameters, and record the failure mode each is most vulnerable to:
+  designs sharing one give correlated evidence. Asking more models does not
+  diversify, and a model's ranking of the candidates needs validating before it
+  is trusted. Do not manufacture extra designs for an obvious next step. Treat
+  failure rates from past systems as evidence with scope, not permanent limits.
 - Say what *done* means before starting a run or follow-up, as a checkable
-  condition written once; keep evidence (this run bears on that prediction, for
-  or against, this much) separate from the verdict a person signs, and cite the
-  runs that go against with the same care as the ones for.
-- Working on your own under an agreed plan, stop only for a reason the plan
-  names (done-means met, a stop-and-ask condition, its abandon condition), a
-  refused permission you cannot do without, or something only the researcher
-  can resolve. A dead end is not one of these: record it, change direction
-  deliberately (invert an assumption, take another route, try to break your
-  best result), and keep going. See "A dead end is not a stopping point".
-  A foreseeable fork is not one either: apply the plan's if-then rule, or run
-  both (an objective check settles it, or the researcher picks before seeing
-  the outcomes) or carry one with the assumption written
-  down, if the choice is reversible and sandboxed. Only a one-way door waits.
-- When comparing to a paper, share one axis with it — an anchor run of one of
-  their conditions on your configuration, or your idea with one factor swapped
-  to their value — rather than reading their absolute number as your baseline.
-  Record each paper's configuration factor by factor, blanks for what it did
-  not report.
+  condition written once and never edited.
+- When comparing to a paper, share one axis with it, stated up front — an
+  anchor run of one of their conditions on your configuration, or your idea with
+  one factor swapped to their value — rather than reading their absolute number
+  as your baseline. Record each paper's configuration factor by factor, blanks
+  for what it did not report. Pin your substrate (base model, trainer, eval
+  harness) and do not upgrade it mid-project; a newer base model is a
+  registered prediction of its own.
+
+## While running and reading results
+
+- "It ran" is not a result. Gate on an independent check written as code that
+  fails loudly (shapes, possible ranges, non-constant predictions, one condition
+  rerun and reproduced, a toy case with a known answer), and keep the reasoning
+  trace. A model's review or an
+  evidence-type label alone does not establish a conclusion.
+- Cite each run that bears on a prediction as you go, for or against, with a
+  weight; cite what goes against with the same care. This evidence is kept
+  separate from the verdict, and its tally never sets the verdict.
+- Estimate robustness by varying the sample (bootstrap the eval set, overlapping
+  data subsets, hyperparameter perturbation), not by sweeping seeds. See "Vary
+  the data, not the seed" in `statistics.md`.
+- *Causes*, *drives*, *mediates*, *is responsible for* need causal evidence
+  (ablation, patching, intervention). Attribution, probes, correlations and
+  statistics of a weight change are observational: weaken the sentence or run
+  the intervention.
 - A shape claim about a representation (ring, helix, manifold) names the share
   of variance of the view it was seen in and cites a check that does not
   project: a similarity matrix in the variable's order, or persistent homology
   against a noise band. UMAP and t-SNE pictures are for looking, not evidence.
-  See "A shape in a projection is not a shape in the model" in the wiki doc.
-- Before testing a question, record at least two hypotheses that predict
-  different observations, or the rival you weighed and why you rejected it.
-  Tie each hypothesis to the run that will decide it. When asking for rivals,
-  seed the request from a field outside the project's own framing.
-- Cite papers as sources someone can open (title, authors, year, link), not
-  from memory, and keep the ones you build on apart from the ones you set
-  aside.
-- Estimate robustness by varying the sample (bootstrap the eval set, overlapping
-  data subsets, hyperparameter perturbation), not by sweeping seeds. See
-  "Comparability", "Say what done means" and "Evidence is not the verdict" in
-  the wiki doc, and "Vary the data, not the seed" in `statistics.md`.
 - When several agents test arms side by side, one coordinator owns the shared
   measurement (items, judge and judge prompt, n, control, figure code) and
-  writes one report across arms; check that every arm used it, and keep a
-  per-arm checklist of what was examined, including each arm's raw outputs and
-  the judge's unlabeled count. Fixed measurement buys comparability, not
-  validity. See "Several agents, one measurement" in the wiki doc.
+  writes one report across arms; flag any arm whose judge, prompt, n or
+  shared-file hash differs, and keep a per-arm checklist of what was examined
+  (raw outputs included). Fixed measurement buys comparability, not validity.
+- Working on your own under an agreed plan, stop only for a reason the plan
+  names (done-means met, a stop-and-ask condition, its abandon condition), a
+  refused permission you cannot do without, or something only the researcher
+  can resolve. A dead end is not one of these: record what was tried and what
+  it does not rule out, change direction deliberately (invert an assumption,
+  take another route, try to break your best result), letting something other
+  than the stuck model pick the move, and keep going. Nor is a
+  foreseeable fork: apply the plan's if-then rule, or run both (an objective
+  check settles it, or the researcher picks before seeing the outcomes), or
+  carry one with the assumption written down, if the choice is reversible and
+  sandboxed. Only a one-way door waits.
 
 ## Concerns and repairs
 
-Record material concerns and investigate them. A useful repair proposal states
-what changed, identifies the rerun or independent check, and points to evidence
-showing what the repair establishes and what remains uncertain. Do not describe
-an unreviewed proposal as verified.
+Write a concern down the moment it appears and investigate it. An open concern
+stops the step being called done and anything downstream that amounts to
+concluding; it never blocks the work. A repair proposal names the concern,
+states what changed, and points to the rerun, independent check, or revised
+claim, with what remains uncertain. Submitting one closes nothing: do not
+describe an unreviewed proposal as verified.
 
 In the MATS dashboard, submit a repair through `<research_update>` using the
 concern id supplied by the tool. The researcher can verify and accept the
@@ -86,12 +123,35 @@ in effect; continue useful work while review is pending. In other environments,
 follow the researcher's chosen review arrangement rather than importing dashboard
 gates from this skill.
 
+## Verdicts, write-up and release
+
+- Every registered prediction gets exactly one verdict — supported, refuted, or
+  inconclusive — with a reason, against the frozen decision rule, signed once by
+  the researcher. It holds through write-up and release: neither goes ahead
+  with a prediction unsigned. Inconclusive is a result; never drop a prediction.
+- Address what cuts against the verdict by name, and do not claim past what was
+  run. A `supported` with anything cited against it, or nothing cited, is shown
+  to the researcher at signing as a flag, not a block. On `supported`, say which
+  rivals were refuted, which still fit, and what the survivors agree on; for the
+  next run, prefer the one that rules out the most survivors.
+- Every number traces to a result artifact someone can open; infinite or NaN is
+  not evidence. An LLM review is triage: a human reads the code and artifacts
+  before anything leaves. Cite papers as sources someone can open (title,
+  authors, year, a link you checked), not from memory, and keep the ones you
+  build on apart from the ones you set aside.
+- On release, disclose inference cost (per step where you have it), harness and
+  version, exact model IDs, run dates, reasoning mode and uncertainty, with
+  seeds, a pinned environment, an entry point and content-hashed artifacts.
+- Surveys, theory and desk research: same mechanisms, different evidence. See
+  "Does this change if I am not running lab experiments?" in the wiki doc.
+
 ## Advice and reminders
 
 Offer advice when it changes a useful decision. Respect handled and muted
 reminders; return to a handled topic only when materially new evidence warrants
-it. Do not rename a reminder to evade dismissal. Skipping this skill, adapting a
-method, or taking an unusual research path is not itself a concern.
+it. Do not repeat a reminder in chat or rename it to evade dismissal. Skipping
+this skill, adapting a method, or taking an unusual research path is not itself
+a concern.
 
 Do not deploy attention checks against another person: the wiki's attention-check
 component remains a design requiring program authorization.

@@ -2,7 +2,7 @@
 
 A toy AI Control example using **ControlArena's Apps setting** + the **defer-to-trusted** micro-protocol. Demonstrates the canonical control workflow: build honest+attack policies, run a trusted monitor, sweep deferral thresholds, calibrate on held-out honest data, plot a safety/usefulness pareto.
 
-The modern, ControlArena-15.x scaffold of the original 2023 paper's main experiment (Greenblatt, Shlegeris, Sachan, Roger — arXiv:2312.06942).
+The modern, ControlArena-20.x scaffold of the original 2023 paper's main experiment (Greenblatt, Shlegeris, Sachan, Roger — arXiv:2312.06942).
 
 ## Scope (don't expand without asking)
 
@@ -20,7 +20,11 @@ The modern, ControlArena-15.x scaffold of the original 2023 paper's main experim
 
 ## Design notes
 
-- Built on **ControlArena 15.x** (`control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "AISI control framework"). API stable across the patch series; key imports: `from control_arena import EvalMode`, `from control_arena.eval import ControlEvalConfig, get_control_task_product`, `from control_arena.micro_protocol import defer_to_trusted_builder`, `from control_arena.settings.apps.apps_setting import AppsSetting`, `from control_arena.analysis import samples_df, compute_safety, compute_usefulness`. If you see imports from `control_arena.protocol` (singular), `control_arena.policies` (vs `policy`), or `EvalMode` imported from anywhere other than `control_arena` top-level — that's pre-15.x and the README/code here will not match.
+- Built on **ControlArena 20.1.1** (`control-arena` on PyPI, `UKGovernmentBEIS/control-arena` on GitHub, "AISI control framework"; floor `>=20.1.1` for the APPS scorer fix, lockfile in `uv.lock`). The API changes between major versions — read the installed source in `.venv` rather than guessing. Key imports: `from control_arena import EvalMode`, `from control_arena.eval import ControlEvalConfig, get_control_task_product`, `from control_arena.micro_protocol import defer_to_trusted_builder`, `from control_arena.settings.apps.apps_setting import AppsSetting`, `from control_arena.analysis import samples_df, compute_safety, compute_usefulness`. If you see imports from `control_arena.protocol` (singular), `control_arena.policies` (vs `policy`), or `EvalMode` imported from anywhere other than `control_arena` top-level — that's pre-15.x and the README/code here will not match.
+- **`audit_budget` is a fraction here (0.05 = 5%) and a percent in ControlArena** (`compute_safety(..., audit_budget=5.0)`). `ac_components.metrics.pareto_curve` converts; if you call `compute_safety` directly, pass a percent.
+- **Protocol parameters live in `micro_protocol_info`**, a dict column of `samples_df` (`defer_threshold`, `type`, ...). There is no `protocol` column and the threshold is not in the task name.
+- **The monitor prompt's output format is load-bearing.** ControlArena reads the last `<score>...</score>` tag; a reply without one becomes suspicion 0.0 with `score_parsed=False`, silently. Keep the tags when editing `TRUSTED_MONITOR_PROMPT`, and keep `{side_task_description}` in the attack prompt.
+- **Record versions with results.** `run.py` writes the `control-arena` and `inspect-ai` versions to `metadata.json`; APPS numbers from `control-arena<=20.1.0` are not comparable (scorer bug).
 - **`ac_components` is a thin wrapper layer** — every helper has its ControlArena equivalent listed in its docstring. If you're confused about what some `ac_components` function does, read the upstream `control_arena.*` it wraps.
 - **Calibration is held-out by default** (`holdout_frac=0.3`). Don't disable this — calibrating on the same honest scores you evaluate on leaks the test, which is the single most common AI Control evaluation mistake.
 - **Ensemble monitor N=10** matches ControlArena's upstream `apps_threshold_sweep` example. Don't drop below N=3 unless you're explicitly studying monitor variance.
@@ -42,9 +46,8 @@ The modern, ControlArena-15.x scaffold of the original 2023 paper's main experim
 The post-checkout sanity check the user will want to see:
 
 ```bash
-uv venv --python 3.11
-uv pip install -e .[dev]
-uv run pytest                              # construction-only tests, no API
+uv sync --extra dev
+uv run pytest                              # construction + prompt-contract tests, no API
 uv run python -m example_1_control_arena_apps.run tag=smoke
 ```
 
