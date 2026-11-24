@@ -19,6 +19,11 @@ harness never auto-accepts on "it ran". Three more design commitments are encode
   refused (SHADE-Arena: monitoring CoT is the one working sabotage defense).
 - Structured feedback. A failed verifier becomes an actionable diagnostic for the
   next attempt (Gome's gradient-style feedback), not a bare retry.
+
+And one count: where a run declares units, `expect_counts` checks each
+condition's units scored against units launched. A unit that errored, went
+unscored or whose checker declined is `errored` (did not run), reported beside
+the metric, never a pass, a failure or a zero.
 """
 
 import hashlib
@@ -139,6 +144,67 @@ def invariant(name: str, fn: Callable[[dict], bool], description: str = "", **kw
         ok = fn(result)
         return (bool(ok), f"invariant {name} holds" if ok else f"invariant {name} VIOLATED")
     return Verifier(f"invariant:{name}", description or name, check, **kw)
+
+
+COUNT_FIELDS = ("launched", "scored", "errored")   # errored = did not run, for any reason
+
+
+def expect_counts(key: str = "conditions") -> list[Verifier]:
+    """Count the units scored against the units launched, per condition.
+
+    Adding this check DECLARES that the run has countable units, so the result
+    must then carry `result[key]`: a mapping from each condition
+    (and label, e.g. "attack/honest") to a dict carrying `launched`, `scored`
+    and `errored` counts beside its metric. `errored` is every unit that did
+    not run, for any reason: it errored, went unscored, or its checker declined
+    to run. Such a unit is never a pass, a failure or a zero. A project with no
+    countable units (theory, a single analysis) does not add this check; a run
+    that adds it and forgets `key` FAILS rather than passing unchecked.
+
+    Returns two PI-owned verifiers: a HARD one that fails when `key` is absent,
+    when a condition is missing the triple, or when `scored + errored !=
+    launched`, and a SOFT one that reports a non-zero `errored` beside the
+    metric without failing the run.
+    """
+    undeclared = (f"no {key!r} in the result: this check declares countable units, so record "
+                  f"launched / scored / errored per condition (a project with none should not add it)")
+
+    def counts(result) -> dict:
+        conditions = result[key]
+        assert isinstance(conditions, dict) and conditions, \
+            f"{key} must map each condition to its counts, got {conditions!r}"
+        return conditions
+
+    def check_counts(result):
+        if key not in result:
+            return False, undeclared
+        bad = []
+        for name, c in counts(result).items():
+            missing = [f for f in COUNT_FIELDS if f not in c]
+            if missing:
+                bad.append(f"{name}: no {missing}")
+                continue
+            assert all(isinstance(c[f], int) and c[f] >= 0 for f in COUNT_FIELDS), \
+                f"{key}[{name!r}]: counts must be non-negative integers, got {c!r}"
+            if c["scored"] + c["errored"] != c["launched"]:
+                bad.append(f"{name}: scored {c['scored']} + errored {c['errored']} "
+                           f"!= launched {c['launched']}")
+        return (not bad, f"every condition in {key} accounts for its launched units" if not bad
+                else f"{key} does not account for its units: {'; '.join(bad)}")
+
+    def check_none_errored(result):
+        if key not in result:
+            return True, "no counts to report (the hard counts check fails on this)"
+        errored = [f"{name}: {c['errored']} of {c['launched']}"
+                   for name, c in counts(result).items() if c.get("errored")]
+        return (not errored, "every launched unit ran" if not errored else
+                "did not run (reported beside the metric, not a pass, failure or zero): " +
+                "; ".join(errored))
+
+    return [Verifier(f"counts:{key}", f"{key} records launched = scored + errored",
+                     check_counts),
+            Verifier(f"did_not_run:{key}", f"units in {key} that did not run",
+                     check_none_errored, severity="soft")]
 
 
 def _shape_of(v) -> tuple:

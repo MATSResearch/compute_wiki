@@ -56,6 +56,105 @@ def test_metadata_schema_accepts_what_the_library_writes(tmp_path):
     assert set(status["additionalProperties"]["enum"]) == set(run_dir.STAGE_STATUS)
 
 
+def test_metadata_schema_accepts_served_ids_and_unachievable_proposals(tmp_path):
+    rd = _mk(tmp_path)
+    rd.record_served_id("claude-opus-4-8", "claude-opus-4-8")
+    rd.propose_unachievable("the licensed dataset was withdrawn")
+    rd.review_unachievable("accepted", by="pi")
+    meta = rd.read_metadata()
+    model_props = SCHEMA["properties"]["models"]["items"]["properties"]
+    assert set(meta["models"][0]) <= set(model_props)
+    item = SCHEMA["properties"]["unachievable"]["items"]
+    assert set(meta["unachievable"][0]) == set(item["required"]) == set(item["properties"])
+    assert set(item["properties"]["decision"]["enum"]) - {None} == set(run_dir.CLOSE_DECISIONS)
+
+
+# --- the served model id -------------------------------------------------------
+
+def test_served_id_is_recorded_beside_the_requested_id(tmp_path):
+    rd = _mk(tmp_path)
+    rd.record_served_id("claude-opus-4-8", "claude-opus-4-8-20261101")
+    m = rd.read_metadata()["models"][0]
+    assert m["id"] == "claude-opus-4-8" and m["served_id"] == "claude-opus-4-8-20261101"
+
+
+def test_a_second_different_served_id_is_a_second_record_not_an_overwrite(tmp_path):
+    rd = _mk(tmp_path)
+    rd.record_served_id("claude-opus-4-8", "claude-opus-4-8")
+    rd.record_served_id("claude-opus-4-8", "claude-opus-4-8")   # the same again adds nothing
+    rd.record_served_id("claude-opus-4-8", "claude-opus-4-8-20261201")
+    served = [(m["id"], m["role"], m["served_id"]) for m in rd.read_metadata()["models"]]
+    assert served == [("claude-opus-4-8", "implementation", "claude-opus-4-8"),
+                      ("claude-opus-4-8", "implementation", "claude-opus-4-8-20261201")]
+
+
+def test_served_id_for_a_model_the_run_never_requested_fails_loudly(tmp_path):
+    with pytest.raises(AssertionError, match="no model record"):
+        _mk(tmp_path).record_served_id("gpt-9", "gpt-9")
+
+
+# --- closing as unachievable: the agent proposes, the researcher decides --------
+
+DEPENDENCY = "the dependency cannot be obtained legitimately"
+
+
+def test_a_new_run_is_open(tmp_path):
+    rd = _mk(tmp_path)
+    assert rd.unachievable_proposals() == [] and not rd.closed_unachievable
+
+
+def test_unachievable_needs_the_reason(tmp_path):
+    rd = _mk(tmp_path)
+    with pytest.raises(AssertionError, match="reason"):
+        rd.propose_unachievable("  ")
+    assert rd.unachievable_proposals() == []
+
+
+def test_an_unacknowledged_proposal_is_not_a_closed_state(tmp_path):
+    rd = _mk(tmp_path)
+    rd.propose_unachievable(DEPENDENCY)
+    assert not rd.closed_unachievable
+    assert rd.read_metadata()["stage_status"]["run"] == "pending"   # not a pass either
+
+
+def test_the_researcher_accepting_closes_the_run(tmp_path):
+    rd = _mk(tmp_path)
+    rd.propose_unachievable(DEPENDENCY)
+    rd.review_unachievable("accepted", by="pi")
+    assert rd.closed_unachievable
+    with pytest.raises(AssertionError, match="already closed"):
+        rd.propose_unachievable("again")
+
+
+def test_reopening_keeps_the_proposal_on_record_and_the_run_open(tmp_path):
+    rd = _mk(tmp_path)
+    rd.propose_unachievable(DEPENDENCY)
+    rd.review_unachievable("reopened", by="pi")
+    assert not rd.closed_unachievable
+    rd.propose_unachievable("the licence terms forbid this use")
+    assert [p.decision for p in rd.unachievable_proposals()] == ["reopened", None]
+
+
+def test_the_agent_cannot_accept_its_own_unachievable_proposal(tmp_path):
+    rd = _mk(tmp_path)
+    rd.propose_unachievable(DEPENDENCY)
+    with pytest.raises(AssertionError, match="researcher"):
+        rd.review_unachievable("accepted", by="agent")
+    assert not rd.closed_unachievable
+
+
+def test_one_proposal_at_a_time(tmp_path):
+    rd = _mk(tmp_path)
+    rd.propose_unachievable(DEPENDENCY)
+    with pytest.raises(AssertionError, match="awaiting review"):
+        rd.propose_unachievable("another reason")
+
+
+def test_reviewing_with_nothing_proposed_fails_loudly(tmp_path):
+    with pytest.raises(AssertionError, match="no proposal"):
+        _mk(tmp_path).review_unachievable("accepted", by="pi")
+
+
 def test_create_refuses_duplicate_run(tmp_path):
     _mk(tmp_path)
     try:

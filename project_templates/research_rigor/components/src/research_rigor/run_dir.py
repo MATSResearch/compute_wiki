@@ -20,6 +20,7 @@ write on ephemeral compute never leaves a half-file.
 
 import json
 import subprocess
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,6 +51,43 @@ ERROR_TYPES = (
     "dropped_confound", "overstated_conclusion",
 )
 DIFFICULTIES = ("easy", "medium", "hard")
+CLOSE_DECISIONS = ("accepted", "reopened")
+
+
+@dataclass
+class UnachievableProposal:
+    """The sanctioned way to say a run or follow-up cannot be done: "X is
+    unavailable / cannot be done because…". The agent proposes it; the
+    researcher accepts (closing the work as `unachievable`, an honest end state,
+    not a pass and not a silent stop) or reopens it, so "too hard" does not
+    become "impossible" on the agent's word alone. Unreviewed, it closes nothing."""
+    reason: str
+    proposed_by: str = "agent"
+    proposed_at: str = ""
+    decision: str | None = None          # None (awaiting review) | "accepted" | "reopened"
+    decided_by: str | None = None
+    decided_at: str | None = None
+
+    def __post_init__(self):
+        assert self.reason and self.reason.strip(), (
+            "an `unachievable` close needs the reason — \"X is unavailable / cannot be done "
+            "because…\"")
+        assert self.decision is None or self.decision in CLOSE_DECISIONS, \
+            f"bad decision {self.decision!r} (one of {CLOSE_DECISIONS})"
+        self.proposed_at = self.proposed_at or _now_iso()
+
+    def review(self, decision: str, *, by: str) -> None:
+        """The researcher's decision on the proposal."""
+        assert decision in CLOSE_DECISIONS, f"bad decision {decision!r} (one of {CLOSE_DECISIONS})"
+        assert by == "pi", (
+            f"an `unachievable` close is accepted or reopened by the researcher, not {by!r} — "
+            f"a proposal alone is not a closed state")
+        assert self.decision is None, f"that proposal was already {self.decision}"
+        self.decision, self.decided_by, self.decided_at = decision, by, _now_iso()
+
+    @property
+    def closes(self) -> bool:
+        return self.decision == "accepted"
 
 
 def _now_iso() -> str:
@@ -104,7 +142,10 @@ class RunDir:
                code_repo: Path | None = None) -> "RunDir":
         """`acceptance` says what done means for this run — what must be true
         before it can honestly be called finished. It is written here, when the
-        run is filed, and nothing in this class edits it afterwards."""
+        run is filed, and nothing in this class edits it afterwards.
+
+        Each model is `{id, role}`, plus `served_id` once known (or later, via
+        `record_served_id`)."""
         assert run_id.startswith("run_"), f"run_id must be run_<ts>_<name>, got {run_id!r}"
         assert acceptance and acceptance.strip(), (
             "a run is filed with its acceptance condition — say what done means before "
@@ -128,6 +169,7 @@ class RunDir:
             "cost": {"usd": None, "tokens_in": 0, "tokens_out": 0},
             "prereg": None,
             "stage_status": {s: "pending" for s in STAGES},
+            "unachievable": [],
         }
         self = cls.__new__(cls)
         self.path = path
@@ -169,6 +211,55 @@ class RunDir:
         meta = self.read_metadata()
         meta["prereg"] = {**(meta["prereg"] or {}),
                           point: {"frozen_at": frozen_at, "content_hash": content_hash}}
+        self._write_metadata(meta)
+
+    def record_served_id(self, model_id: str, served_id: str) -> None:
+        """Record the id the response reports beside the one requested. A
+        requested id is not what ran; `publish` flags a model with no served id,
+        and one whose served id differs from its requested id. One requested id
+        answered by two different served ids is two model records: a new served
+        id is added as another record, never written over the first."""
+        assert served_id and served_id.strip(), "served_id is the id the response reported"
+        meta = self.read_metadata()
+        matches = [m for m in meta["models"] if m["id"] == model_id]
+        assert matches, f"no model record with requested id {model_id!r}"
+        if any(m.get("served_id") == served_id for m in matches):
+            return
+        unserved = [m for m in matches if not m.get("served_id")]
+        if unserved:
+            for m in unserved:
+                m["served_id"] = served_id
+        else:
+            by_role = {m["role"]: m for m in matches}
+            meta["models"] += [{**m, "served_id": served_id} for m in by_role.values()]
+        self._write_metadata(meta)
+
+    # --- closing as unachievable: the agent proposes, the researcher decides ---
+    def unachievable_proposals(self) -> list[UnachievableProposal]:
+        """Every proposal, kept on the record whatever its decision."""
+        return [UnachievableProposal(**p) for p in self.read_metadata().get("unachievable", [])]
+
+    @property
+    def closed_unachievable(self) -> bool:
+        """Closed as `unachievable` only once the researcher accepted a proposal."""
+        return any(p.closes for p in self.unachievable_proposals())
+
+    def propose_unachievable(self, reason: str, *, proposed_by: str = "agent") -> None:
+        proposals = self.unachievable_proposals()
+        assert not any(p.closes for p in proposals), "run already closed as unachievable"
+        assert all(p.decision for p in proposals), "a proposal is already awaiting review"
+        self._write_unachievable(proposals + [UnachievableProposal(reason, proposed_by)])
+
+    def review_unachievable(self, decision: str, *, by: str) -> None:
+        """Accept the pending proposal (closing the run) or reopen the run."""
+        proposals = self.unachievable_proposals()
+        assert proposals and proposals[-1].decision is None, "no proposal awaiting review"
+        proposals[-1].review(decision, by=by)
+        self._write_unachievable(proposals)
+
+    def _write_unachievable(self, proposals: list[UnachievableProposal]) -> None:
+        meta = self.read_metadata()
+        meta["unachievable"] = [asdict(p) for p in proposals]
         self._write_metadata(meta)
 
     # --- append-only logs ----------------------------------------------------

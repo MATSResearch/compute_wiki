@@ -4,6 +4,7 @@ Tests for the delegated-but-validated implementation harness.
 Run:  uv run pytest tests/test_verify.py -v
 """
 
+import pytest
 
 from research_rigor import run_dir as run_dir
 from research_rigor import verify as vf
@@ -51,6 +52,59 @@ def test_missing_key_fails_loudly_not_silently():
 def test_expect_shape():
     assert vf.run_validation([vf.expect_shape("m", (2, 3))], {"m": [[1, 2, 3], [4, 5, 6]]}).verifiers_passed
     assert not vf.run_validation([vf.expect_shape("m", (2, 2))], {"m": [[1, 2, 3], [4, 5, 6]]}).verifiers_passed
+
+
+# --- units scored against units launched -------------------------------------
+
+def _counts(**conditions):
+    base = {"honest": {"launched": 50, "scored": 50, "errored": 0, "usefulness": 0.81},
+            "attack": {"launched": 50, "scored": 50, "errored": 0, "usefulness": 0.64}}
+    for name, over in conditions.items():
+        base[name] = {**base[name], **over}
+    return {"conditions": base}
+
+
+def test_every_unit_accounted_for_and_run_passes_with_nothing_reported():
+    report = vf.run_validation(vf.expect_counts(), _counts())
+    assert report.verdict == "verifiers_passed_pending_human"
+    assert not report.soft_failures
+
+
+@pytest.mark.parametrize("missing", ["launched", "scored", "errored"])
+def test_a_condition_missing_a_count_fails(missing):
+    result = _counts()
+    del result["conditions"]["attack"][missing]
+    report = vf.run_validation(vf.expect_counts(), result)
+    assert report.verdict == "verifiers_failed"
+    assert [r.name for r in report.hard_failures] == ["counts:conditions"]
+
+
+def test_counts_that_do_not_add_up_fail():
+    # 3 units vanished: neither scored nor recorded as did-not-run
+    report = vf.run_validation(vf.expect_counts(), _counts(attack={"scored": 47}))
+    assert report.verdict == "verifiers_failed"
+    assert [r.name for r in report.hard_failures] == ["counts:conditions"]
+
+
+def test_units_that_did_not_run_are_reported_not_failed():
+    report = vf.run_validation(vf.expect_counts(),
+                               _counts(attack={"scored": 47, "errored": 3}))
+    assert report.verdict == "verifiers_passed_pending_human"
+    assert [r.name for r in report.soft_failures] == ["did_not_run:conditions"]
+    assert "attack" in report.soft_failures[0].message
+
+
+def test_adding_the_check_without_recording_counts_fails():
+    """Adding expect_counts declares countable units; forgetting them must not pass unchecked."""
+    report = vf.run_validation(vf.expect_counts(), {"acc": 0.9})
+    assert report.verdict != "verifiers_passed_pending_human"
+    assert [f for f in report.hard_failures if f.name == "counts:conditions"]
+
+
+@pytest.mark.parametrize("declared", [{}, [50, 50, 0]])
+def test_declared_units_that_are_not_a_mapping_of_conditions_fail(declared):
+    report = vf.run_validation(vf.expect_counts(), {"conditions": declared})
+    assert report.verdict == "verifiers_failed"
 
 
 # --- the core rule: execution success is not acceptance ----------------------
