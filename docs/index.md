@@ -343,6 +343,7 @@ Concrete code snippets, templates, and anti-patterns. See [`code-recipes.md`](en
 | Catalog of common paper shapes (mech interp, SAE-feature, behavioral, control eval, model organism, RL safety, eval/benchmark, red-team, CoT faithfulness, welfare, debate) | Project shapes catalog | [`project-shapes.md`](start-here/project-shapes.md) |
 | What do Mentors expect of me? How do I become an independent researcher (plan my own month, route around blockers, decide pivots)? | Mentor expectations essay + reading | [`mentor-expectations.md`](start-here/mentor-expectations.md) |
 | Which research skills should I build as AI agents do more of the execution? What should I read? | Researcher skills that stay human + reading list | [`researcher-skills.md`](start-here/researcher-skills.md) |
+| How do I get Claude to teach me a topic instead of doing it for me? Quiz me / drill me / tutor me | Socratic tutoring, on request (`socratic-tutor` skill) | [`researcher-skills.md`](start-here/researcher-skills.md#how-do-i-get-an-agent-to-teach-me-instead-of-doing-it-for-me-socratic-tutoring) |
 | Look up an acronym / concept | A–Z glossary | [`glossary.md`](start-here/glossary.md) |
 | Beginner FAQ (where to start, API keys, costs, common errors) | FAQ | [`faq.md`](start-here/faq.md) |
 

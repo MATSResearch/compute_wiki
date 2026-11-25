@@ -41,7 +41,7 @@ is checked out locally, read `docs/<path>` directly.
 | `start-here/project-shapes.md` | deciding what kind of project this is (interp paper, behavioral paper, control eval, …) and which reference papers exemplify that shape |
 | `alignment-science/behavioral-safety-playbook.md` | planning a behavioral safety study: the six-step method behind papers like Emergent Misalignment and Alignment Faking; checking whether a behavioural result depends on the model being told it is measured (the one-line benchmark ablation), inoculated data mixed with clean data creating conditional misalignment (homeopathic learning), or a sycophancy number that moves with `max_tokens` |
 | `engineering/research-rigor.md` | pre-registering, accepting a result, raising a concern about your own work, resolving a prediction, or writing up; offering the researcher an interview before a plan is fixed or a result is called |
-| `start-here/researcher-skills.md` | the researcher asks which of their own skills to build while an agent does execution, or wants practical research-craft lessons from 2026 MATS fellows (levels of "done", one change per arm, early write-ups); how to supervise an agent mid-run (what TasteVal and SciΠvot say about agent research taste) |
+| `start-here/researcher-skills.md` | the researcher asks which of their own skills to build while an agent does execution, or wants to learn a topic from you by Socratic tutoring rather than have you do it, or wants practical research-craft lessons from 2026 MATS fellows (levels of "done", one change per arm, early write-ups); how to supervise an agent mid-run (what TasteVal and SciΠvot say about agent research taste) |
 | `start-here/mentor-expectations.md` | the researcher asks what MATS mentors expect of them |
 | `start-here/faq.md` | cross-cutting beginner questions: API keys, costs, where to start |
 | `start-here/glossary.md` | you meet an unfamiliar acronym or term (CAA, GRPO, OOCR, RLAIF, …) |
@@ -144,6 +144,7 @@ If they are installed in `~/.claude/skills/` your client may load them itself.
 | `mats-research-rigor` | choose between experiment designs, pre-register, accept a result, raise a concern, compare your number with a paper's, resolve a prediction, write up, or release code |
 | `wait-what` | the researcher says "wait, what?" (or "wait-what") about your last message: re-pitch it with a little context, in ASD-STE100 Simplified Technical English |
 | `mats-research-interview` | fix a plan or call a result with the researcher, and they asked (or accepted the offer) to be interviewed about the decisions it hangs on |
+| `socratic-tutor` | the researcher asks to be taught, tutored, quizzed or drilled to mastery on a topic ("teach me", "quiz me"): a diagnostic, a 0–5 skill map, one question at a time, spaced review and a final assessment. Only on request; a one-off "explain X" gets a normal answer |
 | `mats-statistics` | claim a difference is real, choose a test, or put an error bar on a number |
 | `mats-visualization` | write plotting code, choose a colormap, or save a figure |
 | `mats-intervention-evidence` | claim you removed or unlearned something, that a finetune changed something, or that particular data caused a behaviour |
@@ -151,4 +152,4 @@ If they are installed in `~/.claude/skills/` your client may load them itself.
 
 ---
 
-Last verified: 2026-11-23.
+Last verified: 2026-11-24.
