@@ -488,6 +488,48 @@ write predictions before experiments (e.g. [Fatebook](https://fatebook.io/)) to 
 calibrated. Nanda: LLM coding tools are great for coding, "but *not* if your goal is to
 learn" ([post](https://www.lesswrong.com/posts/jP9KDyMkchuv6tHwm)).
 
+### How do I get an agent to teach me instead of doing it for me? (Socratic tutoring)
+
+**Socratic tutoring** (also called the maieutic method, or "quiz me / drill me" mode) is
+an agent mode for when you want to *learn* a topic rather than have the work done:
+the agent teaches mainly by asking you questions that make you predict, explain and
+find flaws, instead of lecturing or writing the code for you. It is **available on
+request, never forced on anyone**: an agent should not start quizzing you because you
+asked a question. In Shen & Tamkin's RCT (randomised controlled trial, Anthropic,
+Jan 2026, [arXiv:2601.20245](https://arxiv.org/abs/2601.20245)), the AI-assisted
+participants who asked conceptual and follow-up questions kept their mastery; a tutor
+session makes that the default for the topic you choose.
+
+The wiki ships it as the **`socratic-tutor`** agent skill
+([`skills/socratic-tutor/SKILL.md`](https://github.com/MATSResearch/compute_wiki/blob/master/skills/socratic-tutor/SKILL.md);
+install with `cp -r skills/socratic-tutor ~/.claude/skills/` for Claude Code). What it
+does:
+
+- **Fires only when you ask** — "teach me", "tutor me", "quiz me", "drill me", "help me
+  master". A one-off "explain X" or "what is X" gets a normal answer; if your intent is
+  unclear, the agent asks one short question first.
+- **Diagnostic first**: splits the topic into 4–10 subskills and asks 3–5 placement
+  questions before teaching anything.
+- **Skill map with levels 0–5** (0 unaware … 4 can do independently, 5 can teach it /
+  handle edge cases), shown as a progress bar after each change.
+- **One question at a time**; when you are wrong it asks a narrower question rather
+  than giving the answer (a direct explanation only after 2–3 failed attempts); it sets
+  practical exercises and checks your actual output.
+- **Strict grading**: a level is raised only after 2+ independent checks, one of them
+  unprompted recall; spaced review re-tests earlier subskills without warning; no
+  flattery.
+- **Ends with a final mixed assessment** once every subskill reaches the target level
+  (4/5 by default, 5/5 if you asked for full mastery).
+- **Commands any time**: "show progress", "harder" / "easier", "just tell me" (skip the
+  questions for this one item), "save state" and "resume from:" to carry a session into
+  a new conversation.
+
+Use it for a technique you will have to verify in agent output later (a statistical
+test, an interpretability method, a proof technique, a library you will debug), or a
+field you are entering for a project. **When not to use it:** when you need the answer
+now for a deadline, or for something you will never need to check yourself — ask
+directly, or say "just tell me".
+
 Epistemics: Karnofsky, "Minimal-Trust Investigations"
 ([Cold Takes](https://www.cold-takes.com/minimal-trust-investigations/)); Yudkowsky,
 "Noticing Confusion" ([sequence](https://www.lesswrong.com/s/zpCiuR4T343j9WkcK)); Galef,
@@ -577,7 +619,7 @@ markers for agent notes) are in
 
 ---
 
-Last verified: 2026-11-23. Drafted by Claude from the MATS automated-alignment design notes,
+Last verified: 2026-11-24. Drafted by Claude from the MATS automated-alignment design notes,
 the BootLoops repos, and the papers linked above; the one-line summaries of each source
 are Claude's wording, not the authors'. Pending MATS research-staff review. (Additions
 2026-10-14: the "Research-craft lessons" table and the related bullets in Skills 1, 2, 4

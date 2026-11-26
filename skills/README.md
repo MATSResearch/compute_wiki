@@ -9,6 +9,7 @@ program's conventions instead of inventing its own.
 | [`mats-experiment-workflow/`](mats-experiment-workflow/) | start a project, plan what to run next, keep a research journal, organise run outputs, or decide whether to scale up |
 | [`mats-research-rigor/`](mats-research-rigor/) | choose between experiment designs, pre-register a hypothesis, accept a result, raise a concern about its own work, compare a number with a paper's, resolve a prediction, write up, or release code |
 | [`mats-research-interview/`](mats-research-interview/) | fix a plan or call a result with the researcher, when they ask (or accept the offer) to be interviewed — the decisions surfaced in rounds over a design tree |
+| [`socratic-tutor/`](socratic-tutor/) | is asked by the researcher to teach, tutor, quiz or drill them to mastery on a topic: Socratic questioning with a diagnostic, a 0–5 skill map, spaced review and a final assessment — on request only, never for a one-off "explain X" |
 | [`wait-what/`](wait-what/) | is told "wait, what?" (or "wait-what") by the researcher: the last message did not land, so re-pitch it with a little context, in Simplified Technical English |
 | [`mats-statistics/`](mats-statistics/) | claim a difference is real, choose a test, or put an error bar on a number |
 | [`mats-visualization/`](mats-visualization/) | write plotting code, choose a colormap, or save a figure |
@@ -23,7 +24,7 @@ program's conventions instead of inventing its own.
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -r skills/mats-* ~/.claude/skills/
+cp -r skills/mats-* skills/wait-what skills/socratic-tutor ~/.claude/skills/
 ```
 
 On the MATS cluster this goes on the **dev node**, where your home directory is
